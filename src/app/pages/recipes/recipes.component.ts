@@ -18,4 +18,8 @@ export class RecipesComponent implements OnInit {
   getRecipes() {
     this.recipes = this.recipeService.getRecipes();
   }
+
+  getRecipeAuthors(recipe: Recipe) {
+    return recipe.authors?.join(', ');
+  }
 }

@@ -1,0 +1,17 @@
+<p>recipes works!</p>
+
+<div *ngFor="let recipe of recipes">
+    <h2>{{recipe.title}}</h2>
+    <h3><i>{{recipe.subtitle}}</i></h3>
+    <h3>{{recipe.authors | json}}</h3>
+    <h3>{{recipe.cookTime}}</h3>
+    <ul>
+        <li *ngFor="let ingredient of recipe.ingredients">{{ingredient}}</li>
+    </ul>
+    <ol>
+        <li *ngFor="let step of recipe.steps">{{step}}</li>
+    </ol>
+    <ul>
+        <li *ngFor="let note of recipe.notes">{{note}}</li>
+    </ul>
+</div>

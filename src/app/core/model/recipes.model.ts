@@ -2,6 +2,8 @@ export interface Recipe {
     title: string;
     subtitle?: string;
     authors?: string[];
+    description?: string;
+    servings?: number;
     cookTime: string; 
     tags?: string[]
     coverImage?: string;

@@ -4,21 +4,23 @@
     </ul>
 </div>
 
-<div *ngFor="let recipe of recipes">
-    <h2>{{recipe.title}}</h2>
-    <h3><i>{{recipe.subtitle}}</i></h3>
-    <h3>Author(s){{recipe.authors | json}}</h3>
-    <h3>Duration: {{recipe.cookTime}}</h3>
-    <h4>Ingredients</h4>
-    <ul>
-        <li *ngFor="let ingredient of recipe.ingredients">{{ingredient}}</li>
-    </ul>
-    <h4>Steps</h4>
-    <ol>
-        <li *ngFor="let step of recipe.steps">{{step}}</li>
-    </ol>
-    <h4>Other Notes</h4>
-    <ul>
-        <li *ngFor="let note of recipe.notes">{{note}}</li>
-    </ul>
+<div class="recipes">
+    <div class="recipe-card" *ngFor="let recipe of recipes">
+        <h2>{{recipe.title}}</h2>
+        <h3><i>{{recipe.subtitle}}</i></h3>
+        <h3>Author(s){{recipe.authors | json}}</h3>
+        <h3>Duration: {{recipe.cookTime}}</h3>
+        <h4>Ingredients</h4>
+        <ul>
+            <li *ngFor="let ingredient of recipe.ingredients">{{ingredient}}</li>
+        </ul>
+        <h4>Steps</h4>
+        <ol>
+            <li *ngFor="let step of recipe.steps">{{step}}</li>
+        </ol>
+        <h4>Other Notes</h4>
+        <ul>
+            <li *ngFor="let note of recipe.notes">{{note}}</li>
+        </ul>
+    </div>
 </div>

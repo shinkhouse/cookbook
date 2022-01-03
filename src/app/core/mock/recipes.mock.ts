@@ -27,4 +27,29 @@ export const Recipes: Recipe[] = [
         notes: ['Soda sized can of tomato juice works great'],
         urls: [],
     },
+    {
+        title: "Grandma's Chili",
+        subtitle: '',
+        authors: ['Bernadine Canady'],
+        cookTime: '',
+        tags: [''],
+        coverImage: '',
+        ingredients: ['1 pound hamburger', '1 can kidney beans', '2 can chili beans', '1 can vegetable juice', 'Chili powder to taste', '1 teaspoon sugar', 'Salt to taste', 'Can of diced tomatoes (optional)'],
+        steps: [''],
+        notes: [''],
+        urls: [''],
+    },
 ];
+
+export const RecipeTemplate: Recipe = {
+    title: '',
+    subtitle: '',
+    authors: [''],
+    cookTime: '',
+    tags: [''],
+    coverImage: '',
+    ingredients: [''],
+    steps: [''],
+    notes: [''],
+    urls: [''],
+};

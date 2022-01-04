@@ -8,6 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { FlexLayoutModule } from '@angular/flex-layout';
 @NgModule({
     declarations: [CreateRecipeComponent],
     imports: [
@@ -19,6 +21,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
         MatButtonModule,
         MatInputModule,
         MatFormFieldModule,
+        MatToolbarModule,
+        FlexLayoutModule
     ],
 })
 export class CreateRecipeModule {}

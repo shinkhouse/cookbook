@@ -1,16 +1,27 @@
 form {
     display: flex;
     flex-direction: column;
+    padding: 16px;
 
     div {
         width: 100%;
+    }
+
+    .form-array-header{
+        display: flex;
+        flex-direction: row;
+        gap: 16px;
+        align-items: flex-start;
     }
 }
 
 .form-preview {
     font-family: monospace;
     padding: 16px;
-    margin: 16px;
     background: #eaeaea;
     border-radius: 8px;
+}
+
+mat-form-field {
+    width: 100%;
 }

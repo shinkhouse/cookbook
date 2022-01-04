@@ -11,6 +11,8 @@ export class CreateRecipeComponent implements OnInit {
         title: ['', Validators.required],
         subtitle: [''],
         authors: this.fb.array([this.fb.control('')]),
+        description: [''],
+        servings: [1],
         cookTime: [''],
         tags: this.fb.array([this.fb.control('')]),
         coverImage: [''],
@@ -61,5 +63,22 @@ export class CreateRecipeComponent implements OnInit {
 
     addNote() {
         this.getRecipeNotes.push(this.fb.control(''));
+    }
+
+    resetRecipeForm() {
+        this.recipeForm = this.fb.group({
+            title: ['', Validators.required],
+            subtitle: [''],
+            authors: this.fb.array([this.fb.control('')]),
+            description: [''],
+            servings: [1],
+            cookTime: [''],
+            tags: this.fb.array([this.fb.control('')]),
+            coverImage: [''],
+            ingredients: this.fb.array([this.fb.control('')]),
+            steps: this.fb.array([this.fb.control('')]),
+            notes: this.fb.array([this.fb.control('')]),
+            urls: this.fb.array([this.fb.control('')]),
+        });
     }
 }

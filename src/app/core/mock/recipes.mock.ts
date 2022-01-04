@@ -143,9 +143,9 @@ export const Recipes: Recipe[] = [
             '2 tablespoons soy sauce',
             '1/4 teaspoon crushed red pepper flakes',
         ],
-        steps: [''],
-        notes: [''],
-        urls: [''],
+        steps: [],
+        notes: [],
+        urls: [],
     },
 ];
 

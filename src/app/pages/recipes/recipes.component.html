@@ -1,46 +1,64 @@
-<div class="recipe-list">
-    <ul>
-        <li *ngFor="let recipe of recipes">{{ recipe.title }}</li>
-    </ul>
-</div>
-
-<div class="recipes">
-    <div class="recipe-card" *ngFor="let recipe of recipes">
-        <h1>{{ recipe.title }}</h1>
-        <h2>
-            <i>{{ recipe.subtitle }}</i>
-        </h2>
-        <!-- <h3 *ngIf="recipe.authors">Author(s) {{ getRecipeAuthors(recipe) }}</h3> -->
-        <div class="recipe-details">
-            <div class="recipe-duration">
-                <h3>Duration</h3>
-                <h3>{{ recipe.cookTime }}</h3>
+<mat-drawer-container class="example-container">
+    <mat-drawer mode="side" opened>
+        <div class="drawer-header">
+            <h1>Recipes</h1>
+        </div>
+        <mat-selection-list #shoes [multiple]="false">
+            <mat-list-option
+                *ngFor="let recipe of recipes"
+                [value]="recipe"
+                (click)="displayRecipe(recipe)"
+            >
+                {{ recipe?.title }}
+            </mat-list-option>
+        </mat-selection-list>
+    </mat-drawer>
+    <mat-drawer-content>
+        <div class="recipe-card" *ngIf="selectedRecipe">
+            <h1>{{ selectedRecipe?.title }}</h1>
+            <h2>
+                <i>{{ selectedRecipe?.subtitle }}</i>
+            </h2>
+            <p>
+                <i>{{ selectedRecipe?.description }}</i>
+            </p>
+            <div class="recipe-details">
+                <div class="recipe-duration">
+                    <h5>Duration</h5>
+                    <h3>{{ selectedRecipe?.cookTime }}</h3>
+                </div>
+                <div class="recipe-servings">
+                    <h5>Makes</h5>
+                    <h3>{{ selectedRecipe?.servings }} servings</h3>
+                </div>
             </div>
-            <div class="recipe-servings">
-                <h3>Makes</h3>
-                <h3>{{ recipe.servings }} servings</h3>
+            <div
+                class="recipe-ingredients"
+                *ngIf="selectedRecipe?.ingredients.length > 0"
+            >
+                <h4>Ingredients</h4>
+                <ul>
+                    <li *ngFor="let ingredient of selectedRecipe?.ingredients">
+                        {{ ingredient }}
+                    </li>
+                </ul>
+            </div>
+            <div class="recipe-steps" *ngIf="selectedRecipe?.steps.length > 0">
+                <h4>Steps</h4>
+                <ol>
+                    <li *ngFor="let step of selectedRecipe?.steps">
+                        {{ step }}
+                    </li>
+                </ol>
+            </div>
+            <div class="recipe-notes" *ngIf="selectedRecipe?.notes.length > 0">
+                <h4>Other Notes</h4>
+                <ul>
+                    <li *ngFor="let note of selectedRecipe?.notes">
+                        {{ note }}
+                    </li>
+                </ul>
             </div>
         </div>
-        <hr />
-        <div class="recipe-ingredients" *ngIf="recipe.ingredients.length > 0">
-            <h4>Ingredients</h4>
-            <ul>
-                <li *ngFor="let ingredient of recipe.ingredients">
-                    {{ ingredient }}
-                </li>
-            </ul>
-        </div>
-        <div class="recipe-steps" *ngIf="recipe.steps.length > 0">
-            <h4>Steps</h4>
-            <ol>
-                <li *ngFor="let step of recipe.steps">{{ step }}</li>
-            </ol>
-        </div>
-        <div class="recipe-notes" *ngIf="recipe.notes.length > 0">
-            <h4>Other Notes</h4>
-            <ul>
-                <li *ngFor="let note of recipe.notes">{{ note }}</li>
-            </ul>
-        </div>
-    </div>
-</div>
+    </mat-drawer-content>
+</mat-drawer-container>

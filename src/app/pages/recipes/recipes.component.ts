@@ -9,6 +9,7 @@ import { RecipesService } from 'src/app/core/services/recipes.service';
 })
 export class RecipesComponent implements OnInit {
   public recipes: Recipe[] = [];
+  public selectedRecipe: Recipe | undefined;
   constructor(private recipeService: RecipesService) {}
 
   ngOnInit(): void {
@@ -21,5 +22,9 @@ export class RecipesComponent implements OnInit {
 
   getRecipeAuthors(recipe: Recipe) {
     return recipe.authors?.join(', ');
+  }
+
+  displayRecipe(recipe: Recipe) {
+    this.selectedRecipe = recipe;
   }
 }

@@ -1,0 +1,16 @@
+form {
+    display: flex;
+    flex-direction: column;
+
+    div {
+        width: 100%;
+    }
+}
+
+.form-preview {
+    font-family: monospace;
+    padding: 16px;
+    margin: 16px;
+    background: #eaeaea;
+    border-radius: 8px;
+}

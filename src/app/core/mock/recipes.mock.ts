@@ -122,10 +122,30 @@ export const Recipes: Recipe[] = [
         ],
         notes: [
             'When sauteing the garlic, add a little bit of sundried tomatoes oil for more flavor.',
-            'Do not use single/light cream as that won\'t thicken the sauce enough.',
+            "Do not use single/light cream as that won't thicken the sauce enough.",
             "I recommend buying a block of parmesan cheese and grating it at home. I found that store-bought parmesan cheese doesn't have much flavor, and doesn't dissolve well in sauces.",
         ],
         urls: ['https://littlesunnykitchen.com/marry-me-chicken/'],
+    },
+    {
+        title: 'Honey Buffalo Sauce',
+        subtitle: 'Suited for meatballs',
+        authors: [''],
+        cookTime: '5-10 minutes',
+        tags: ['sauces'],
+        coverImage: '',
+        ingredients: [
+            '1/2 cup honey',
+            '1/4 cup buffalo wing sauce',
+            '1/4 cup packed brown sugar',
+            '2 tbsp orange marmalade',
+            '2 tbsp apricot spreadable fruit',
+            '2 tablespoons soy sauce',
+            '1/4 teaspoon crushed red pepper flakes',
+        ],
+        steps: [''],
+        notes: [''],
+        urls: [''],
     },
 ];
 

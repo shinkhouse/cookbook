@@ -3,15 +3,22 @@
         <div class="drawer-header">
             <h1>Recipes</h1>
         </div>
+        <div class="search-bar" fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
+            <mat-icon>search</mat-icon>
+            <input type="text" placeholder="Search" [(ngModel)]="searchQuery">
+        </div>
         <mat-selection-list #shoes [multiple]="false">
             <mat-list-option
-                *ngFor="let recipe of recipes"
+                *ngFor="let recipe of getSearchResults()"
                 [value]="recipe"
                 (click)="displayRecipe(recipe)"
             >
                 {{ recipe?.title }}
             </mat-list-option>
         </mat-selection-list>
+        <div class="no-recipes" *ngIf="getSearchResults().length === 0">
+            <p>Cannot find recipe, "{{searchQuery}}"</p>
+        </div>
     </mat-drawer>
     <mat-drawer-content>
         <div class="recipe-card" *ngIf="selectedRecipe">

@@ -10,5 +10,6 @@ export interface Recipe {
     ingredients: string[] | null;
     steps: string[] | null;
     notes: string[] | null;
-    urls: string[] | null
+    urls: string[] | null,
+    equipment?: string[] | null;
 }

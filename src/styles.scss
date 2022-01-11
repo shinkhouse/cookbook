@@ -4,6 +4,7 @@
 html,
 body {
     height: 100%;
+    background: #FAF9EF;
 }
 body {
     margin: 0;
@@ -34,3 +35,8 @@ $my-theme: mat.define-light-theme(
 );
 
 @include mat.all-component-themes($my-theme);
+
+.mat-card-header-text {
+    padding: 0px;
+    margin: 0px !important;
+}

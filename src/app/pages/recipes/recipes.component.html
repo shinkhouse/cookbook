@@ -1,16 +1,23 @@
-<div class="drawer-header" fxLayout="row" fxLayoutAlign="start start">
-    <div fxLayout="column">
-        <h1>Recipes</h1>
-        <p>This is a collection of recipes my wife and I like to cook or have tried.</p>
+<div class="drawer-header" fxLayout="row" fxLayoutAlign="start center">
+    <div class="recipe-icon">
+        <span>R</span>
     </div>
+    <h1>Sam's Recipes</h1>
     <div fxFlex></div>
     <button mat-button routerLink="/create">
         <mat-icon>add</mat-icon>
         Add Recipe
     </button>
 </div>
+<div class="big-container-section">
+    <h1>Simple, flavorful recipes</h1>
+    <p>
+        This is a collection of recipes my wife and I like to cook or have
+        tried.
+    </p>
+</div>
 <div
-    class="search-bar"
+    class="search-bar mat-elevation-z2"
     fxLayout="row"
     fxLayoutAlign="start center"
     fxLayoutGap="16px"
@@ -18,7 +25,7 @@
     <mat-icon>search</mat-icon>
     <input type="text" placeholder="Search Recipes" [(ngModel)]="searchQuery" />
 </div>
-<mat-selection-list class="recipes" #recipes [multiple]="false">
+<!-- <mat-selection-list class="recipes" #recipes [multiple]="false">
     <mat-list-option
         *ngFor="let recipe of getSearchResults()"
         [value]="recipe"
@@ -30,7 +37,49 @@
             <span>{{ recipe?.title }}</span>
         </div>
     </mat-list-option>
-</mat-selection-list>
-<div class="no-recipes" *ngIf="getSearchResults().length === 0">
-    <p>Cannot find recipe, "{{ searchQuery }}"</p>
-</div>
+</mat-selection-list> -->
+<main class="recipes">
+    <mat-grid-list
+        *ngIf="getSearchResults().length > 0"
+        [cols]="gridColumnSize"
+        gutterSize="16px"
+    >
+        <mat-grid-tile
+            *ngFor="let recipe of getSearchResults()"
+            routerLink="/recipe/{{ recipe.slug }}"
+        >
+            <mat-card>
+                <img
+                    mat-card-image
+                    [src]="recipe.coverImage"
+                    [alt]="recipe.title"
+                />
+                <mat-card-header
+                    fxLayout="row"
+                    fxLayoutAlign="start center"
+                    fxLayoutGap="16px"
+                >
+                    <mat-card-title>{{ recipe.title }}</mat-card-title>
+                    <mat-card-subtitle>{{ recipe.subtitle }}</mat-card-subtitle>
+                    <div fxFlex></div>
+                    <button class="mat-elevation-z2" mat-icon-button *ngIf="recipe.favorite">
+                        <mat-icon
+                            matTooltip="Favorite Recipe!"
+                            class="favorite-icon"
+                            >star</mat-icon
+                        >
+                    </button>
+                    <button class="mat-elevation-z2" mat-icon-button *ngIf="!recipe.favorite">
+                        <mat-icon class="inactive-favorite-icon"
+                            >star_outline</mat-icon
+                        >
+                    </button>
+                </mat-card-header>
+            </mat-card>
+        </mat-grid-tile>
+    </mat-grid-list>
+
+    <div class="no-recipes" *ngIf="getSearchResults().length === 0">
+        <p>Cannot find recipe, "{{ searchQuery }}"</p>
+    </div>
+</main>

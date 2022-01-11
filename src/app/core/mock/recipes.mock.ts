@@ -38,7 +38,8 @@ export const Recipes: Recipe[] = [
         servings: 4,
         cookTime: '2 to 4 hours',
         tags: [''],
-        coverImage: '',
+        coverImage:
+            'https://hips.hearstapps.com/del.h-cdn.co/assets/18/08/1519157479-chili-horizontal.jpg',
         ingredients: [
             '1 pound hamburger',
             '1 can kidney beans',
@@ -63,7 +64,8 @@ export const Recipes: Recipe[] = [
         authors: [''],
         cookTime: '30 minutes',
         tags: ['pasta', 'italian', 'shrimp', 'seafood'],
-        coverImage: '',
+        coverImage:
+            'https://www.servingdumplings.com//wp-content/uploads/2021/05/creamy-shrimp-pasta-5v2-48ca58b9.jpg',
         ingredients: [
             '14 oz rigatoni',
             '1 pound shrimp',
@@ -100,7 +102,8 @@ export const Recipes: Recipe[] = [
         authors: [''],
         cookTime: '25 minutes',
         tags: [''],
-        coverImage: '',
+        coverImage:
+            'https://littlesunnykitchen.com/wp-content/uploads/Marry-Me-Chicken-22-500x375.jpg',
         ingredients: [
             '1 lb chicken thighs',
             '¼ teaspoon ground black pepper',
@@ -141,7 +144,8 @@ export const Recipes: Recipe[] = [
         authors: [''],
         cookTime: '5-10 minutes',
         tags: ['sauces'],
-        coverImage: '',
+        coverImage:
+            'https://www.thechunkychef.com/wp-content/uploads/2017/11/Slow-Cooker-Honey-Buffalo-Wings-feat.jpg',
         ingredients: [
             '1/2 cup honey',
             '1 cup buffalo wing sauce',
@@ -166,7 +170,8 @@ export const Recipes: Recipe[] = [
         calories: 286,
         cookTime: '55 minutes',
         tags: [''],
-        coverImage: '',
+        coverImage:
+            'https://images.themodernproper.com/billowy-turkey/production/posts/2019/Mango-Chutney-Sheet-Pan-Chicken-with-Cauliflower-6.jpg?w=1800&auto=compress%2Cformat&fit=crop&dm=1599769261&s=4abaf776aa21cf1972ab2899517f396a',
         ingredients: [
             '8 Boneless, skinless, chicken thighs, about 2 lbs',
             '1 (9 oz) jar Mango chutney',
@@ -196,7 +201,8 @@ export const Recipes: Recipe[] = [
         calories: 383,
         cookTime: '25 minutes',
         tags: [''],
-        coverImage: '',
+        coverImage:
+            'https://cookingwithcoit.com/wp-content/uploads/2019/05/20190430_CWC-Vegan-Garlic-Noodles_0594.jpg',
         ingredients: [
             '3 (3 oz) packages Instant ramen noodles, flavor packets discarded',
             '1⁄4 cup Low sodium soy sauce',
@@ -233,7 +239,8 @@ export const Recipes: Recipe[] = [
         calories: 204,
         cookTime: '30 minutes',
         tags: ['chicken', 'italian', 'broccoli'],
-        coverImage: '',
+        coverImage:
+            'https://www.jocooks.com/wp-content/uploads/2019/04/chicken-parmesan-1-32.jpg',
         ingredients: [
             '4 large boneless skinless chicken breasts',
             '1 egg',
@@ -272,7 +279,8 @@ export const Recipes: Recipe[] = [
         calories: 0,
         cookTime: '1 hr 35 min',
         tags: ['ground beef', 'tomato', 'red pepper flakes', 'rice'],
-        coverImage: '',
+        coverImage:
+            'https://hips.hearstapps.com/hmg-prod/images/delish-classic-stuffed-peppers-horizontal-1538065876.jpg',
         ingredients: [
             '6 bell peppers, any color',
             '4 tablespoons olive oil, plus more for drizzling',

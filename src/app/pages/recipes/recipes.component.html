@@ -4,7 +4,7 @@
     </div>
     <h1>Sam's Recipes</h1>
     <div fxFlex></div>
-    <button mat-button routerLink="/create">
+    <button color="primary" mat-raised-button routerLink="/create">
         <mat-icon>add</mat-icon>
         Add Recipe
     </button>
@@ -25,22 +25,10 @@
     <mat-icon>search</mat-icon>
     <input type="text" placeholder="Search Recipes" [(ngModel)]="searchQuery" />
 </div>
-<!-- <mat-selection-list class="recipes" #recipes [multiple]="false">
-    <mat-list-option
-        *ngFor="let recipe of getSearchResults()"
-        [value]="recipe"
-        routerLink="/recipe/{{recipe.slug}}"
-    >
-        <div fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
-            <mat-icon matTooltip="Favorite Recipe!" class="favorite-icon" *ngIf="recipe.favorite">star</mat-icon>
-            <mat-icon class="inactive-favorite-icon"*ngIf="!recipe.favorite">star_outline</mat-icon>
-            <span>{{ recipe?.title }}</span>
-        </div>
-    </mat-list-option>
-</mat-selection-list> -->
 <main class="recipes">
     <mat-grid-list
         *ngIf="getSearchResults().length > 0"
+        rowHeight="400px"
         [cols]="gridColumnSize"
         gutterSize="16px"
     >
@@ -62,19 +50,32 @@
                     <mat-card-title>{{ recipe.title }}</mat-card-title>
                     <mat-card-subtitle>{{ recipe.subtitle }}</mat-card-subtitle>
                     <div fxFlex></div>
-                    <button class="mat-elevation-z2" mat-icon-button *ngIf="recipe.favorite">
+                    <button
+                        class="mat-elevation-z2"
+                        mat-icon-button
+                        *ngIf="recipe.favorite"
+                    >
                         <mat-icon
                             matTooltip="Favorite Recipe!"
                             class="favorite-icon"
                             >star</mat-icon
                         >
                     </button>
-                    <button class="mat-elevation-z2" mat-icon-button *ngIf="!recipe.favorite">
+                    <button
+                        class="mat-elevation-z2"
+                        mat-icon-button
+                        *ngIf="!recipe.favorite"
+                    >
                         <mat-icon class="inactive-favorite-icon"
                             >star_outline</mat-icon
                         >
                     </button>
                 </mat-card-header>
+                <mat-card-content>
+                    <p>
+                        {{ recipe.description }}
+                    </p>
+                </mat-card-content>
             </mat-card>
         </mat-grid-tile>
     </mat-grid-list>

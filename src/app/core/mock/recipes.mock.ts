@@ -4,6 +4,7 @@ export const Recipes: Recipe[] = [
     {
         title: "Grandma's Spaghetti",
         subtitle: 'In memory of Bernadine Canady',
+        description: 'This is a special recipe for Sam. His late grandmother loved to make this recipe for the family all the time. It was a very popular meal when family and friends would come over.',
         slug: 'grandmas-spaghetti',
         authors: ['Bernadine Canady'],
         servings: 4,
@@ -32,7 +33,8 @@ export const Recipes: Recipe[] = [
     },
     {
         title: "Grandma's Chili",
-        subtitle: '',
+        subtitle: 'In memory of Bernadine Canady',
+        description: 'Another special recipe from grandma and grandpa, they would make this recipe on cold, windy days.',
         slug: 'grandmas-chili',
         authors: ['Bernadine Canady'],
         servings: 4,
@@ -98,6 +100,7 @@ export const Recipes: Recipe[] = [
     {
         title: 'Marry Me Chicken',
         subtitle: '',
+        description: 'Fun fact: I actually proposed to my then girlfriend now wife with this recipe. It\'s packed full of favor and makes for a great, romantic meal.',
         slug: 'marry-me-chicken',
         authors: [''],
         cookTime: '25 minutes',
@@ -139,7 +142,7 @@ export const Recipes: Recipe[] = [
     },
     {
         title: 'Honey Buffalo Sauce',
-        subtitle: 'Suited for meatballs',
+        subtitle: 'Suited for meatballs or wings',
         slug: 'honey-buffalo-sauce',
         authors: [''],
         cookTime: '5-10 minutes',
@@ -165,7 +168,7 @@ export const Recipes: Recipe[] = [
         subtitle: '',
         slug: 'mango-chutney-chicken-sheet-pan',
         authors: ['The Modern Proper'],
-        description: '',
+        description: 'A simple, healthy sheetpan meal.',
         servings: 6,
         calories: 286,
         cookTime: '55 minutes',

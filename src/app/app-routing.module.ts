@@ -16,6 +16,13 @@ const routes: Routes = [
                 (m) => m.CreateRecipeModule
             ),
     },
+    {
+        path: 'recipe/:id',
+        loadChildren: () =>
+            import('./pages/recipe/recipe.module').then(
+                (m) => m.RecipeModule
+            ),
+    },
 ];
 
 @NgModule({

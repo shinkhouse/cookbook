@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { FlexLayoutModule } from '@angular/flex-layout';
+import { ClipboardModule } from '@angular/cdk/clipboard';
 @NgModule({
     declarations: [CreateRecipeComponent],
     imports: [
@@ -22,7 +23,8 @@ import { FlexLayoutModule } from '@angular/flex-layout';
         MatInputModule,
         MatFormFieldModule,
         MatToolbarModule,
-        FlexLayoutModule
+        FlexLayoutModule,
+        ClipboardModule
     ],
 })
 export class CreateRecipeModule {}

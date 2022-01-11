@@ -1,3 +1,4 @@
+import { Clipboard } from '@angular/cdk/clipboard';
 import { Component, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 
@@ -10,9 +11,11 @@ export class CreateRecipeComponent implements OnInit {
     public recipeForm: FormGroup = this.fb.group({
         title: ['', Validators.required],
         subtitle: [''],
+        slug: [''],
         authors: this.fb.array([this.fb.control('')]),
         description: [''],
         servings: [1],
+        calories: [0],
         cookTime: [''],
         tags: this.fb.array([this.fb.control('')]),
         coverImage: [''],
@@ -21,7 +24,16 @@ export class CreateRecipeComponent implements OnInit {
         notes: this.fb.array([this.fb.control('')]),
         urls: this.fb.array([this.fb.control('')]),
     });
-    constructor(private fb: FormBuilder) {}
+    constructor(private fb: FormBuilder, private clipboard: Clipboard) {
+        this.recipeForm.get('title')?.valueChanges.subscribe((res) => {
+            console.log(res);
+            this.recipeForm.get('slug')?.setValue(this.generateSlug(res));
+        });
+    }
+
+    generateSlug(title: string) {
+        return title.toLowerCase().split(' ').join('-');
+    }
 
     ngOnInit(): void {}
 
@@ -42,17 +54,17 @@ export class CreateRecipeComponent implements OnInit {
     }
 
     get getRecipeIngredients() {
-      return this.recipeForm.get('ingredients') as FormArray;
+        return this.recipeForm.get('ingredients') as FormArray;
     }
-    
+
     addIngredient() {
-      this.getRecipeIngredients.push(this.fb.control(''));
+        this.getRecipeIngredients.push(this.fb.control(''));
     }
-    
+
     get getRecipeSteps() {
         return this.recipeForm.get('steps') as FormArray;
     }
-    
+
     addStep() {
         this.getRecipeSteps.push(this.fb.control(''));
     }
@@ -69,9 +81,11 @@ export class CreateRecipeComponent implements OnInit {
         this.recipeForm = this.fb.group({
             title: ['', Validators.required],
             subtitle: [''],
+            slug: [''],
             authors: this.fb.array([this.fb.control('')]),
             description: [''],
             servings: [1],
+            calories: [0],
             cookTime: [''],
             tags: this.fb.array([this.fb.control('')]),
             coverImage: [''],
@@ -80,5 +94,13 @@ export class CreateRecipeComponent implements OnInit {
             notes: this.fb.array([this.fb.control('')]),
             urls: this.fb.array([this.fb.control('')]),
         });
+    }
+
+    copyRecipe() {
+        // replace this object with your data
+        const object = this.recipeForm.value;
+
+        // Note the parameters
+        this.clipboard.copy(JSON.stringify(object));
     }
 }

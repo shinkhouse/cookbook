@@ -1,71 +1,36 @@
-<mat-drawer-container class="example-container">
-    <mat-drawer mode="side" opened>
-        <div class="drawer-header">
-            <h1>Recipes</h1>
+<div class="drawer-header" fxLayout="row" fxLayoutAlign="start start">
+    <div fxLayout="column">
+        <h1>Recipes</h1>
+        <p>This is a collection of recipes my wife and I like to cook or have tried.</p>
+    </div>
+    <div fxFlex></div>
+    <button mat-button routerLink="/create">
+        <mat-icon>add</mat-icon>
+        Add Recipe
+    </button>
+</div>
+<div
+    class="search-bar"
+    fxLayout="row"
+    fxLayoutAlign="start center"
+    fxLayoutGap="16px"
+>
+    <mat-icon>search</mat-icon>
+    <input type="text" placeholder="Search Recipes" [(ngModel)]="searchQuery" />
+</div>
+<mat-selection-list class="recipes" #recipes [multiple]="false">
+    <mat-list-option
+        *ngFor="let recipe of getSearchResults()"
+        [value]="recipe"
+        routerLink="/recipe/{{recipe.slug}}"
+    >
+        <div fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
+            <mat-icon matTooltip="Favorite Recipe!" class="favorite-icon" *ngIf="recipe.favorite">star</mat-icon>
+            <mat-icon class="inactive-favorite-icon"*ngIf="!recipe.favorite">star_outline</mat-icon>
+            <span>{{ recipe?.title }}</span>
         </div>
-        <div class="search-bar" fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
-            <mat-icon>search</mat-icon>
-            <input type="text" placeholder="Search" [(ngModel)]="searchQuery">
-        </div>
-        <mat-selection-list #shoes [multiple]="false">
-            <mat-list-option
-                *ngFor="let recipe of getSearchResults()"
-                [value]="recipe"
-                (click)="displayRecipe(recipe)"
-            >
-                {{ recipe?.title }}
-            </mat-list-option>
-        </mat-selection-list>
-        <div class="no-recipes" *ngIf="getSearchResults().length === 0">
-            <p>Cannot find recipe, "{{searchQuery}}"</p>
-        </div>
-    </mat-drawer>
-    <mat-drawer-content>
-        <div class="recipe-card" *ngIf="selectedRecipe">
-            <h1>{{ selectedRecipe?.title }}</h1>
-            <h2>
-                <i>{{ selectedRecipe?.subtitle }}</i>
-            </h2>
-            <p>
-                <i>{{ selectedRecipe?.description }}</i>
-            </p>
-            <div class="recipe-details">
-                <div class="recipe-duration">
-                    <h5>Duration</h5>
-                    <h3>{{ selectedRecipe?.cookTime }}</h3>
-                </div>
-                <div class="recipe-servings" *ngIf="selectedRecipe?.servings">
-                    <h5>Makes</h5>
-                    <h3>{{ selectedRecipe?.servings }} servings</h3>
-                </div>
-            </div>
-            <div
-                class="recipe-ingredients"
-                *ngIf="selectedRecipe?.ingredients.length > 0"
-            >
-                <h4>Ingredients</h4>
-                <ul>
-                    <li *ngFor="let ingredient of selectedRecipe?.ingredients">
-                        {{ ingredient }}
-                    </li>
-                </ul>
-            </div>
-            <div class="recipe-steps" *ngIf="selectedRecipe?.steps.length > 0">
-                <h4>Steps</h4>
-                <ol>
-                    <li *ngFor="let step of selectedRecipe?.steps">
-                        {{ step }}
-                    </li>
-                </ol>
-            </div>
-            <div class="recipe-notes" *ngIf="selectedRecipe?.notes.length > 0">
-                <h4>Other Notes</h4>
-                <ul>
-                    <li *ngFor="let note of selectedRecipe?.notes">
-                        {{ note }}
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </mat-drawer-content>
-</mat-drawer-container>
+    </mat-list-option>
+</mat-selection-list>
+<div class="no-recipes" *ngIf="getSearchResults().length === 0">
+    <p>Cannot find recipe, "{{ searchQuery }}"</p>
+</div>

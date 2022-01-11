@@ -1,0 +1,70 @@
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: "Merriweather";
+}
+
+.recipe-card {
+    padding: 24px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    margin: 8px;
+    margin-bottom: 16px;
+    color: rgba(0, 0, 0, 0.87);
+
+    .recipe-details {
+        display: flex;
+        flex-direction: row;
+        gap: 16px;
+        margin-bottom: 8px;
+
+        h3 {
+            margin: 0px;
+        }
+    }
+
+    h1 {
+        color: #e9c46a;
+        margin: 0px;
+    }
+    h2 {
+        color: rgba(0, 0, 0, 0.54);
+        margin: 0px;
+        margin-bottom: 16px;
+    }
+    h5 {
+        margin: 0px;
+    }
+    ol {
+        counter-reset: incredient-counter;
+        list-style: none;
+        padding-left: 40px;
+    }
+    ol li {
+        margin: 0 0 1rem 0;
+        counter-increment: incredient-counter;
+        position: relative;
+    }
+    ol li::before {
+        content: counter(incredient-counter) ". ";
+        color: #e9c46a;
+        font-size: 24px;
+        font-weight: bold;
+        position: absolute;
+        font-family: "Merriweather";
+        --size: 32px;
+        left: calc(-1 * var(--size) - 10px);
+        line-height: var(--size);
+        width: var(--size);
+        height: var(--size);
+        top: -10;
+        text-align: center;
+    }
+}
+hr {
+    border-color: rgba(0, 0, 0, 0.12);
+    margin: 48px -24px;
+}

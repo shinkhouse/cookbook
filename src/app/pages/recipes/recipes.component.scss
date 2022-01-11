@@ -1,95 +1,40 @@
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    font-family: "Merriweather";
-}
-mat-drawer {
-    width: 350px;
-
-    .search-bar {
-        border-top: 1px;
-        border-bottom: 1px;
-        border-style: solid;
-        border-left: 0px;
-        border-right: 0px;
-        border-color: rgba(0, 0, 0, 0.12);
-        background: #fafafa;
-        padding: 0px 16px;
-        height: 48px;
-        input {
-            height: 100%;
-            width: 100%;
-            border: 0px;
-            outline: none;
-            background: none;
-        }
+.search-bar {
+    border-top: 1px;
+    border-bottom: 1px;
+    border-style: solid;
+    border-left: 0px;
+    border-right: 0px;
+    border-color: rgba(0, 0, 0, 0.12);
+    background: #fafafa;
+    padding: 0px 16px;
+    height: 48px;
+    input {
+        height: 100%;
+        width: 100%;
+        border: 0px;
+        outline: none;
+        background: none;
     }
 }
 
 .drawer-header {
     padding: 24px 16px 0px 16px;
-    color: #e9c46a;
+    h1 {
+        color: #e9c46a;
+    }
 }
 
 .recipes {
-    display: flex;
-    flex-direction: row;
+    .favorite-icon {
+        color: #e9c46a;
+    }
+    .inactive-favorite-icon {
+        color: rgba(0, 0, 0, 0.54);
+    }
 }
 
-.recipe-card {
-    max-width: 400px;
-    flex: 1 1 25%;
-    padding: 24px;
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    margin: 8px;
-    margin-bottom: 16px;
-    color: rgba(0, 0, 0, 0.87);
-    h1 {
-        color: #e9c46a;
-        margin: 0px;
-    }
-    h2 {
-        color: rgba(0, 0, 0, 0.54);
-        margin: 0px;
-        margin-bottom: 16px;
-    }
-    h5 {
-        margin: 0px;
-    }
-    ol {
-        max-width: 350px;
-        counter-reset: incredient-counter;
-        list-style: none;
-        padding-left: 40px;
-    }
-    ol li {
-        margin: 0 0 1rem 0;
-        counter-increment: incredient-counter;
-        position: relative;
-    }
-    ol li::before {
-        content: counter(incredient-counter) ". ";
-        color: #e9c46a;
-        font-size: 24px;
-        font-weight: bold;
-        position: absolute;
-        font-family: "Merriweather";
-        --size: 32px;
-        left: calc(-1 * var(--size) - 10px);
-        line-height: var(--size);
-        width: var(--size);
-        height: var(--size);
-        top: -10;
-        text-align: center;
-    }
-}
-hr {
-    border-color: rgba(0, 0, 0, 0.12);
-    margin: 48px -24px;
+.mat-list-option:not(:last-of-type) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .recipe-details {
@@ -102,7 +47,6 @@ hr {
         margin: 0px;
     }
 }
-
 
 .no-recipes {
     padding: 16px;

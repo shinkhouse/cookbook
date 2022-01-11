@@ -1,9 +1,11 @@
 export interface Recipe {
     title: string;
     subtitle?: string;
+    slug: string;
     authors?: string[];
     description?: string;
     servings?: number;
+    calories?: number;
     cookTime: string; 
     tags?: string[]
     coverImage?: string;
@@ -12,4 +14,5 @@ export interface Recipe {
     notes: string[] | null;
     urls: string[] | null,
     equipment?: string[] | null;
+    favorite?: boolean;
 }

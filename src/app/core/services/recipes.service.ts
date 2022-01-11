@@ -13,9 +13,9 @@ export class RecipesService {
     return this.recipes;
   }
 
-  findRecipes() {
-    return this.recipes.filter((recipe) => {
-      return recipe;
+  findRecipes(recipeSlug: string) {
+    return this.recipes.find((recipe) => {
+      return recipe.slug === recipeSlug;
     });
   }
 }

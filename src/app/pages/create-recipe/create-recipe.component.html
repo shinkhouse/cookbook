@@ -1,6 +1,8 @@
-
 <mat-toolbar color="primary">
-    <mat-toolbar-row>
+    <mat-toolbar-row fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
+        <button mat-icon-button routerLink="/">
+            <mat-icon>navigate_before</mat-icon>
+        </button>
         Create New Recipe
         <div fxFlex></div>
         <button mat-button (click)="resetRecipeForm()">Reset Form</button>
@@ -24,6 +26,10 @@
         <input matInput type="number" formControlName="servings" />
     </mat-form-field>
     <mat-form-field appearance="fill">
+        <mat-label>Calories</mat-label>
+        <input matInput type="number" formControlName="calories" />
+    </mat-form-field>
+    <mat-form-field appearance="fill">
         <mat-label>Cover Image</mat-label>
         <input matInput type="text" formControlName="coverImage" />
     </mat-form-field>
@@ -40,8 +46,10 @@
                     <mat-icon>add</mat-icon>Add author
                 </button>
             </div>
-    
-            <div *ngFor="let authors of getRecipeAuthors.controls; let i = index">
+
+            <div
+                *ngFor="let authors of getRecipeAuthors.controls; let i = index"
+            >
                 <mat-form-field appearance="fill">
                     <mat-label>Author {{ i + 1 }}</mat-label>
                     <input
@@ -57,13 +65,20 @@
             <div class="form-array-header">
                 <h2>Ingredients</h2>
                 <div fxFlex></div>
-                <button mat-stroked-button (click)="addIngredient()" type="button">
+                <button
+                    mat-stroked-button
+                    (click)="addIngredient()"
+                    type="button"
+                >
                     <mat-icon>add</mat-icon>Add Ingredient
                 </button>
             </div>
-    
+
             <div
-                *ngFor="let authors of getRecipeIngredients.controls; let i = index"
+                *ngFor="
+                    let authors of getRecipeIngredients.controls;
+                    let i = index
+                "
             >
                 <mat-form-field appearance="fill">
                     <mat-label>Ingredient {{ i + 1 }}</mat-label>
@@ -84,7 +99,7 @@
                     <mat-icon>add</mat-icon>Add Step
                 </button>
             </div>
-    
+
             <div *ngFor="let authors of getRecipeSteps.controls; let i = index">
                 <mat-form-field appearance="fill">
                     <mat-label>Step {{ i + 1 }}</mat-label>
@@ -105,7 +120,7 @@
                     <mat-icon>add</mat-icon>Add Note
                 </button>
             </div>
-    
+
             <div *ngFor="let authors of getRecipeNotes.controls; let i = index">
                 <mat-form-field appearance="fill">
                     <mat-label>Note {{ i + 1 }}</mat-label>
@@ -126,7 +141,7 @@
                     <mat-icon>add</mat-icon>Add Tag
                 </button>
             </div>
-    
+
             <div *ngFor="let authors of getRecipeTags.controls; let i = index">
                 <mat-form-field appearance="fill">
                     <mat-label>Tag {{ i + 1 }}</mat-label>
@@ -140,10 +155,18 @@
             </div>
         </div>
     </div>
-    <h2>Recipe Preview</h2>
+    <div
+        class="recipe-preview-header"
+        fxLayout="row"
+        fxLayoutAlign="start center"
+        fxLayoutGap="16px"
+    >
+        <h2>Recipe Preview</h2>
+        <button mat-button (click)="copyRecipe()">
+            Copy Recipe to Clipboard
+        </button>
+    </div>
     <div class="form-preview">
-    {{ this.recipeForm.value | json }}
+        {{ this.recipeForm.value | json }}
     </div>
 </form>
-
-

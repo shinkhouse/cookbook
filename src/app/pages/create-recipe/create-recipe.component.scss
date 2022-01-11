@@ -26,7 +26,7 @@ mat-form-field {
     width: 100%;
 }
 
-button .mat-icon {
+button:not(.mat-icon-button) .mat-icon {
     width: 18px;
     height: 18px;
     font-size: 18px;

@@ -12,6 +12,7 @@ export class RecipesComponent implements OnInit {
     public recipes: Recipe[] = [];
     public selectedRecipe: Recipe | undefined;
     public searchQuery: string = '';
+    public onlyFavoritesShown: boolean = false;
     constructor(private recipeService: RecipesService) {
         this.resizeGrid(window.innerWidth);
     }
@@ -38,6 +39,10 @@ export class RecipesComponent implements OnInit {
         this.getRecipes();
     }
 
+    toggleFavorites() {
+        this.onlyFavoritesShown = !this.onlyFavoritesShown;
+    }
+
     getRecipes() {
         this.recipes = this.recipeService.getRecipes();
     }
@@ -45,6 +50,38 @@ export class RecipesComponent implements OnInit {
     getSearchResults(): Recipe[] {
         if (this.searchQuery.length > 0) {
             return this.recipes.filter((recipe) => {
+                if(this.onlyFavoritesShown) {
+                    return (
+                        recipe.favorite &&
+                        (recipe.title
+                            .toLowerCase()
+                            .trim()
+                            .includes(this.searchQuery.toLowerCase().trim()) ||
+                        recipe.tags?.find((tag) => {
+                            return tag
+                                .toLowerCase()
+                                .trim()
+                                .includes(
+                                    this.searchQuery.toLowerCase().trim()
+                                );
+                        }))
+                    );
+                } else {
+                    return (
+                        recipe.title
+                            .toLowerCase()
+                            .trim()
+                            .includes(this.searchQuery.toLowerCase().trim()) ||
+                        recipe.tags?.find((tag) => {
+                            return tag
+                                .toLowerCase()
+                                .trim()
+                                .includes(
+                                    this.searchQuery.toLowerCase().trim()
+                                );
+                        })
+                    );
+                }
                 return (
                     recipe.title
                         .toLowerCase()

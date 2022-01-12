@@ -1,6 +1,7 @@
 <div class="drawer-header" fxLayout="row" fxLayoutAlign="start center">
     <div class="recipe-icon">
-        <span>R</span>
+        <!-- <span>R</span> -->
+        <mat-icon>ramen_dining</mat-icon>
     </div>
     <h1>Sam's Recipes</h1>
     <div fxFlex></div>
@@ -16,14 +17,20 @@
         tried.
     </p>
 </div>
-<div
-    class="search-bar mat-elevation-z2"
-    fxLayout="row"
-    fxLayoutAlign="start center"
-    fxLayoutGap="16px"
->
-    <mat-icon (click)="textarea1.focus()">search</mat-icon>
-    <input #textarea1 type="text" placeholder="Search Recipes" [(ngModel)]="searchQuery" />
+<div class="search-actions" fxLayout="row" fxLayoutAlign="center center" fxLayoutGap="16px">
+    <div
+        class="search-bar mat-elevation-z2"
+        fxLayout="row"
+        fxLayoutAlign="start center"
+        fxLayoutGap="16px"
+    >
+        <mat-icon (click)="textarea1.focus()">search</mat-icon>
+        <input #textarea1 type="text" placeholder="Search Recipes" [(ngModel)]="searchQuery" />
+    </div>
+    <button class="favorites-filter-btn mat-elevation-z2" mat-icon-button (click)="toggleFavorites()" matTooltip="Show Favorites Only">
+        <mat-icon class="favorite-icon" *ngIf="onlyFavoritesShown">star</mat-icon>
+        <mat-icon *ngIf="!onlyFavoritesShown">star_outline</mat-icon>
+    </button>
 </div>
 <main class="recipes">
     <mat-grid-list
@@ -32,8 +39,9 @@
         [cols]="gridColumnSize"
         gutterSize="16px"
     >
+    <ng-container *ngFor="let recipe of getSearchResults()" >
         <mat-grid-tile
-            *ngFor="let recipe of getSearchResults()"
+            *ngIf="onlyFavoritesShown ? recipe.favorite : true"
             routerLink="/recipe/{{ recipe.slug }}"
         >
             <mat-card>
@@ -79,9 +87,12 @@
                 </mat-card-content>
             </mat-card>
         </mat-grid-tile>
+    </ng-container>
+    
     </mat-grid-list>
 
-    <div class="no-recipes" *ngIf="getSearchResults().length === 0">
+    <div class="no-recipes" fxLayout="column" fxLayoutAlign="center center" *ngIf="getSearchResults().length === 0">
+        <mat-icon>ramen_dining</mat-icon>
         <p>Cannot find recipe, "{{ searchQuery }}"</p>
     </div>
 </main>

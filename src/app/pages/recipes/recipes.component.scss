@@ -1,14 +1,19 @@
-@use '@angular/material' as mat;
-
-.search-bar {
-    border:  1px solid rgba(0, 0, 0, 0.12);
-    background: #fafafa;
-    padding: 0px 16px;
-    height: 48px;
-    max-width: 400px;
-    /* justify-content: center; */
+@use "@angular/material" as mat;
+.search-actions {
     margin: 0 auto;
     margin-bottom: 24px;
+
+    button.mat-icon-button {
+        width: 48px;
+        height: 48px;
+        background: white;
+    }
+}
+.search-bar {
+    background: white;
+    padding: 0px 16px;
+    height: 48px;
+    width: 400px;
     border-radius: 40px;
     mat-icon {
         cursor: pointer;
@@ -39,14 +44,9 @@
         border-radius: 24px;
         background: #d62828;
         margin-right: 16px;
-        span {
-            text-align: center;
+        .mat-icon {
+            margin: 12px;
             color: white;
-            vertical-align: middle;
-            line-height: 48px;
-            margin: 0px 16px;
-            font-family: "Merriweather", serif;
-            font-size: 24px;
         }
     }
     button {
@@ -58,7 +58,7 @@
     text-align: center;
     h1 {
         font-size: 3.5rem;
-        font-family: 'Merriweather', serif;
+        font-family: "Merriweather", serif;
         margin: 24px;
         line-height: 3.5rem;
     }
@@ -67,15 +67,12 @@
     }
 }
 
-.recipes {
-    .favorite-icon {
-        color: #e9c46a;
-    }
-    .inactive-favorite-icon {
-        color: rgba(0, 0, 0, 0.54);
-    }
+.favorite-icon {
+    color: #e9c46a;
 }
-
+.inactive-favorite-icon {
+    color: rgba(0, 0, 0, 0.54);
+}
 .mat-list-option:not(:last-of-type) {
     border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
@@ -94,6 +91,15 @@
 .no-recipes {
     padding: 16px;
     text-align: center;
+
+    mat-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 48px;
+        line-height: 48px;
+        margin-bottom: 16px;
+        color: rgba(0, 0, 0, 0.54);
+    }
 }
 main {
     padding: 16px;

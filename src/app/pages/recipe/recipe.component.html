@@ -1,5 +1,5 @@
 <div class="recipe-card" *ngIf="recipe">
-    <img [src]="recipe.coverImage" [alt]="recipe.title" />
+    <img *ngIf="recipe.coverImage" [src]="recipe.coverImage" [alt]="recipe.title" />
     <div class="recipe-information-container">
         <h1>{{ recipe?.title }}</h1>
         <h2>

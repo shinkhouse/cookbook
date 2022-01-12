@@ -4,7 +4,8 @@ export const Recipes: Recipe[] = [
     {
         title: "Grandma's Spaghetti",
         subtitle: 'In memory of Bernadine Canady',
-        description: 'This is a special recipe for Sam. His late grandmother loved to make this recipe for the family all the time. It was a very popular meal when family and friends would come over.',
+        description:
+            'This is a special recipe for Sam. His late grandmother loved to make this recipe for the family all the time. It was a very popular meal when family and friends would come over.',
         slug: 'grandmas-spaghetti',
         authors: ['Bernadine Canady'],
         servings: 4,
@@ -34,7 +35,8 @@ export const Recipes: Recipe[] = [
     {
         title: "Grandma's Chili",
         subtitle: 'In memory of Bernadine Canady',
-        description: 'Another special recipe from grandma and grandpa, they would make this recipe on cold, windy days.',
+        description:
+            'Another special recipe from grandma and grandpa, they would make this recipe on cold, windy days.',
         slug: 'grandmas-chili',
         authors: ['Bernadine Canady'],
         servings: 4,
@@ -100,7 +102,8 @@ export const Recipes: Recipe[] = [
     {
         title: 'Marry Me Chicken',
         subtitle: '',
-        description: 'Fun fact: I actually proposed to my then girlfriend now wife with this recipe. It\'s packed full of favor and makes for a great, romantic meal.',
+        description:
+            "Fun fact: I actually proposed to my then girlfriend now wife with this recipe. It's packed full of favor and makes for a great, romantic meal.",
         slug: 'marry-me-chicken',
         authors: [''],
         cookTime: '25 minutes',
@@ -306,6 +309,34 @@ export const Recipes: Recipe[] = [
         ],
         notes: [],
         urls: [''],
+    },
+    {
+        title: 'Vanilla Crème Brûlée',
+        subtitle: '',
+        slug: 'vanilla-crème-brûlée',
+        authors: ['New York Times'],
+        description:
+            'Five simple ingredients – cream, vanilla, salt, eggs and sugar – make for an exquisitely rich and elegant dessert. ',
+        servings: 4,
+        cookTime: '1 hour',
+        tags: ['dessert', 'vanilla'],
+        coverImage:
+            'https://static01.nyt.com/images/2017/12/13/dining/15COOKING-CREME-BRULEE1/15COOKING-CREME-BRULEE1-articleLarge.jpg',
+        ingredients: [
+            '2 cups heavy or light cream, or half-and-half',
+            '1 vanilla bean, split lengthwise, or 1 teaspoon vanilla extract',
+            '⅛ teaspoon salt',
+            '⅛ teaspoon salt',
+            '½ cup sugar, more for topping',
+        ],
+        steps: [
+            'Heat oven to 325 degrees. In a saucepan, combine cream, vanilla bean and salt and cook over low heat just until hot. Let sit for a few minutes, then discard vanilla bean. (If using vanilla extract, add it now.)',
+            'In a bowl, beat yolks and sugar together until light. Stir about a quarter of the cream into this mixture, then pour sugar-egg mixture into cream and stir. Pour into four 6-ounce ramekins and place ramekins in a baking dish; fill dish with boiling water halfway up the sides of the dishes. Bake for 30 to 40 minutes, or until centers are barely set. Cool completely. Refrigerate for several hours and up to a couple of days.',
+            'When ready to serve, top each custard with about a teaspoon of sugar in a thin layer. Place ramekins in a broiler 2 to 3 inches from heat source. Turn on broiler. Cook until sugar melts and browns or even blackens a bit, about 5 minutes. Serve within two hours.',
+        ],
+        notes: [''],
+        urls: [''],
+        favorite: true
     },
 ];
 

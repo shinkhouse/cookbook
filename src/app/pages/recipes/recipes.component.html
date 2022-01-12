@@ -38,6 +38,7 @@
         >
             <mat-card>
                 <img
+                    *ngIf="recipe.coverImage"
                     mat-card-image
                     [src]="recipe.coverImage"
                     [alt]="recipe.title"

@@ -23,9 +23,9 @@ export class RecipesComponent implements OnInit {
     }
 
     resizeGrid(pageWidth: number) {
-        if (pageWidth > 1400) {
+        if (pageWidth > 1600) {
             this.gridColumnSize = 4;
-        } else if (pageWidth > 1050 && pageWidth <= 1400) {
+        } else if (pageWidth > 1050 && pageWidth <= 1600) {
             this.gridColumnSize = 3;
         } else if (pageWidth > 650 && pageWidth <= 1050) {
             this.gridColumnSize = 2;

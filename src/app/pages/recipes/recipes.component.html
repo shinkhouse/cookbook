@@ -22,8 +22,8 @@
     fxLayoutAlign="start center"
     fxLayoutGap="16px"
 >
-    <mat-icon>search</mat-icon>
-    <input type="text" placeholder="Search Recipes" [(ngModel)]="searchQuery" />
+    <mat-icon (click)="textarea1.focus()">search</mat-icon>
+    <input #textarea1 type="text" placeholder="Search Recipes" [(ngModel)]="searchQuery" />
 </div>
 <main class="recipes">
     <mat-grid-list

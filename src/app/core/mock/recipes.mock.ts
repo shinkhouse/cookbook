@@ -10,7 +10,7 @@ export const Recipes: Recipe[] = [
         authors: ['Bernadine Canady'],
         servings: 4,
         cookTime: '20 to 30 minutes',
-        tags: ['pasta', 'italian'],
+        tags: ['pasta', 'italian', 'dinner', 'lunch', 'beef'],
         coverImage:
             'https://www.artandthekitchen.com/wp-content/uploads/2012/03/Spaghetti-and-Meat-Sauce-.jpg',
         ingredients: [
@@ -41,7 +41,7 @@ export const Recipes: Recipe[] = [
         authors: ['Bernadine Canady'],
         servings: 4,
         cookTime: '2 to 4 hours',
-        tags: [''],
+        tags: ['dinner', 'lunch', 'soup'],
         coverImage:
             'https://hips.hearstapps.com/del.h-cdn.co/assets/18/08/1519157479-chili-horizontal.jpg',
         ingredients: [
@@ -67,7 +67,7 @@ export const Recipes: Recipe[] = [
             'Spicy Shrimp Pasta in Tomato Cream Sauce. Seared shrimp and rigatoni tossed with a super-quick spicy tomato cream sauce. Jazzed up with garlic, shallot, sun-dried tomatoes and white wine. Served with feta. Seriously, what’s not to like? It’s finger-licking good.',
         authors: [''],
         cookTime: '30 minutes',
-        tags: ['pasta', 'italian', 'shrimp', 'seafood'],
+        tags: ['pasta', 'italian', 'shrimp', 'seafood', 'dinner', 'lunch'],
         coverImage:
             'https://www.servingdumplings.com//wp-content/uploads/2021/05/creamy-shrimp-pasta-5v2-48ca58b9.jpg',
         ingredients: [
@@ -107,7 +107,7 @@ export const Recipes: Recipe[] = [
         slug: 'marry-me-chicken',
         authors: [''],
         cookTime: '25 minutes',
-        tags: [''],
+        tags: ['dinner', 'lunch', 'romantic'],
         coverImage:
             'https://littlesunnykitchen.com/wp-content/uploads/Marry-Me-Chicken-22-500x375.jpg',
         ingredients: [
@@ -175,7 +175,7 @@ export const Recipes: Recipe[] = [
         servings: 6,
         calories: 286,
         cookTime: '55 minutes',
-        tags: [''],
+        tags: ['dinner', 'lunch'],
         coverImage:
             'https://images.themodernproper.com/billowy-turkey/production/posts/2019/Mango-Chutney-Sheet-Pan-Chicken-with-Cauliflower-6.jpg?w=1800&auto=compress%2Cformat&fit=crop&dm=1599769261&s=4abaf776aa21cf1972ab2899517f396a',
         ingredients: [
@@ -206,7 +206,7 @@ export const Recipes: Recipe[] = [
         servings: 4,
         calories: 383,
         cookTime: '25 minutes',
-        tags: [''],
+        tags: ['dinner', 'lunch'],
         coverImage:
             'https://cookingwithcoit.com/wp-content/uploads/2019/05/20190430_CWC-Vegan-Garlic-Noodles_0594.jpg',
         ingredients: [
@@ -244,7 +244,7 @@ export const Recipes: Recipe[] = [
         servings: 4,
         calories: 204,
         cookTime: '30 minutes',
-        tags: ['chicken', 'italian', 'broccoli'],
+        tags: ['chicken', 'italian', 'broccoli', 'dinner', 'lunch'],
         coverImage:
             'https://www.jocooks.com/wp-content/uploads/2019/04/chicken-parmesan-1-32.jpg',
         ingredients: [
@@ -284,7 +284,14 @@ export const Recipes: Recipe[] = [
         servings: 6,
         calories: 0,
         cookTime: '1 hr 35 min',
-        tags: ['ground beef', 'tomato', 'red pepper flakes', 'rice'],
+        tags: [
+            'ground beef',
+            'tomato',
+            'red pepper flakes',
+            'rice',
+            'dinner',
+            'lunch',
+        ],
         coverImage:
             'https://hips.hearstapps.com/hmg-prod/images/delish-classic-stuffed-peppers-horizontal-1538065876.jpg',
         ingredients: [
@@ -336,6 +343,156 @@ export const Recipes: Recipe[] = [
         ],
         notes: [''],
         urls: [''],
+        favorite: true,
+    },
+    {
+        title: 'Homemade Mozzarella Sticks',
+        subtitle: '',
+        slug: 'homemade-mozzarella-sticks',
+        authors: ['The Modern Proper'],
+        description:
+            'Crisp and golden and perfectly melty on the inside, these are so irresistible! ',
+        servings: 6,
+        calories: 294,
+        cookTime: '1hr 10min',
+        tags: ['appetizer'],
+        coverImage:
+            'https://images.themodernproper.com/billowy-turkey/production/posts/2021/Homemade-Mozzarella-Sticks-11.jpeg?w=1280&auto=compress%2Cformat&fit=crop&dm=1638833675&s=5bf80383621abb502943fe6a165d98c3',
+        ingredients: [
+            '3/4 cup All purpose flour',
+            '2 tsp Sea salt',
+            '1/2 tsp Black pepper',
+            '1 tsp Garlic powder',
+            '2 Eggs',
+            '2 cups Panko',
+            '2 tsp Italian seasoning',
+            '12 oz Low moisture mozzarella cheese cut into pieces 3-inch x ¾ inch, or 12 oz string cheese cut in half',
+            '1 jar marinara sauce',
+        ],
+        steps: [
+            'Line a rimmed baking sheet with parchment paper, set aside.',
+            'In a small shallow bowl mix the flour with salt, pepper and garlic powder.',
+            'In a second bowl add eggs along with 1 tablespoon of water and beat until smooth.',
+            'In a third bowl mix together the panko and the Italian seasoning.',
+            'Working with one piece of cheese at a time, dip the cheese into the egg mixture, followed by the flour mixture, back into the egg mixture and finally into the panko, gently pressing the panko to ensure it sticks. Set the cheese sticks on the prepared baking sheet and repeat with remaining cheese. Place the baking sheet in the freezer and freeze the cheese sticks for 45 minutes.',
+            'In a large pot, set over medium high heat, bring the oil to 350°F, using a deep fat thermometer. Remove the cheese sticks from the freezer. Working in small batches gently drop them into the hot oil. Cook until golden brown on all sides, about 2 minutes. Remove from oil and place on a metal cooling rack set over a baking sheet. Repeat with remaining cheese sticks.',
+            'Serve mozzarella sticks immediately with marinara sauce.',
+        ],
+        notes: [''],
+        urls: [''],
+        favorite: true,
+    },
+    {
+        title: 'Sausage Breakfast Casserole',
+        subtitle: '',
+        slug: 'sausage-breakfast-casserole',
+        authors: ['The Modern Proper'],
+        description:
+            'The classic breakfast trio of eggs, sausage and hash browns, all in one baking dish! Plenty of melty cheese crowns this rich, rib-sticking breakfast casserole the king of all brunch recipes!',
+        servings: 12,
+        calories: 390,
+        cookTime: '70 minutes',
+        tags: ['breakfast', 'eggs', 'sausage'],
+        coverImage:
+            'https://images.themodernproper.com/billowy-turkey/production/posts/2020/Sausage-Breakfast-Casserole-7.jpg?w=667&auto=compress%2Cformat&fit=crop&dm=1599768783&s=0829321edda2511d01a1a53b21fe25b2',
+        ingredients: [
+            '1 lb Breakfast sausage, raw ground (buy the maple kind if you want a hint of sweetness)',
+            '12 Eggs',
+            '1 tsp Salt',
+            '½ tsp Pepper',
+            '½ tsp Cayenne',
+            '1 cup Whipping cream',
+            '16 oz Cheddar cheese, shredded, divided',
+            '1 bunch Green onions, optional (about ½ cup)',
+            '1 lb Hash browns, thawed',
+            '2 tbsp Butter, melted',
+        ],
+        steps: [
+            'Heat oven to 350°F.',
+            'Heat a large skillet over medium heat. Brown the sausage (If you buy sausage links, make sure to remove the casting first.)',
+            'In a large bowl, whisk the eggs with the salt, pepper, cayenne and whipping cream until fully combined and all of the yolks are broken and incorporated.',
+            'Add the browned crumbled sausage, ¾ of the cheese, green onions and hash browns to the bowl with the egg mixture. Stir until fully combined.',
+            'Spread the butter into a 9x13 baking dish. Pour the egg and sausage mixture into the baking dish and top with remaining cheese.',
+            "Bake for 40 minutes before covering with foil. Bake for another 15 minutes with foil on so the top doesn't get too brown.",
+        ],
+        notes: [''],
+        urls: [''],
+    },
+    {
+        title: 'Red Chicken Enchiladas',
+        subtitle: '',
+        slug: 'red-chicken-enchiladas',
+        authors: ['The Modern Proper'],
+        description:
+            'A creamy, cheesy chicken enchilada filling plus store-bought red enchilada sauce make this delicious enchilada recipe a huge hit for both the cook and the lucky enchilada eaters!',
+        servings: 6,
+        calories: 674,
+        cookTime: '45 minutes',
+        tags: ['mexican', 'cheese', 'chicken', 'lunch', 'dinner', 'tortilla'],
+        coverImage:
+            'https://images.themodernproper.com/billowy-turkey/production/posts/2021/Red-Enchiladas-11.jpeg?w=1280&auto=compress%2Cformat&fit=crop&dm=1639588242&s=d1f2323f4355ce166725f63ea47b1bd9',
+        ingredients: [
+            '4 cups cooked, shredded chicken',
+            '3 cups Shredded mozzarella, (12 oz)',
+            '3 cups Shredded monterey jack cheese, (12 oz)',
+            '1 cup Sour cream',
+            '2 Tbsp Taco Seasoning',
+            '10 10” corn tortillas',
+            '1 (28 oz) can Mild red enchilada sauce',
+        ],
+        steps: [
+            'Preheat the oven to 375°F.',
+            'In a large bowl combine shredded chicken, 2 cups of the mozzarella and 2 cups of the Monterey jack cheese, sour cream and taco seasoning. Mix until well incorporated.',
+            'Wrap tortillas in a damp paper towel or tea towel and microwave for 1 minute.',
+            'Wrap tortillas in a damp paper towel or tea towel and microwave for 1 minute.',
+            'Pour remaining enchilada sauce over the prepared enchiladas followed by the remaining cheese.',
+            'Bake for 25 minutes, until the cheese is bubbling',
+        ],
+        notes: [''],
+        urls: [''],
+    },
+    {
+        title: 'Chicken Taco Baked Sweet Potatoes',
+        subtitle: '',
+        slug: 'chicken-taco-baked-sweet-potatoes',
+        authors: [''],
+        description:
+            'A creative alternative to your regular taco, these chicken taco baked sweet potatoes will be a new favorite on Taco Tuesday or for any other night of the week.',
+        servings: 4,
+        calories: 0,
+        cookTime: '8 hours',
+        tags: ['tacos', 'mexican', 'lunch', 'dinner'],
+        coverImage:
+            'https://thecheerfulkitchen.com/wp-content/uploads/2016/10/slow-cooker-chicken-taco-baked-sweet-potatoes-cheerful-kitchen.jpg',
+        ingredients: [
+            '3 boneless, skinless chicken breast halves',
+            '8 oz can tomato sauce',
+            '1/2 cup salsa',
+            '2 teaspoons taco seasoning',
+            'Salt and pepper to taste as desired',
+            '4 sweet potatoes',
+            '1/2 to 1 teaspoon chili powder',
+            '1/2 to 1 teaspoon MCT oil (optional)',
+            'Fresh, snipped chives',
+            'Fresh cilantro',
+            '0% Greek yogurt or sour cream',
+            'Salsa',
+            'Hot sauce',
+        ],
+        steps: [
+            'For sweet potatoes, Scrub outside and prick with a fork in several places',
+            'For sweet potatoes, Bake in a preheated 350 oven for 45 minutes, or until soft inside OR',
+            'Combine chicken taco filling ingredients into a sauce pan and cook over medium high heat until chicken is cooked through and shreds easily. Add liquid if necessary and adjust seasonings if needed',
+            'Use a hand mixer to quickly shred the chicken (use a towel to cover the pan and prevent splashing hot mixture on yourself) or use two forks to shred the chicken.',
+            "OR add the chicken taco filling ingredients to your slow cooker and cook for 4 to 6 hours on high. You'll want to plan ahead for this, of course!",
+            'After chicken and potatoes are cooked, Cut a slit in the cooked sweet potato lengthwise. ',
+            'Using a fork, mash and fluff the sweet potato.',
+            'Add the chili powder and MCT oil, if using, and mix it into the mashed sweet potato until well combined',
+            'Add 1/4 to 1/2 cup Chicken Taco Filling, as desired',
+            'Top with desired toppings and enjoy!',
+        ],
+        notes: ['MCT oil is purely optional'],
+        urls: [],
         favorite: true
     },
 ];

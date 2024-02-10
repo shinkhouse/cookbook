@@ -1,6 +1,6 @@
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Component, OnInit } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { UntypedFormArray, UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 
 @Component({
     selector: 'app-create-recipe',
@@ -8,7 +8,7 @@ import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
     styleUrls: ['./create-recipe.component.scss'],
 })
 export class CreateRecipeComponent implements OnInit {
-    public recipeForm: FormGroup = this.fb.group({
+    public recipeForm: UntypedFormGroup = this.fb.group({
         title: ['', Validators.required],
         subtitle: [''],
         slug: [''],
@@ -24,7 +24,7 @@ export class CreateRecipeComponent implements OnInit {
         notes: this.fb.array([this.fb.control('')]),
         urls: this.fb.array([this.fb.control('')]),
     });
-    constructor(private fb: FormBuilder, private clipboard: Clipboard) {
+    constructor(private fb: UntypedFormBuilder, private clipboard: Clipboard) {
         this.recipeForm.get('title')?.valueChanges.subscribe((res) => {
             console.log(res);
             this.recipeForm.get('slug')?.setValue(this.generateSlug(res));
@@ -38,7 +38,7 @@ export class CreateRecipeComponent implements OnInit {
     ngOnInit(): void {}
 
     get getRecipeAuthors() {
-        return this.recipeForm.get('authors') as FormArray;
+        return this.recipeForm.get('authors') as UntypedFormArray;
     }
 
     addAuthor() {
@@ -46,7 +46,7 @@ export class CreateRecipeComponent implements OnInit {
     }
 
     get getRecipeTags() {
-        return this.recipeForm.get('tags') as FormArray;
+        return this.recipeForm.get('tags') as UntypedFormArray;
     }
 
     addTag() {
@@ -54,7 +54,7 @@ export class CreateRecipeComponent implements OnInit {
     }
 
     get getRecipeIngredients() {
-        return this.recipeForm.get('ingredients') as FormArray;
+        return this.recipeForm.get('ingredients') as UntypedFormArray;
     }
 
     addIngredient() {
@@ -62,7 +62,7 @@ export class CreateRecipeComponent implements OnInit {
     }
 
     get getRecipeSteps() {
-        return this.recipeForm.get('steps') as FormArray;
+        return this.recipeForm.get('steps') as UntypedFormArray;
     }
 
     addStep() {
@@ -70,7 +70,7 @@ export class CreateRecipeComponent implements OnInit {
     }
 
     get getRecipeNotes() {
-        return this.recipeForm.get('notes') as FormArray;
+        return this.recipeForm.get('notes') as UntypedFormArray;
     }
 
     addNote() {

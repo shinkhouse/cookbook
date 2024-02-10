@@ -4,21 +4,18 @@ h3,
 h4,
 h5,
 h6 {
-    font-family: "Merriweather";
+    font-family: "Yeseva One";
 }
 
-.recipe-card {
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+.recipe-card, .container {
     margin: 8px;
     margin-bottom: 8px;
     color: rgba(0, 0, 0, 0.87);
 
     img {
-        border-radius: 8px 8px 0px 0px;
         object-fit: cover;
         width: 100%;
-        height: 300px;
+        max-height: 600px;
     }
 
     .recipe-information-container {
@@ -78,3 +75,95 @@ hr {
     border-color: rgba(0, 0, 0, 0.12);
     margin: 48px -24px;
 }
+
+.recipe-card-v2 {
+    height: 100%;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 0.75fr 1fr;
+    gap: 0px 0px;
+    grid-auto-flow: row;
+    grid-template-areas:
+        "description image"
+        "ingredients steps";
+    .header {
+        grid-area: "header";
+    }
+
+    .description {
+        grid-area: "description";
+    }
+
+    .image {
+        grid-area: "image";
+    }
+
+    .ingredients {
+        grid-area: "ingredients";
+    }
+
+    .steps {
+        grid-area: "steps";
+    }
+}
+
+.recipe-card-v2 * {
+    border: 1px solid red;
+    position: relative;
+}
+
+.recipe-card-v2 *:after {
+    content: attr(class);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {  display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 0.75fr 1fr;
+    gap: 0px 0px;
+    grid-auto-flow: row;
+    grid-template-areas:
+      "Description Image"
+      "Ingredients Steps";
+  }
+  
+  .Description { grid-area: Description; }
+  
+  .Image { grid-area: Image; }
+  
+  .Ingredients { grid-area: Ingredients; }
+  
+  .Steps { grid-area: Steps; }
+  
+  
+  html, body , .container {
+    height: 100%;
+    margin: 0;
+  }
+  
+  /* For presentation only, no need to copy the code below */
+  
+  .container * {
+    border: 1px solid red;
+    position: relative;
+  }
+  
+  .container *:after {
+    content:attr(class);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  

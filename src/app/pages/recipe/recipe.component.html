@@ -1,4 +1,28 @@
-<div class="recipe-card" *ngIf="recipe">
+<div class="container" *ngIf="recipe">
+    <div class="Description">
+        <h1>{{ recipe?.title }}</h1>
+        <h2>
+            <i>{{ recipe?.subtitle }}</i>
+        </h2>
+        <p>
+            <i>{{ recipe?.description }}</i>
+        </p>
+    </div>
+    <div class="Images">
+        <img
+            *ngIf="recipe.coverImage"
+            [src]="recipe.coverImage"
+            [alt]="recipe.title"
+        />
+    </div>
+    <div class="Ingredients">
+        <h2>Ingredients</h2>
+    </div>
+    <div class="Steps">
+        <h2>Steps</h2>
+    </div>
+</div>
+<!-- <div class="recipe-card" *ngIf="recipe">
     <img *ngIf="recipe.coverImage" [src]="recipe.coverImage" [alt]="recipe.title" />
     <div class="recipe-information-container">
         <h1>{{ recipe?.title }}</h1>
@@ -43,4 +67,4 @@
             </ul>
         </div>
     </div>
-</div>
+</div> -->

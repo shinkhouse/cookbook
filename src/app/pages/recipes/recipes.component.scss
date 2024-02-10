@@ -3,7 +3,7 @@
     margin: 0 auto;
     margin-bottom: 24px;
 
-    button.mat-icon-button {
+    button.mat-mdc-icon-button {
         width: 48px;
         height: 48px;
         background: white;
@@ -73,6 +73,7 @@
 .inactive-favorite-icon {
     color: rgba(0, 0, 0, 0.54);
 }
+/* TODO(mdc-migration): The following rule targets internal classes of list that may no longer apply for the MDC version. */
 .mat-list-option:not(:last-of-type) {
     border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
@@ -104,6 +105,8 @@
 main {
     padding: 16px;
     mat-grid-tile {
+        /* TODO(mdc-migration): The following rule targets internal classes of card that may no longer apply for the MDC version. */
+        /* TODO(mdc-migration): The following rule targets internal classes of card that may no longer apply for the MDC version. */
         mat-card {
             width: calc(100% - 48px);
             height: calc(100% - 48px);
@@ -113,7 +116,7 @@ main {
                 object-fit: cover;
             }
 
-            button.mat-icon-button {
+            button.mat-mdc-icon-button {
                 position: absolute;
                 top: 180px;
                 right: 16px;

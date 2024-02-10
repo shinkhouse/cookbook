@@ -44,7 +44,7 @@
             *ngIf="onlyFavoritesShown ? recipe.favorite : true"
             routerLink="/recipe/{{ recipe.slug }}"
         >
-            <mat-card>
+            <mat-card appearance="outlined">
                 <img
                     *ngIf="recipe.coverImage"
                     mat-card-image

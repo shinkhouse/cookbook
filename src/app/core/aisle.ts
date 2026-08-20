@@ -33,11 +33,20 @@ const KEYWORDS: ReadonlyArray<readonly [Aisle, readonly string[]]> = [
   [
     'produce',
     [
-      'basil', 'parsley', 'cilantro', 'thyme', 'rosemary', 'oregano', 'sage',
+      'basil', 'parsley', 'cilantro', 'chives', 'sage',
+      // Bare 'thyme' and 'oregano' sit in pantry: at the quantities recipes use
+      // them they are the dried jar. The 'fresh ' forms below win when longer.
+      'fresh thyme', 'fresh oregano', 'fresh rosemary', 'fresh basil',
       'garlic', 'onion', 'onions', 'shallot', 'scallion', 'scallions', 'leek',
+      'green onion', 'green onions', 'red onion',
       'tomato', 'tomatoes', 'potato', 'potatoes', 'carrot', 'carrots', 'celery',
-      'pepper', 'peppers', 'bell pepper', 'jalapeno', 'jalapeño', 'chili pepper',
-      'broccoli', 'spinach', 'kale', 'lettuce', 'cabbage', 'zucchini', 'squash',
+      'sweet potato', 'sweet potatoes',
+      // Bare 'pepper' is in pantry — at a teaspoon it is ground black pepper,
+      // not a vegetable. The bell/chili forms below are longer and win.
+      'peppers', 'bell pepper', 'bell peppers', 'jalapeno', 'jalapeño',
+      'chili pepper', 'green pepper', 'green peppers',
+      'broccoli', 'cauliflower', 'spinach', 'kale', 'lettuce', 'cabbage',
+      'zucchini', 'squash',
       'mushroom', 'mushrooms', 'cucumber', 'lemon', 'lime', 'orange', 'apple',
       'avocado', 'ginger', 'corn', 'peas', 'green beans', 'asparagus',
     ],
@@ -65,6 +74,9 @@ const KEYWORDS: ReadonlyArray<readonly [Aisle, readonly string[]]> = [
       'milk', 'cream', 'heavy cream', 'half and half', 'butter', 'cheese',
       'parmesan', 'mozzarella', 'cheddar', 'ricotta', 'feta', 'yogurt',
       'sour cream', 'cream cheese', 'egg', 'eggs', 'buttermilk', 'mascarpone',
+      'whipping cream', 'greek yogurt', 'string cheese',
+      // Longer than the bare 'pepper' in pantry, so the cheese wins.
+      'pepper jack', 'pepper jack cheese', 'monterey jack', 'monterey jack cheese',
     ],
   ],
   [
@@ -83,6 +95,23 @@ const KEYWORDS: ReadonlyArray<readonly [Aisle, readonly string[]]> = [
       'honey', 'maple syrup', 'mustard', 'ketchup', 'mayonnaise', 'sriracha',
       'paprika', 'cumin', 'cinnamon', 'nutmeg', 'bay leaf', 'red pepper flakes',
       'sesame seeds', 'breadcrumbs', 'panko', 'wine', 'stockpot',
+      // Spices and seasonings whose bare name would otherwise read as produce.
+      'pepper', 'black pepper', 'ground black pepper', 'white pepper',
+      'thyme', 'oregano', 'rosemary', 'cayenne', 'chili flakes',
+      'kosher salt', 'sea salt', 'salt and pepper', 'taco seasoning',
+      'italian seasoning',
+      // Jarred, canned and dried goods that share a name with fresh produce.
+      'sundried tomatoes', 'sun-dried tomatoes', 'diced tomatoes',
+      'marmalade', 'orange marmalade', 'mango chutney', 'chutney',
+      'apricot spreadable fruit', 'corn tortillas', 'tortillas', 'tortilla',
+      'hash browns',
+      // Sauces and other bottled goods.
+      'salsa', 'hot sauce', 'chili sauce', 'hoisin sauce', 'enchilada sauce',
+      'marinara sauce', 'buffalo wing sauce', 'rice vinegar',
+      // Staples.
+      'oil', 'mct oil', 'all purpose flour', 'all-purpose flour', 'brown sugar',
+      'vanilla bean', 'vanilla extract', 'quinoa', 'couscous', 'rigatoni',
+      'ramen noodles',
     ],
   ],
 ];

@@ -94,10 +94,14 @@ export function parseIngredient(raw: string): ParsedIngredient {
   const qty = takeQuantity(rest);
   if (qty) rest = qty.rest;
 
+  // "1 (9 oz) jar Mango chutney" — the parenthetical restates the size and sits
+  // between the count and the real unit, so step over it to reach the unit.
+  if (qty) rest = rest.replace(/^\s*\([^)]*\)/, '');
+
   const unit = takeUnit(rest);
   if (unit) rest = unit.rest;
 
-  const name = rest.trim() || line;
+  const name = tidyName(rest) || tidyName(line) || line;
 
   return {
     qty: qty ? qty.value : null,
@@ -149,7 +153,9 @@ function takeQuantity(text: string): Taken<number> | null {
     }
   }
 
-  const integer = /^(\d+(?:\.\d+)?)\b/.exec(text);
+  // (?!\s*%) keeps "0% Greek yogurt" from reading as a quantity of zero —
+  // the number is part of the product name, not an amount.
+  const integer = /^(\d+(?:\.\d+)?)\b(?!\s*%)/.exec(text);
   if (integer) {
     return openRange(Number(integer[1]), text.slice(integer[0].length));
   }
@@ -158,11 +164,15 @@ function takeQuantity(text: string): Taken<number> | null {
 }
 
 /**
- * Catches a range whose lower bound was already consumed as a fraction, as in
- * "1/2 -1 tsp chili sauce". Takes the upper bound like every other range.
+ * Catches a range whose lower bound was already consumed, as in "1/2 -1 tsp
+ * chili sauce" or "1/2 to 1 teaspoon chili powder". Takes the upper bound like
+ * every other range.
+ *
+ * The `to\b` alternative cannot swallow the start of a name: in "1 tomato" the
+ * boundary after "to" falls inside a word, so it does not match.
  */
 function openRange(value: number, rest: string): Taken<number> {
-  const upper = /^\s*[-–—]\s*(\d+(?:\.\d+)?)(?:\s*\/\s*(\d+))?(?!\d)/.exec(rest);
+  const upper = /^\s*(?:[-–—]|to\b)\s*(\d+(?:\.\d+)?)(?:\s*\/\s*(\d+))?(?!\d)/.exec(rest);
   if (upper) {
     const bound = upper[2] ? Number(upper[1]) / Number(upper[2]) : Number(upper[1]);
     if (bound > value) return { value: bound, rest: rest.slice(upper[0].length) };
@@ -201,6 +211,24 @@ function takeUnit(text: string): Taken<string> | null {
 
 function stripPunctuation(word: string): string {
   return word.replace(/[.,;:]+$/, '');
+}
+
+/**
+ * Trailing serving instructions belong to the recipe, not to the shopping list
+ * row: "Salt to taste" is bought as "Salt", "crumbled feta, for serving" as
+ * "crumbled feta". Returns '' if stripping would leave nothing, so the caller
+ * can fall back to the original line.
+ */
+function tidyName(text: string): string {
+  const trimmed = text.trim();
+  // Longest phrase first: stripping "to taste" out of "more to taste" would
+  // leave the "more" behind with nothing to qualify.
+  const stripped = trimmed
+    .replace(/[,;]?\s*\b(more|extra)\s+to\s+taste\b\.?\s*$/i, '')
+    .replace(/[,;]?\s*\b(to taste|as needed|as desired|for serving|optional)\b\.?\s*$/i, '')
+    .replace(/[,\s]+$/, '')
+    .trim();
+  return stripped || '';
 }
 
 function needsReview(line: string): boolean {

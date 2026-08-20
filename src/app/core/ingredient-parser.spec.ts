@@ -85,9 +85,20 @@ describe('parseIngredient — names', () => {
   });
 
   it('keeps the whole line as the name when there is no quantity', () => {
-    expect(parseIngredient('crumbled feta, for serving').name).toBe(
-      'crumbled feta, for serving',
-    );
+    expect(parseIngredient('can of tomato juice').name).toBe('tomato juice');
+    expect(parseIngredient('Fresh cilantro').name).toBe('Fresh cilantro');
+  });
+
+  it('drops a trailing serving instruction, which is not part of the item', () => {
+    expect(parseIngredient('crumbled feta, for serving').name).toBe('crumbled feta');
+    expect(parseIngredient('Salt to taste').name).toBe('Salt');
+    expect(parseIngredient('Cilantro, chopped, optional').name).toBe('Cilantro, chopped');
+    expect(parseIngredient('1 tsp chili flakes, more to taste').name).toBe('chili flakes');
+  });
+
+  it('never strips the whole name away', () => {
+    // 'to taste' is the entire line; there is nothing else to keep.
+    expect(parseIngredient('to taste').name).toBe('to taste');
   });
 
   it('trims surrounding whitespace', () => {

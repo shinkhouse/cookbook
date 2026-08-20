@@ -38,12 +38,12 @@ describe('ingredient corpus — the real recipe data', () => {
   });
 
   it('never leaves a quantity stranded at the front of the name', () => {
-    // A name starting with a digit means the quantity was not consumed. The one
-    // real exception is a dimension: '10 10" corn tortillas' is ten 10-inch
-    // tortillas, so the second number is part of the name.
+    // A name starting with a digit means the quantity was not consumed. Two real
+    // exceptions: a dimension ('10 10" corn tortillas' is ten 10-inch
+    // tortillas) and a percentage ('0% Greek yogurt' is a product name).
     const stranded = ALL_LINES.filter(({ line }) => {
       const { name } = parseIngredient(line);
-      return /^\d/.test(name) && !/^\d+\s*["”′]/.test(name);
+      return /^\d/.test(name) && !/^\d+\s*(["”′]|%)/.test(name);
     }).map(({ line }) => line);
     expect(stranded).toEqual([]);
   });
@@ -91,7 +91,11 @@ describe('ingredient corpus — the real recipe data', () => {
 
   it('resolves a quantity for every line that opens with a digit', () => {
     const missed = ALL_LINES.filter(
-      ({ line }) => /^\s*[\d¼-¾⅐-⅞]/.test(line) && parseIngredient(line).qty === null,
+      ({ line }) =>
+        /^\s*[\d¼-¾⅐-⅞]/.test(line) &&
+        // A leading percentage is a product name, not an amount.
+        !/^\s*\d+\s*%/.test(line) &&
+        parseIngredient(line).qty === null,
     ).map(({ line }) => line);
     expect(missed).toEqual([]);
   });

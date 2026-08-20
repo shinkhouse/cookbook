@@ -1,167 +1,174 @@
 <mat-toolbar color="primary">
-    <mat-toolbar-row class="create-recipe-toolbar">
-        <button mat-icon-button routerLink="/">
-            <mat-icon>navigate_before</mat-icon>
-        </button>
-        Create New Recipe
-        <span class="spacer"></span>
-        <button mat-button (click)="resetRecipeForm()">Reset Form</button>
-    </mat-toolbar-row>
+  <mat-toolbar-row class="create-recipe-toolbar">
+    <button mat-icon-button routerLink="/">
+      <mat-icon>navigate_before</mat-icon>
+    </button>
+    Create New Recipe
+    <span class="spacer"></span>
+    <button mat-button (click)="resetRecipeForm()">Reset Form</button>
+  </mat-toolbar-row>
 </mat-toolbar>
 <form [formGroup]="recipeForm">
-    <mat-form-field appearance="fill">
-        <mat-label>Title</mat-label>
-        <input matInput type="text" formControlName="title" />
-    </mat-form-field>
-    <mat-form-field appearance="fill">
-        <mat-label>Subtitle</mat-label>
-        <input matInput type="text" formControlName="subtitle" />
-    </mat-form-field>
-    <mat-form-field appearance="fill">
-        <mat-label>Cook time</mat-label>
-        <input matInput type="text" formControlName="cookTime" />
-    </mat-form-field>
-    <mat-form-field appearance="fill">
-        <mat-label>Servings</mat-label>
-        <input matInput type="number" formControlName="servings" />
-    </mat-form-field>
-    <mat-form-field appearance="fill">
-        <mat-label>Calories</mat-label>
-        <input matInput type="number" formControlName="calories" />
-    </mat-form-field>
-    <mat-form-field appearance="fill">
-        <mat-label>Cover Image</mat-label>
-        <input matInput type="text" formControlName="coverImage" />
-    </mat-form-field>
-    <mat-form-field appearance="fill">
-        <mat-label>Description</mat-label>
-        <textarea matInput type="text" formControlName="description"></textarea>
-    </mat-form-field>
-    <div class="form-arrays">
-        <div formArrayName="authors">
-            <div class="form-array-header">
-                <h2>Authors</h2>
-                <span class="spacer"></span>
-                <button mat-stroked-button (click)="addAuthor()" type="button">
-                    <mat-icon>add</mat-icon>Add author
-                </button>
-            </div>
-
-            <div
-                *ngFor="let authors of getRecipeAuthors.controls; let i = index"
-            >
-                <mat-form-field appearance="fill">
-                    <mat-label>Author {{ i + 1 }}</mat-label>
-                    <input
-                        matInput
-                        id="alias-{{ i }}"
-                        type="text"
-                        [formControlName]="i"
-                    />
-                </mat-form-field>
-            </div>
-        </div>
-        <div formArrayName="ingredients">
-            <div class="form-array-header">
-                <h2>Ingredients</h2>
-                <span class="spacer"></span>
-                <button
-                    mat-stroked-button
-                    (click)="addIngredient()"
-                    type="button"
-                >
-                    <mat-icon>add</mat-icon>Add Ingredient
-                </button>
-            </div>
-
-            <div
-                *ngFor="
-                    let authors of getRecipeIngredients.controls;
-                    let i = index
-                "
-            >
-                <mat-form-field appearance="fill">
-                    <mat-label>Ingredient {{ i + 1 }}</mat-label>
-                    <input
-                        matInput
-                        id="alias-{{ i }}"
-                        type="text"
-                        [formControlName]="i"
-                    />
-                </mat-form-field>
-            </div>
-        </div>
-        <div formArrayName="steps">
-            <div class="form-array-header">
-                <h2>Steps</h2>
-                <span class="spacer"></span>
-                <button mat-stroked-button (click)="addStep()" type="button">
-                    <mat-icon>add</mat-icon>Add Step
-                </button>
-            </div>
-
-            <div *ngFor="let authors of getRecipeSteps.controls; let i = index">
-                <mat-form-field appearance="fill">
-                    <mat-label>Step {{ i + 1 }}</mat-label>
-                    <input
-                        matInput
-                        id="alias-{{ i }}"
-                        type="text"
-                        [formControlName]="i"
-                    />
-                </mat-form-field>
-            </div>
-        </div>
-        <div formArrayName="notes">
-            <div class="form-array-header">
-                <h2>Notes</h2>
-                <span class="spacer"></span>
-                <button mat-stroked-button (click)="addNote()" type="button">
-                    <mat-icon>add</mat-icon>Add Note
-                </button>
-            </div>
-
-            <div *ngFor="let authors of getRecipeNotes.controls; let i = index">
-                <mat-form-field appearance="fill">
-                    <mat-label>Note {{ i + 1 }}</mat-label>
-                    <input
-                        matInput
-                        id="alias-{{ i }}"
-                        type="text"
-                        [formControlName]="i"
-                    />
-                </mat-form-field>
-            </div>
-        </div>
-        <div formArrayName="tags">
-            <div class="form-array-header">
-                <h2>Tags</h2>
-                <span class="spacer"></span>
-                <button mat-stroked-button (click)="addTag()" type="button">
-                    <mat-icon>add</mat-icon>Add Tag
-                </button>
-            </div>
-
-            <div *ngFor="let authors of getRecipeTags.controls; let i = index">
-                <mat-form-field appearance="fill">
-                    <mat-label>Tag {{ i + 1 }}</mat-label>
-                    <input
-                        matInput
-                        id="alias-{{ i }}"
-                        type="text"
-                        [formControlName]="i"
-                    />
-                </mat-form-field>
-            </div>
-        </div>
-    </div>
-    <div class="recipe-preview-header">
-        <h2>Recipe Preview</h2>
-        <button mat-button (click)="copyRecipe()">
-            Copy Recipe to Clipboard
+  <mat-form-field appearance="fill">
+    <mat-label>Title</mat-label>
+    <input matInput type="text" formControlName="title" />
+  </mat-form-field>
+  <mat-form-field appearance="fill">
+    <mat-label>Subtitle</mat-label>
+    <input matInput type="text" formControlName="subtitle" />
+  </mat-form-field>
+  <mat-form-field appearance="fill">
+    <mat-label>Cook time</mat-label>
+    <input matInput type="text" formControlName="cookTime" />
+  </mat-form-field>
+  <mat-form-field appearance="fill">
+    <mat-label>Servings</mat-label>
+    <input matInput type="number" formControlName="servings" />
+  </mat-form-field>
+  <mat-form-field appearance="fill">
+    <mat-label>Calories</mat-label>
+    <input matInput type="number" formControlName="calories" />
+  </mat-form-field>
+  <mat-form-field appearance="fill">
+    <mat-label>Cover Image</mat-label>
+    <input matInput type="text" formControlName="coverImage" />
+  </mat-form-field>
+  <mat-form-field appearance="fill">
+    <mat-label>Description</mat-label>
+    <textarea matInput type="text" formControlName="description"></textarea>
+  </mat-form-field>
+  <div class="form-arrays">
+    <div formArrayName="authors">
+      <div class="form-array-header">
+        <h2>Authors</h2>
+        <span class="spacer"></span>
+        <button mat-stroked-button (click)="addAuthor()" type="button">
+          <mat-icon>add</mat-icon>Add author
         </button>
+      </div>
+
+      @for (authors of getRecipeAuthors.controls; track authors; let i = $index) {
+        <div
+          >
+          <mat-form-field appearance="fill">
+            <mat-label>Author {{ i + 1 }}</mat-label>
+            <input
+              matInput
+              id="alias-{{ i }}"
+              type="text"
+              [formControlName]="i"
+              />
+          </mat-form-field>
+        </div>
+      }
     </div>
-    <div class="form-preview">
-        {{ this.recipeForm.value | json }}
+    <div formArrayName="ingredients">
+      <div class="form-array-header">
+        <h2>Ingredients</h2>
+        <span class="spacer"></span>
+        <button
+          mat-stroked-button
+          (click)="addIngredient()"
+          type="button"
+          >
+          <mat-icon>add</mat-icon>Add Ingredient
+        </button>
+      </div>
+
+      @for (
+        authors of getRecipeIngredients.controls; track
+        authors; let i = $index) {
+        <div
+          >
+          <mat-form-field appearance="fill">
+            <mat-label>Ingredient {{ i + 1 }}</mat-label>
+            <input
+              matInput
+              id="alias-{{ i }}"
+              type="text"
+              [formControlName]="i"
+              />
+          </mat-form-field>
+        </div>
+      }
     </div>
+    <div formArrayName="steps">
+      <div class="form-array-header">
+        <h2>Steps</h2>
+        <span class="spacer"></span>
+        <button mat-stroked-button (click)="addStep()" type="button">
+          <mat-icon>add</mat-icon>Add Step
+        </button>
+      </div>
+
+      @for (authors of getRecipeSteps.controls; track authors; let i = $index) {
+        <div>
+          <mat-form-field appearance="fill">
+            <mat-label>Step {{ i + 1 }}</mat-label>
+            <input
+              matInput
+              id="alias-{{ i }}"
+              type="text"
+              [formControlName]="i"
+              />
+          </mat-form-field>
+        </div>
+      }
+    </div>
+    <div formArrayName="notes">
+      <div class="form-array-header">
+        <h2>Notes</h2>
+        <span class="spacer"></span>
+        <button mat-stroked-button (click)="addNote()" type="button">
+          <mat-icon>add</mat-icon>Add Note
+        </button>
+      </div>
+
+      @for (authors of getRecipeNotes.controls; track authors; let i = $index) {
+        <div>
+          <mat-form-field appearance="fill">
+            <mat-label>Note {{ i + 1 }}</mat-label>
+            <input
+              matInput
+              id="alias-{{ i }}"
+              type="text"
+              [formControlName]="i"
+              />
+          </mat-form-field>
+        </div>
+      }
+    </div>
+    <div formArrayName="tags">
+      <div class="form-array-header">
+        <h2>Tags</h2>
+        <span class="spacer"></span>
+        <button mat-stroked-button (click)="addTag()" type="button">
+          <mat-icon>add</mat-icon>Add Tag
+        </button>
+      </div>
+
+      @for (authors of getRecipeTags.controls; track authors; let i = $index) {
+        <div>
+          <mat-form-field appearance="fill">
+            <mat-label>Tag {{ i + 1 }}</mat-label>
+            <input
+              matInput
+              id="alias-{{ i }}"
+              type="text"
+              [formControlName]="i"
+              />
+          </mat-form-field>
+        </div>
+      }
+    </div>
+  </div>
+  <div class="recipe-preview-header">
+    <h2>Recipe Preview</h2>
+    <button mat-button (click)="copyRecipe()">
+      Copy Recipe to Clipboard
+    </button>
+  </div>
+  <div class="form-preview">
+    {{ this.recipeForm.value | json }}
+  </div>
 </form>

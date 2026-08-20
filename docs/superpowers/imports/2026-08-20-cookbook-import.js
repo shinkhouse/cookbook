@@ -23,7 +23,7 @@ const EXISTING = [
 const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 const existing = new Set(EXISTING.map(norm));
 
-const review = { skippedDuplicate: [], skippedTemplate: [], defaultedServings: [], splitLines: [], yields: [], groups: [], noSteps: [], inferredTags: [], rejoined: [] };
+const review = { skippedDuplicate: [], skippedTemplate: [], defaultedServings: [], splitLines: [], yields: [], groups: [], noSteps: [], inferredTags: [], rejoined: [], stepsCleaned: [] };
 
 /** A group label, not an ingredient. */
 function isGroup(line) {
@@ -189,6 +189,87 @@ function titleCase(title) {
     .join('');
 }
 
+/** A paragraph that is only a step label: "Step 1", "STEP 2.". */
+const BARE_STEP_LABEL = /^(?:step|stage|part|direction)\s*\.?\s*\d+\s*[:.)]?$/i;
+
+/** A redundant section header inside the steps cell. */
+const STEP_SECTION_HEADER = /^(?:directions?|instructions?|method|preparation|steps?)\s*:?$/i;
+
+/** A phase label whose text follows on the next line: "Marinate:", "Sear:". */
+const PHASE_LABEL = /^[A-Z][A-Za-z &,'’()-]{1,32}:$/;
+
+/** "Serves 4." sitting among the steps. */
+const SERVES_LINE = /^serves?\s+(\d+)\s*\.?$/i;
+
+/**
+ * Whether a step is finished, or was cut off mid sentence.
+ *
+ * Some recipes in the source are hard-wrapped at about fifty characters, so a
+ * single step arrives as five paragraphs broken mid-clause. A line that does not
+ * end on sentence punctuation is unfinished, and the line after it is its
+ * continuation rather than a step of its own.
+ */
+function isUnterminated(line) {
+  return !/[.!?:;]["'”’)]?$/.test(line.trim());
+}
+
+/** A line that reads as the tail of the sentence above it. */
+function continuesPrevious(line) {
+  return /^[a-z(]/.test(line) || /^\)/.test(line) || /^\d+[a-z]/.test(line);
+}
+
+/**
+ * Cleans the step list.
+ *
+ * The source document numbers its steps with a standalone "Step 1" paragraph
+ * followed by the text, so a naive read produces alternating label and content
+ * lines and the page renders "1. Step 1" / "2. <the actual step>". The
+ * numbering is already rendered from the list index, so a bare label carries
+ * nothing and is dropped.
+ */
+function cleanSteps(lines, title) {
+  const out = [];
+  let pendingLabel = null;
+  let servesFound = null;
+  let dropped = 0;
+
+  for (const raw of lines) {
+    const line = raw.replace(/^\s*\d{1,2}\s*[.)]\s*/, '').trim();
+    if (!line) continue;
+
+    if (BARE_STEP_LABEL.test(line) || STEP_SECTION_HEADER.test(line)) { dropped++; continue; }
+
+    const serves = SERVES_LINE.exec(line);
+    if (serves) { servesFound = Number(serves[1]); dropped++; continue; }
+
+    // A phase label belongs to the step it introduces, so hold it and prefix.
+    if (PHASE_LABEL.test(line)) { pendingLabel = line; continue; }
+
+    // A continuation belongs to the step above it, whether it was stranded on
+    // its own or is one of several mid-sentence wraps.
+    if (
+      out.length > 0 &&
+      !pendingLabel &&
+      isUnterminated(out[out.length - 1]) &&
+      continuesPrevious(line)
+    ) {
+      out[out.length - 1] = `${out[out.length - 1]} ${line}`.replace(/\s+/g, ' ');
+      dropped++;
+      continue;
+    }
+
+    out.push(pendingLabel ? `${pendingLabel} ${line}` : line);
+    pendingLabel = null;
+  }
+
+  // A label with nothing after it still beats losing it.
+  if (pendingLabel) out.push(pendingLabel.replace(/:$/, ''));
+
+  if (dropped) review.stepsCleaned.push({ title, dropped });
+  out.servesFound = servesFound;
+  return out;
+}
+
 function slugify(t) {
   return t.toLowerCase().trim().replace(/['’]/g, '').replace(/[^a-z0-9À-ɏ]+/g, '-').replace(/^-+|-+$/g, '');
 }
@@ -276,10 +357,14 @@ for (const rec of raw) {
   }
 
   // ---- steps ----
-  const steps = rec.stepLines
-    .map((s) => s.replace(/^\s*\d{1,2}\s*[.)]\s*/, '').trim())
-    .filter(Boolean);
+  const steps = cleanSteps(rec.stepLines, title);
   if (steps.length === 0) review.noSteps.push(title);
+
+  // "Serves 4." sometimes hides among the steps rather than the ingredients.
+  if (!servingsFromSub && !found && steps.servesFound) {
+    servings = steps.servesFound;
+    review.defaultedServings.splice(review.defaultedServings.indexOf(title), 1);
+  }
 
   if (ingredients.length === 0) continue;
 

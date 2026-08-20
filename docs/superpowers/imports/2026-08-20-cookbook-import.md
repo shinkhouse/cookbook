@@ -52,6 +52,38 @@ last row   ingredients | steps       (two cells)
 The detail page omits the duration rail and the library card omits the time when
 they are empty, so nothing renders as a blank.
 
+## Step cleaning
+
+The source numbers its steps with a standalone `Step 1` paragraph followed by
+the text, so a naive read produced alternating label and content lines and the
+page rendered "1. Step 1" above "2. <the actual step>". 50 such labels across 9
+recipes are dropped — the list index already supplies the number.
+
+Four related repairs in the same pass:
+
+- Redundant `Directions:` / `Instructions` headers inside the steps cell dropped.
+- `Serves 4.` hiding among the steps is read as the serving count, not a step.
+- A phase label whose text follows on the next line (`Marinate:`, `Sear:`,
+  `Blister the Green Beans:`) is prefixed onto the step it introduces rather
+  than left standing alone.
+- Steps hard-wrapped mid-sentence are reflowed. Some recipes in the source break
+  at about fifty characters, so one step arrived as five paragraphs cut
+  mid-clause. A line is joined to the one above when that line does not end on
+  sentence punctuation *and* the next begins lower-case — No Egg Pancakes went
+  from 11 fragments to 5 real steps, while an already well-formed recipe like
+  Coq au Vin was left at its original 9.
+
+58 lines were dropped or merged across 15 recipes. Two assertions in
+`recipes.mock.spec.ts` pin the result so it cannot regress.
+
+## One recipe is incomplete in the source
+
+`Shrimp and pasta` has 13 real ingredients and no method — its steps cell
+contains only the word `Instructions`. It is kept rather than dropped, since the
+ingredients are real, and the detail page already says "No steps written down
+for this one yet." The spec pins it by slug so any *other* recipe losing its
+steps still fails the build.
+
 ## Known residue
 
 Five ingredient names still open with a measure, e.g. `3oz. packages ramen

@@ -35,8 +35,18 @@ describe('migrated seed data', () => {
     }
   });
 
-  it('leaves the imported recipes their steps, which is what they do carry', () => {
+  it('leaves the imported recipes their steps, bar the one the source never wrote', () => {
+    // 'Shrimp and pasta' has ingredients but no method in the source document —
+    // its steps cell holds the word "Instructions" and nothing else. Kept
+    // rather than dropped, since the ingredients are real, and the detail page
+    // already says so. Pinned so any *other* recipe losing its steps fails.
+    const INCOMPLETE_IN_SOURCE = new Set(['shrimp-and-pasta']);
     for (const r of ImportedRecipes) {
+      if (INCOMPLETE_IN_SOURCE.has(r.slug)) {
+        expect(r.steps).withContext(r.slug).toEqual([]);
+        expect(r.ingredients.length).toBeGreaterThan(0);
+        continue;
+      }
       expect(r.steps.length).withContext(r.slug).toBeGreaterThan(0);
     }
   });
@@ -87,6 +97,27 @@ describe('migrated seed data', () => {
       ),
     );
     expect(raw).toEqual([]);
+  });
+
+  it('never stores a bare step label as a step', () => {
+    // The source document numbers its steps with a standalone "Step 1"
+    // paragraph followed by the text, so a naive read rendered "1. Step 1"
+    // above "2. <the actual step>". The list index supplies the number, so a
+    // label on its own carries nothing.
+    const labels = Recipes.flatMap((r) =>
+      r.steps.filter((s) => /^(?:step|stage|part|direction)\s*\.?\s*\d+\s*[:.)]?$/i.test(s.trim())),
+    );
+    expect(labels).toEqual([]);
+  });
+
+  it('never stores a section header or a bare phase label as a step', () => {
+    const headers = Recipes.flatMap((r) =>
+      r.steps.filter(
+        (s) => /^(?:directions?|instructions?|method|preparation|steps?)\s*:?$/i.test(s.trim())
+          || (s.trim().endsWith(':') && s.trim().length < 40),
+      ),
+    );
+    expect(headers).toEqual([]);
   });
 
   it('carries ingredient sub-groups where the source had them', () => {

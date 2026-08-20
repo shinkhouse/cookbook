@@ -95,13 +95,13 @@
 }
 
 .aisles {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: var(--grid-gap);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
 }
 
 .aisle {
-    padding: 18px;
+    padding: 6px 20px 14px;
     border: 1px solid var(--rule);
     border-radius: var(--radius-card);
     background: var(--surface);
@@ -134,14 +134,20 @@
 
 .row {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 14px;
     padding: 4px 0;
     // §3.4 — 48px targets on shopping-list rows.
     min-height: var(--touch-large);
-    justify-content: center;
 
     & + .row {
         border-top: 1px solid var(--rule);
+    }
+
+    // The checkbox and its label take the room; the source is pushed right.
+    mat-checkbox {
+        flex: 1;
+        min-width: 0;
     }
 }
 
@@ -169,9 +175,11 @@
 }
 
 .row-source {
-    margin-left: 108px;
+    flex: none;
+    max-width: 34%;
     color: var(--ink-4);
     font-size: 12.5px;
+    text-align: right;
 }
 
 // Struck-through rows use --ink-5, which is only AA-large; the line-through is

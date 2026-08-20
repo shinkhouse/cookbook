@@ -68,7 +68,12 @@
                     <span class="row-name">{{ row.ingredient.name }}</span>
                   </span>
                 </mat-checkbox>
-                <span class="row-source">{{ row.recipeTitle }}</span>
+                <!-- The source only tells you anything when more than one
+                     recipe is on the list; otherwise it repeats the chip above
+                     on every single row. -->
+                @if (list.recipeCount() > 1) {
+                  <span class="row-source">{{ row.recipeTitle }}</span>
+                }
               </li>
             }
           </ul>

@@ -408,9 +408,16 @@ on imported recipes. Aisle is inferred with a manual override in the editor.
 ### 6.5 Shopping list — `/list`
 
 - Aggregates ingredients from every recipe on the list, grouped by aisle:
-  Produce, Meat, Fish counter, Dairy, Pantry. Grid
-  `repeat(auto-fill, minmax(260px, 1fr))`.
-- Each row shows amount, name, and the source recipe beneath.
+  Produce, Meat, Fish counter, Dairy, Pantry.
+- **Revised 2026-08-20.** Originally specified as
+  `repeat(auto-fill, minmax(260px, 1fr))`. That balanced badly against real
+  data — a two-recipe list runs Pantry to 15 items against Meat's 1, so two
+  columns sat nearly empty while the long one was squeezed narrow enough to
+  wrap ingredient names over four lines. Now a single stacked column at a
+  720px measure: a shopping list is a scanning column, not a page of prose.
+- Each row shows amount, name, and the source recipe right-aligned. The source
+  is hidden when only one recipe is on the list, where it would repeat the chip
+  above on every row without disambiguating anything.
 - Check off to buy; "Uncheck all"; recipe chips at top with × to remove a recipe
   and all its items.
 - Duplicate ingredients across recipes appear as separate rows — merging is

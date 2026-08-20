@@ -6,6 +6,7 @@ import { UntypedFormArray, UntypedFormBuilder, UntypedFormGroup, Validators } fr
     selector: 'app-create-recipe',
     templateUrl: './create-recipe.component.html',
     styleUrls: ['./create-recipe.component.scss'],
+    standalone: false
 })
 export class CreateRecipeComponent implements OnInit {
     public recipeForm: UntypedFormGroup = this.fb.group({

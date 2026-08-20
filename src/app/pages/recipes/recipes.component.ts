@@ -6,6 +6,7 @@ import { RecipesService } from 'src/app/core/services/recipes.service';
     selector: 'app-recipes',
     templateUrl: './recipes.component.html',
     styleUrls: ['./recipes.component.scss'],
+    standalone: false
 })
 export class RecipesComponent implements OnInit {
     public gridColumnSize: number = 4;

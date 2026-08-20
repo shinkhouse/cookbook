@@ -7,6 +7,7 @@ import { RecipesService } from 'src/app/core/services/recipes.service';
     selector: 'app-recipe',
     templateUrl: './recipe.component.html',
     styleUrls: ['./recipe.component.scss'],
+    standalone: false
 })
 export class RecipeComponent implements OnInit {
     public recipe: Recipe | undefined = undefined;

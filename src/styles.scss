@@ -30,7 +30,8 @@ body {
     margin: 0;
     font-family: Roboto, "Helvetica Neue", sans-serif;
 }
-@include mat.core();
+@include mat.elevation-classes();
+@include mat.app-background();
 
 $my-custom-typography-config: mat.m2-define-typography-config(
     $headline-1: mat.m2-define-typography-level(64px, 1, 300, $letter-spacing: -0.05em, $font-family: "Yeseva One"),

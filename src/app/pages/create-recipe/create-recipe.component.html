@@ -265,7 +265,7 @@
     <!-- §6.4 — sticky draft preview with the parse-status badge. -->
     <aside class="preview">
       <div class="preview-head">
-        <span class="label-mono">Draft</span>
+        <span class="label">Draft</span>
         <span class="badge" [attr.data-status]="status()">{{ statusLabel() }}</span>
       </div>
 
@@ -278,7 +278,7 @@
       } @else {
         <h2 class="preview-title">{{ title() || 'Untitled' }}</h2>
         @if (slug()) {
-          <p class="preview-slug label-mono">/{{ slug() }}</p>
+          <p class="preview-slug label">/{{ slug() }}</p>
         }
 
         @if (review().length > 0) {
@@ -296,7 +296,7 @@
           </div>
         }
 
-        <h3 class="preview-sub label-mono">
+        <h3 class="preview-sub label">
           Ingredients · {{ ingredients().length }}
         </h3>
         <ul class="preview-list">
@@ -311,7 +311,7 @@
           }
         </ul>
 
-        <h3 class="preview-sub label-mono">Steps · {{ steps().length }}</h3>
+        <h3 class="preview-sub label">Steps · {{ steps().length }}</h3>
         <ol class="preview-list">
           @for (step of steps(); track $index) {
             <li>{{ step }}</li>

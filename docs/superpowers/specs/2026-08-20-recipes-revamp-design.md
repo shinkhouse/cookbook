@@ -11,7 +11,7 @@ mode, shopping list), a rebuilt create flow, and one codebase serving both mobil
 and desktop through fluid layout rather than separate builds.
 
 The app currently has four screens on Angular 21 with NgModule-based lazy routes,
-15 recipes of mock data, and ingredients stored as flat strings. The revamp keeps
+14 recipes of mock data, and ingredients stored as flat strings. The revamp keeps
 the recipe data, restructures the ingredient shape, and replaces everything above it.
 
 ### Approved decisions
@@ -99,64 +99,111 @@ aisle-grouped list rows, the file dropzone.
 
 ## 3. Visual system
 
+**Revised 2026-08-20** after review of the first build. The original direction —
+cream paper, a serif display face, a green accent — was rejected as reading like
+a generic template rather than a choice. Replaced with navy on white, set
+entirely in Figtree. Reference: the Blue Apron web screens.
+
 ### 3.1 Tokens
 
 Defined once as CSS custom properties on `:root`, then mapped onto Material's
 `--mat-sys-*` system tokens so Material components inherit them.
 
-| Token | Hex | Use |
-|-------|-----|-----|
-| `paper` | `#FBF7EF` | Page background |
-| `card` | `#FFFDF8` | Cards, inputs, raised surfaces |
-| `ink` | `#23211D` | Primary text; cook-mode background |
-| `ink-2` | `#4C463C` | Body copy on light |
-| `ink-3` | `#6E6659` | Secondary copy |
-| `ink-4` | `#8C8272` | Mono labels, captions |
-| `ink-5` | `#A69C8B` | Placeholders, checked-off text |
-| `rule` | `#E4DCCC` | Hairline borders |
-| `rule-strong` | `#C9BFA8` | Button borders, dashed dropzones |
-| `accent` | `#3E6B4F` | Primary actions, active state, step numbers |
-| `accent-hover` | `#2C4E39` | Hover on filled accent |
-| `accent-tint` | `#F3F6F1` | Notes panel, on-list state, badges |
-| `accent-tint-border` | `#DCE6DA` | Border for the above |
-| `swatch-a` / `swatch-b` | `#EFE5D3` / `#E7DBC6` | Photo placeholder stripes |
+Surfaces are deliberately **cool** greys, not cream. The only warm colour in the
+system is `ember`, and it is spent on one thing.
 
-Cook mode: bg `#23211D`, surface `#2B2823`, rule `#35322C`, accent `#6E9A7B`,
-text `#F6F1E6`.
+| Token | Hex | Use | On `surface` |
+|-------|-----|-----|--------------|
+| `paper` | `#FFFFFF` | Page | — |
+| `surface` | `#F7F8FA` | Cards, panels | — |
+| `surface-sunk` | `#F0F2F6` | Wells, inputs on a card | — |
+| `navy` | `#1B3A6B` | Primary actions, section heads, step numbers | 10.60 |
+| `navy-deep` | `#142B4F` | Hover, footer band, cook-mode ground | 13.28 |
+| `navy-tint` | `#EDF1F8` | Badges, notes panel, on-list state | — |
+| `navy-tint-edge` | `#D8E1F0` | Border for the above | — |
+| `ink` | `#16202E` | Headings, primary text | 15.44 |
+| `ink-2` | `#3D4A5C` | Body copy | 8.47 |
+| `ink-3` | `#5A6878` | Secondary copy, placeholders | 5.36 |
+| `ink-4` | `#667383` | Small-caps labels, captions | 4.55 |
+| `ink-5` | `#8B97A6` | Struck-through rows only, always with `line-through` | 3.28 |
+| `rule` | `#E2E6ED` | Hairlines | — |
+| `rule-strong` | `#C8D0DC` | Button borders, dashed dropzones | — |
+| `ember` | `#C95028` | The single primary action on a screen | white on it: 4.50 |
+| `ember-deep` | `#A8401E` | Hover on ember | — |
 
-Two background colors total. No gradients.
+Every value carrying text was measured against WCAG AA before landing. `ink-4`
+and `ember` were both darkened from their first draft to clear 4.5:1 — `ember`
+specifically so white button labels pass on it.
+
+Cook mode is not a separate palette. It is the same navy taken to its dark end,
+so it reads as the same product with the lights turned down: bg `#101F38`,
+surface `#172B4A`, rule `#24395C`, accent `#7FA8E0` (5.77), text `#EEF2F8`
+(12.56).
 
 ### 3.2 Type
 
-- **Newsreader** (serif) — display and headings, weights 400/500,
-  `letter-spacing: -0.02em` at large sizes, `line-height: 1.02–1.15`.
-  Italic 400 for credit lines and the footer.
-- **Karla** — UI, body, buttons. 400/500/600/700.
-- **IBM Plex Mono** — small labels only, `9.5–11px`,
-  `letter-spacing: 0.1–0.18em`, uppercase.
+**Figtree throughout.** One family, self-hosted via `@fontsource` (weights 400,
+400 italic, 500, 600, 700, 800; latin subset). No CDN.
 
-Fluid display sizes: library H1 `clamp(38px, 6vw, 64px)`; detail H1
-`clamp(34px, 5vw, 54px)`; cook step `clamp(28px, 3.6vw, 40px)`. Body 15–17px / 1.6.
-`text-wrap: pretty` on paragraphs.
+With a single family, the three type roles that used to need three faces come
+from weight, case and tracking instead:
 
-Fonts are **self-hosted** (woff2, `font-display: swap`), not loaded from the
-Google CDN.
+- **Display** — 800, `letter-spacing: -0.028em`, `line-height: 1.06`. At display
+  sizes the weight carries the personality, since there is no second family.
+- **Section title** — 800, uppercase, `letter-spacing: 0.055em`, navy. Always
+  paired with a lowercase italic kicker above it (`.section-kicker`). This pair
+  is the page's structural signature and appears above every major section.
+- **Body** — 400 / 500, `line-height: 1.62`.
+- **Data label** (`.label`) — 700, uppercase, `letter-spacing: 0.15em`, 10.5px.
+  Replaces what IBM Plex Mono used to do.
+- **Figures** (`.tnum`) — `font-variant-numeric: tabular-nums`. This is what
+  lets amount columns align without a monospace family.
+- **Italic** — reserved for credit lines and section kickers, where it carries
+  meaning rather than decoration.
+
+Fluid display sizes: library H1 `clamp(38px, 6vw, 62px)`; detail H1
+`clamp(32px, 5vw, 52px)`; cook step `clamp(27px, 3.6vw, 40px)`.
 
 ### 3.3 Shape, spacing, motion
 
-- Radii: `4px` cards and panels, `999px` buttons and chips, `3px` checkboxes.
-- Borders over shadows. Single elevation `0 22px 44px rgba(35,33,29,0.22)`,
-  used only for device frames.
+- Radii: `6px` cards and panels, `999px` buttons and chips, `3px` checkboxes.
+- Borders first, with two soft shadows (`--shadow-card`, `--shadow-lift`) for the
+  cards and panels that need to lift off the white.
 - Section padding `clamp(24px, 5vw, 64px)`; gutters `clamp(16px, 4vw, 40px)`;
-  grid gaps `clamp(18px, 2.4vw, 30px)`.
-- Motion: `fadeUp` 0.3s on cards, 0.18s drawer, 0.25s cook progress-bar width.
+  grid gaps `clamp(18px, 2.4vw, 28px)`.
+- Motion: `fadeUp` 0.28s on cards, 0.16s drawer, 0.25s cook progress-bar width.
   All motion respects `prefers-reduced-motion`.
 
-### 3.4 Layout
+### 3.4 Signature devices
+
+Three devices carry the identity, and they are used consistently rather than
+decoratively:
+
+1. **Kicker over uppercase title.** Every major section is introduced by a
+   lowercase italic phrase over a letterspaced uppercase navy heading —
+   *what you need* / **INGREDIENTS**, *step by step* / **METHOD**,
+   *from the cook* / **NOTES**.
+2. **The two-column amount.** Ingredient rows set the amount right-aligned in a
+   fixed 62px column with tabular figures, so quantities stack in a line down
+   the list the way a printed recipe card sets them. Used identically on the
+   detail page, in cook mode and on the shopping list. A long unit such as
+   "1 small can" wraps within the column rather than pushing the name.
+3. **The times-cooked count.** In a cookbook kept over years, how often a recipe
+   actually got made is the honest measure of it, so that figure gets display
+   type: the library header sets the most-cooked count at `clamp(46px, 5vw, 62px)`
+   in navy.
+
+`ember` appears once per screen at most — "Start cooking" on the detail page. Cook
+mode's "Next step" deliberately stays blue: it is a navigation control pressed
+many times, not a hero action, and making it loud would spend the accent's
+meaning.
+
+### 3.5 Layout
 
 Fluid, not breakpoint-driven. Two-column regions are `flex-wrap` with
 `flex: 2 1 420px` / `flex: 1 1 280px` so they stack naturally. Max content width
-1280px library, 1180px detail/cook/create, 1000px shopping list.
+1280px library, 1140px detail/cook/create, 1000px shopping list. The detail hero
+is full-bleed; only the body copy is measured.
 
 **One** real JS breakpoint: `760px`, below which the header nav collapses to the
 hamburger drawer. Everything else is CSS.
@@ -203,7 +250,7 @@ The existing model differs in ways that need explicit handling:
 
 | Current | Target | Action |
 |---|---|---|
-| `ingredients: string[]` | `Ingredient[]` | Parse all 137 lines, hand-correct, assign aisles |
+| `ingredients: string[]` | `Ingredient[]` | Parse all 136 lines, hand-correct, assign aisles |
 | `cookTime: string` (`"20 to 30 minutes"`) | `time: string` (`"20–30 min"`) | Rewrite to display form |
 | `description` | `desc` + `blurb` | `desc` from existing; author a shorter `blurb` per recipe |
 | — | `cooked: number` | New. Seed with plausible values; Grandma's Spaghetti is 41 per the design |
@@ -212,7 +259,7 @@ The existing model differs in ways that need explicit handling:
 | `authors`, `calories`, `urls`, `equipment` | — | Dropped; unused by any screen in the new design |
 
 Tag pills are **derived from recipe data**, not hardcoded — so they will read
-`Pasta`, `Italian`, `Dinner`, `Beef` etc. from the real 15 recipes rather than the
+`Pasta`, `Italian`, `Dinner`, `Beef` etc. from the real 14 recipes rather than the
 handoff's illustrative `Family` / `Sheet Pan` set. Display is title-cased from the
 stored lowercase values.
 
@@ -357,7 +404,7 @@ Test-first on the kernel, because that is where correctness actually lives:
 
 - `scale.ts` — fraction boundaries either side of the 0.04 tolerance, mixed
   numbers, null qty, factor 1 identity.
-- `ingredient-parser.ts` — every one of the 137 real lines as a corpus, plus the
+- `ingredient-parser.ts` — every one of the 136 real lines as a corpus, plus the
   awkward cases in §5.2.
 - `aisle.ts` — longest-match precedence, the "chicken broth" class of trap.
 - `timer.ts` — ranges with both dash characters, hours, no-match.
@@ -390,7 +437,7 @@ bootstrap.
    handle colour and type, but pill radii and hairline borders on Material
    primitives may still need per-component overrides. First real test is the
    create flow's form fields.
-3. **Parser accuracy on 137 lines.** Expect misses; every parsed result gets
+3. **Parser accuracy on 136 lines.** Expect misses; every parsed result gets
    reviewed by hand before it lands as seed data.
 4. **`blurb` copy does not exist.** 15 short card strings need authoring. Drafting
    them from each `desc`, flagged for your review rather than silently invented.

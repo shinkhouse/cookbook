@@ -33,12 +33,12 @@
       <!-- §6.2 — the metadata rail: duration, servings stepper, times cooked. -->
       <div class="rail">
         <div class="rail-item">
-          <p class="label-mono">Duration</p>
+          <p class="label">Duration</p>
           <p class="rail-value">{{ r.time }}</p>
         </div>
 
         <div class="rail-item">
-          <p class="label-mono">Makes</p>
+          <p class="label">Makes</p>
           <div class="stepper">
             <button
               type="button"
@@ -62,7 +62,7 @@
         </div>
 
         <div class="rail-item">
-          <p class="label-mono">Times cooked</p>
+          <p class="label">Times cooked</p>
           <p class="rail-value">{{ r.cooked }}</p>
         </div>
       </div>
@@ -107,38 +107,44 @@
 
       <div class="columns">
         <aside class="ingredients-card">
-          <h2>
-            Ingredients
-            @if (checkedCount() > 0) {
-              <span class="checked-count label-mono">{{ checkedCount() }} in hand</span>
-            }
-          </h2>
+          <div class="section-head">
+            <span class="section-kicker">what you need</span>
+            <h2 class="section-title">Ingredients</h2>
+          </div>
 
           <ul class="ingredient-list">
             @for (item of ingredients(); track item.index) {
               <li [class.is-checked]="item.checked">
                 <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
-                  <span class="ing-text">
-                    @if (amountLabel(item.amount, item.unit); as amt) {
-                      <span class="ing-amount">{{ amt }}</span>
-                    }
+                  <!-- Amount and name are separate columns so figures line up
+                       down the list, the way a printed recipe card sets them. -->
+                  <span class="ing-row">
+                    <span class="ing-amount tnum">{{ amountLabel(item.amount, item.unit) }}</span>
                     <span class="ing-name">{{ item.name }}</span>
                   </span>
                 </mat-checkbox>
               </li>
             }
           </ul>
+
+          @if (checkedCount() > 0) {
+            <p class="checked-count label">{{ checkedCount() }} of {{ ingredients().length }} in hand</p>
+          }
         </aside>
 
         <section class="steps">
-          <h2>Steps</h2>
+          <div class="section-head">
+            <span class="section-kicker">step by step</span>
+            <h2 class="section-title">Method</h2>
+          </div>
+
           @if (r.steps.length === 0) {
             <p class="no-steps">No steps written down for this one yet.</p>
           } @else {
             <ol class="step-list">
               @for (step of r.steps; track $index) {
                 <li>
-                  <span class="step-number label-mono">{{ $index + 1 }}</span>
+                  <span class="step-number tnum">{{ $index + 1 }}</span>
                   <p>{{ step }}</p>
                 </li>
               }
@@ -148,7 +154,10 @@
           <!-- §6.2 — the notes panel renders only when there are notes. -->
           @if (r.notes.length > 0) {
             <div class="notes">
-              <h3>Notes</h3>
+              <div class="section-head notes-head">
+                <span class="section-kicker">from the cook</span>
+                <h3 class="section-title">Notes</h3>
+              </div>
               <ul>
                 @for (note of r.notes; track $index) {
                   <li>{{ note }}</li>

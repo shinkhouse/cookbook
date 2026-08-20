@@ -1,15 +1,21 @@
 <div class="library">
   <header class="library-head">
-    <h1>Everything worth cooking twice.</h1>
+    <div class="head-copy">
+      <span class="section-kicker">the family cookbook</span>
+      <h1>Everything worth cooking twice.</h1>
+    </div>
 
+    <!-- The count is the point: in a cookbook kept over years, how many times a
+         recipe has actually been made is the honest measure of it. -->
     @if (mostCooked(); as top) {
-      <div class="stat-block">
-        <p class="label-mono">Most cooked</p>
-        <p class="stat-value">
-          <a [routerLink]="['/recipes', top.slug]">{{ top.title }}</a>
-        </p>
-        <p class="stat-detail">{{ top.cooked }} times and counting</p>
-      </div>
+      <a class="stat-block" [routerLink]="['/recipes', top.slug]">
+        <span class="stat-count tnum">{{ top.cooked }}</span>
+        <span class="stat-body">
+          <span class="label">Times cooked</span>
+          <span class="stat-title">{{ top.title }}</span>
+          <span class="stat-detail">more than anything else here</span>
+        </span>
+      </a>
     }
   </header>
 
@@ -65,7 +71,7 @@
     }
   </div>
 
-  <p class="result-count label-mono" aria-live="polite">
+  <p class="result-count label" aria-live="polite">
     {{ results().length }} {{ results().length === 1 ? 'recipe' : 'recipes' }}
   </p>
 
@@ -106,7 +112,7 @@
           </button>
 
           <div class="card-body">
-            <div class="card-meta label-mono">
+            <div class="card-meta label">
               <span>{{ recipe.time }}</span>
               @if (recipe.cooked > 0) {
                 <span>Cooked {{ recipe.cooked }}×</span>

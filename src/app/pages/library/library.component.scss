@@ -10,49 +10,63 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: var(--gutter);
-    margin-bottom: calc(var(--pad-section) * 0.6);
+    margin-bottom: calc(var(--pad-section) * 0.55);
+}
+
+.head-copy {
+    flex: 1 1 380px;
 
     h1 {
-        flex: 2 1 420px;
-        max-width: 18ch;
+        max-width: 17ch;
+        margin-top: 2px;
         font-size: var(--size-library-h1);
-        line-height: 1.02;
+        line-height: 1.0;
     }
 }
 
-// §6.1 — the header stat block naming the most-cooked recipe.
+// The signature: the times-cooked count set at display size. A family cookbook
+// measures a recipe by how often it actually got made, so that figure earns the
+// largest type on the page after the headline itself.
 .stat-block {
-    flex: 1 1 220px;
-    padding: 18px 22px;
-    border: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex: 0 1 auto;
+    padding: 18px 26px 18px 22px;
+    border: 1px solid var(--navy-tint-edge);
     border-radius: var(--radius-card);
-    background: var(--card);
+    background: var(--navy-tint);
+    text-decoration: none;
+    transition: border-color var(--motion-drawer) var(--ease);
 
-    p {
-        margin: 0;
+    &:hover {
+        border-color: var(--navy);
     }
 }
 
-.stat-value {
-    margin-top: 6px !important;
-    font-family: var(--font-display);
-    font-size: 21px;
-    line-height: 1.15;
+.stat-count {
+    font-size: clamp(46px, 5vw, 62px);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 0.86;
+    color: var(--navy);
+}
 
-    a {
-        color: var(--ink);
-        text-decoration: none;
+.stat-body {
+    display: grid;
+    gap: 1px;
+}
 
-        &:hover {
-            color: var(--accent);
-        }
-    }
+.stat-title {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--ink);
 }
 
 .stat-detail {
-    margin-top: 4px !important;
     color: var(--ink-3);
-    font-size: 14px;
+    font-size: 13.5px;
 }
 
 .controls {
@@ -71,11 +85,11 @@
     padding: 0 16px;
     border: 1px solid var(--rule-strong);
     border-radius: var(--radius-pill);
-    background: var(--card);
+    background: var(--surface);
 
     // The ring belongs on the whole field, not the bare input inside it.
     &:focus-within {
-        outline: 2px solid var(--accent);
+        outline: 2px solid var(--navy);
         outline-offset: 2px;
     }
 
@@ -92,7 +106,7 @@
         border: 0;
         background: none;
         color: var(--ink);
-        font-family: var(--font-ui);
+        font-family: var(--font);
         font-size: 15px;
 
         &::placeholder {
@@ -138,9 +152,9 @@
     padding: 0 16px;
     border: 1px solid var(--rule-strong);
     border-radius: var(--radius-pill);
-    background: var(--card);
+    background: var(--surface);
     color: var(--ink-2);
-    font-family: var(--font-ui);
+    font-family: var(--font);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -153,9 +167,9 @@
     }
 
     &.is-on {
-        border-color: var(--accent);
-        background: var(--accent);
-        color: var(--card);
+        border-color: var(--navy);
+        background: var(--navy);
+        color: var(--surface);
     }
 
     mat-icon {
@@ -190,9 +204,17 @@
     flex-direction: column;
     border: 1px solid var(--rule);
     border-radius: var(--radius-card);
-    background: var(--card);
+    background: var(--paper);
     overflow: hidden;
     animation: fadeUp var(--motion-card) var(--ease) both;
+    transition:
+        box-shadow var(--motion-drawer) var(--ease),
+        border-color var(--motion-drawer) var(--ease);
+
+    &:hover {
+        border-color: var(--rule-strong);
+        box-shadow: var(--shadow-card);
+    }
 }
 
 @keyframes fadeUp {
@@ -213,7 +235,7 @@
 
 .card-photo {
     aspect-ratio: 16 / 10;
-    background: var(--swatch-a);
+    background: var(--surface);
 
     img,
     .photo-placeholder {
@@ -240,7 +262,7 @@
     cursor: pointer;
 
     &[aria-pressed="true"] {
-        color: var(--accent);
+        color: var(--navy);
     }
 
     mat-icon {
@@ -264,14 +286,14 @@
 }
 
 .card-body h3 {
-    font-size: 22px;
+    font-size: 20px;
 
     a {
         color: var(--ink);
         text-decoration: none;
 
         &:hover {
-            color: var(--accent);
+            color: var(--navy);
         }
     }
 }
@@ -303,7 +325,7 @@
     min-height: 40px;
     padding: 0 16px;
     border-radius: var(--radius-pill);
-    font-family: var(--font-ui);
+    font-family: var(--font);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -320,13 +342,14 @@
 
 .btn-outline {
     flex: 1;
-    border: 1px solid var(--accent);
+    border: 1px solid var(--navy);
     background: transparent;
-    color: var(--accent);
+    color: var(--navy);
+    font-weight: 700;
 
     &:hover {
-        background: var(--accent);
-        color: var(--card);
+        background: var(--navy);
+        color: var(--paper);
     }
 }
 
@@ -341,9 +364,9 @@
     }
 
     &.is-on {
-        border-color: var(--accent-tint-border);
-        background: var(--accent-tint);
-        color: var(--accent-hover);
+        border-color: var(--navy-tint-edge);
+        background: var(--navy-tint);
+        color: var(--navy-deep);
     }
 }
 
@@ -358,7 +381,7 @@
 
 .empty-line {
     margin: 0;
-    font-family: var(--font-display);
+    font-family: var(--font);
     font-size: clamp(22px, 3vw, 30px);
     color: var(--ink-2);
 }

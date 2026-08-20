@@ -41,7 +41,7 @@
     } @else {
       <div class="cook-body">
         <section class="stage">
-          <p class="step-counter label-mono">Step {{ stepIndex() + 1 }} of {{ stepCount() }}</p>
+          <p class="step-counter label">Step {{ stepIndex() + 1 }} of {{ stepCount() }}</p>
 
           <p class="step-text">{{ currentStep() }}</p>
 
@@ -74,15 +74,13 @@
         </section>
 
         <aside class="sidebar">
-          <h2 class="sidebar-head label-mono">Ingredients</h2>
+          <h2 class="sidebar-head label">Ingredients</h2>
           <ul class="ing-list">
             @for (item of ingredients(); track item.index) {
               <li [class.is-checked]="item.checked">
                 <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
-                  <span class="ing-text">
-                    @if (item.amount) {
-                      <span class="ing-amount">{{ item.amount }}</span>
-                    }
+                  <span class="ing-row">
+                    <span class="ing-amount tnum">{{ item.amount }}</span>
                     <span class="ing-name">{{ item.name }}</span>
                   </span>
                 </mat-checkbox>
@@ -94,7 +92,7 @@
 
       <!-- §6.3 — the jump list, current step highlighted. -->
       <nav class="jump" aria-label="All steps">
-        <h2 class="label-mono">All steps</h2>
+        <h2 class="label">All steps</h2>
         <ol>
           @for (step of steps(); track $index) {
             <li>
@@ -104,7 +102,7 @@
                 [attr.aria-current]="$index === stepIndex() ? 'step' : null"
                 (click)="jumpTo($index)"
               >
-                <span class="jump-number label-mono">{{ $index + 1 }}</span>
+                <span class="jump-number label">{{ $index + 1 }}</span>
                 <span class="jump-text">{{ step }}</span>
               </button>
             </li>

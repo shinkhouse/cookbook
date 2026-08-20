@@ -1,43 +1,39 @@
 @use "@angular/material" as mat;
 @use "./styles/tokens";
 
-// §3.2 — fonts are self-hosted via @fontsource rather than fetched from the
-// Google CDN. The weight files are listed in angular.json's styles array, which
-// is where third-party CSS belongs; Sass @use would need a namespace per file.
+// Figtree is self-hosted through @fontsource; the weight files are listed in
+// angular.json. One family across the board, so the type roles below are built
+// from weight, case and tracking rather than from different faces.
 
-// Establishes Material's M3 token structure. The palette here is a starting
-// point only — the --mat-sys-* overrides below are what actually decide how
-// Material components look, so they match the tokens in _tokens.scss.
 html {
     @include mat.theme(
         (
             color: (
-                primary: mat.$green-palette,
-                tertiary: mat.$green-palette,
+                primary: mat.$azure-palette,
+                tertiary: mat.$azure-palette,
             ),
             typography: (
-                plain-family: "Karla",
-                brand-family: "Newsreader",
+                plain-family: "Figtree",
+                brand-family: "Figtree",
             ),
             density: 0,
         )
     );
 }
 
-// §3.1 — map our tokens onto Material's system tokens so mat-checkbox,
-// mat-form-field, mat-menu and mat-icon inherit the palette instead of
-// fighting it.
+// Map our tokens onto Material's system tokens so mat-checkbox, mat-form-field
+// and mat-menu inherit the palette.
 :root {
-    --mat-sys-primary: var(--accent);
-    --mat-sys-on-primary: var(--card);
-    --mat-sys-primary-container: var(--accent-tint);
-    --mat-sys-on-primary-container: var(--accent-hover);
+    --mat-sys-primary: var(--navy);
+    --mat-sys-on-primary: var(--paper);
+    --mat-sys-primary-container: var(--navy-tint);
+    --mat-sys-on-primary-container: var(--navy-deep);
 
     --mat-sys-surface: var(--paper);
-    --mat-sys-surface-container: var(--card);
-    --mat-sys-surface-container-low: var(--card);
-    --mat-sys-surface-container-high: var(--card);
-    --mat-sys-surface-variant: var(--accent-tint);
+    --mat-sys-surface-container: var(--surface);
+    --mat-sys-surface-container-low: var(--surface);
+    --mat-sys-surface-container-high: var(--surface);
+    --mat-sys-surface-variant: var(--navy-tint);
     --mat-sys-on-surface: var(--ink);
     --mat-sys-on-surface-variant: var(--ink-3);
 
@@ -46,10 +42,8 @@ html {
 
     --mat-sys-outline: var(--rule-strong);
     --mat-sys-outline-variant: var(--rule);
+    --mat-sys-error: #a8321f;
 
-    --mat-sys-error: #8c2f2f;
-
-    // Material's corner tokens, aligned to §3.3.
     --mat-sys-corner-extra-small: var(--radius-card);
     --mat-sys-corner-small: var(--radius-card);
     --mat-sys-corner-medium: var(--radius-card);
@@ -72,24 +66,27 @@ body {
     margin: 0;
     background: var(--paper);
     color: var(--ink-2);
-    font-family: var(--font-ui);
+    font-family: var(--font);
     font-size: 16px;
-    line-height: 1.6;
+    font-weight: 400;
+    line-height: 1.62;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }
 
-// §3.2 — display type. Newsreader, tightened at large sizes.
+// ---- Display type -------------------------------------------------------
+// Figtree at 800 with negative tracking. At display sizes the weight is what
+// carries the personality, since there is no second family to lean on.
 h1,
 h2,
 h3,
 h4 {
     margin: 0;
-    font-family: var(--font-display);
-    font-weight: 400;
+    font-family: var(--font);
+    font-weight: 800;
     color: var(--ink);
-    letter-spacing: -0.02em;
-    line-height: 1.08;
+    letter-spacing: -0.028em;
+    line-height: 1.06;
     text-wrap: balance;
 }
 
@@ -97,15 +94,16 @@ h1 {
     font-size: var(--size-detail-h1);
 }
 h2 {
-    font-size: clamp(24px, 3vw, 34px);
+    font-size: clamp(23px, 3vw, 31px);
 }
 h3 {
-    font-size: clamp(19px, 2vw, 23px);
-    line-height: 1.15;
+    font-size: clamp(18px, 2vw, 21px);
+    letter-spacing: -0.02em;
+    line-height: 1.18;
 }
 h4 {
-    font-size: 17px;
-    line-height: 1.2;
+    font-size: 16px;
+    letter-spacing: -0.01em;
 }
 
 p {
@@ -113,56 +111,85 @@ p {
     text-wrap: pretty;
 }
 
-// §3.2 — the mono label style, used for small uppercase captions.
-.label-mono {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.14em;
+// ---- The section header -------------------------------------------------
+// A lowercase italic kicker over a letterspaced uppercase navy heading. This is
+// the page's structural signature and appears above every major section, so it
+// lives here rather than being restated in each component.
+.section-head {
+    margin-bottom: 20px;
+}
+
+.section-kicker {
+    display: block;
+    margin: 0 0 2px;
+    color: var(--ink-4);
+    font-size: 15px;
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: 0;
+}
+
+.section-title {
+    margin: 0;
+    color: var(--navy);
+    font-size: clamp(21px, 2.6vw, 28px);
+    font-weight: 800;
+    letter-spacing: 0.055em;
+    line-height: 1.05;
+    text-transform: uppercase;
+}
+
+// ---- The data label ----------------------------------------------------
+// Replaces what a mono face used to do: small, uppercase, wide tracking.
+.label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
     color: var(--ink-4);
 }
 
-// Credit lines and the footer (§3.2).
+// Figures that sit in a column — ingredient amounts, timers, counts — need to
+// align without a monospace family to do it for them.
+.tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
+
+// Credit lines: the one place italic carries meaning rather than decoration.
 .credit {
-    font-family: var(--font-display);
     font-style: italic;
     font-weight: 400;
     color: var(--ink-3);
 }
 
 a {
-    color: var(--accent);
+    color: var(--navy);
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
 }
 
-// §7 — a visible focus ring on everything interactive, not only inputs.
+// A visible focus ring on everything interactive, not only inputs.
 :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--navy);
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: 3px;
 }
 
 button {
-    font-family: var(--font-ui);
+    font-family: var(--font);
 }
 
-// §3.3 — the one elevation, reserved for device frames.
-.frame {
-    box-shadow: var(--elevation-frame);
-}
-
-// §6.1 / §6.2 — the striped placeholder that stands in for a missing photo.
+// Stands in for a missing photo. A flat navy wash at low opacity rather than
+// stripes — quieter, and it reads as intentional next to a real photograph.
 .photo-placeholder {
-    background: repeating-linear-gradient(
-        135deg,
-        var(--swatch-a) 0 14px,
-        var(--swatch-b) 14px 28px
-    );
+    background:
+        linear-gradient(180deg, rgb(27 58 107 / 0.05), rgb(27 58 107 / 0.09)),
+        var(--surface);
+    display: grid;
+    place-items: center;
 }
 
-// Screen-reader-only text, for the live regions cook mode needs (§7).
 .sr-only {
     position: absolute;
     width: 1px;

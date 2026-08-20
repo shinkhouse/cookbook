@@ -15,7 +15,7 @@
     text-decoration: none;
 
     &:hover {
-        color: var(--accent);
+        color: var(--navy);
     }
 
     mat-icon {
@@ -53,9 +53,9 @@
     padding: 0 18px;
     border: 1px solid var(--rule-strong);
     border-radius: var(--radius-pill);
-    background: var(--card);
+    background: var(--surface);
     color: var(--ink-2);
-    font-family: var(--font-ui);
+    font-family: var(--font);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -65,9 +65,9 @@
     }
 
     &.is-on {
-        border-color: var(--accent);
-        background: var(--accent);
-        color: var(--card);
+        border-color: var(--navy);
+        background: var(--navy);
+        color: var(--surface);
     }
 }
 
@@ -84,10 +84,9 @@
 
 .field-label {
     display: block;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.14em;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
     color: var(--ink-4);
 }
@@ -98,7 +97,7 @@
     font-size: 13.5px;
 
     code {
-        font-family: var(--font-mono);
+        font-family: var(--font);
         font-size: 12.5px;
     }
 }
@@ -112,9 +111,9 @@ select {
     padding: 12px 14px;
     border: 1px solid var(--rule-strong);
     border-radius: var(--radius-card);
-    background: var(--card);
+    background: var(--surface);
     color: var(--ink);
-    font-family: var(--font-ui);
+    font-family: var(--font);
     font-size: 15px;
     line-height: 1.5;
 
@@ -125,9 +124,11 @@ select {
 
 textarea {
     resize: vertical;
-    // Pasted recipe text is column-aligned; a mono face keeps it readable.
-    font-family: var(--font-mono);
-    font-size: 13.5px;
+    font-size: 14px;
+    line-height: 1.7;
+    // Pasted recipe lines start with amounts; tabular figures keep them
+    // aligned now that there is no monospace family to do it.
+    font-variant-numeric: tabular-nums;
 }
 
 // §6.4 — the dashed dropzone.
@@ -139,13 +140,13 @@ textarea {
     padding: calc(var(--pad-section) * 0.9) 20px;
     border: 1px dashed var(--rule-strong);
     border-radius: var(--radius-card);
-    background: var(--card);
+    background: var(--surface);
     text-align: center;
     transition: border-color var(--motion-drawer) var(--ease);
 
     &.is-active {
-        border-color: var(--accent);
-        background: var(--accent-tint);
+        border-color: var(--navy);
+        background: var(--navy-tint);
     }
 
     p {
@@ -161,7 +162,7 @@ textarea {
     }
 
     code {
-        font-family: var(--font-mono);
+        font-family: var(--font);
         font-size: 13px;
         color: var(--ink-2);
     }
@@ -205,7 +206,7 @@ textarea {
     padding: 16px;
     border: 1px solid var(--rule);
     border-radius: var(--radius-card);
-    background: var(--card);
+    background: var(--surface);
 }
 
 .editor-head {
@@ -264,7 +265,7 @@ textarea {
     padding: 18px;
     border: 1px solid var(--rule);
     border-radius: var(--radius-card);
-    background: var(--card);
+    background: var(--surface);
     max-height: calc(100vh - 120px);
     overflow-y: auto;
 }
@@ -281,7 +282,7 @@ textarea {
 .badge {
     padding: 4px 12px;
     border-radius: var(--radius-pill);
-    font-family: var(--font-mono);
+    font-family: var(--font);
     font-size: 10px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -298,9 +299,9 @@ textarea {
     }
 
     &[data-status="clean"] {
-        border: 1px solid var(--accent-tint-border);
-        background: var(--accent-tint);
-        color: var(--accent-hover);
+        border: 1px solid var(--navy);
+        background: var(--navy);
+        color: var(--paper);
     }
 }
 
@@ -346,7 +347,7 @@ ol.preview-list li {
     &::before {
         content: counter(n) ".";
         margin-right: 8px;
-        font-family: var(--font-mono);
+        font-family: var(--font);
         font-size: 12px;
         color: var(--ink-4);
     }
@@ -354,14 +355,14 @@ ol.preview-list li {
 
 .preview-amount {
     margin-right: 6px;
-    font-family: var(--font-mono);
+    font-family: var(--font);
     font-size: 12.5px;
     color: var(--ink-4);
 }
 
 .preview-aisle {
     float: right;
-    font-family: var(--font-mono);
+    font-family: var(--font);
     font-size: 10px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -378,7 +379,7 @@ ol.preview-list li {
     ul {
         margin: 6px 0 0;
         padding-left: 18px;
-        font-family: var(--font-mono);
+        font-family: var(--font);
         font-size: 12px;
         color: #6d5518;
     }
@@ -419,7 +420,7 @@ ol.preview-list li {
     min-height: var(--touch);
     padding: 0 20px;
     border-radius: var(--radius-pill);
-    font-family: var(--font-ui);
+    font-family: var(--font);
     font-size: 14px;
     font-weight: 600;
     text-decoration: none;
@@ -439,12 +440,12 @@ ol.preview-list li {
 }
 
 .btn-primary {
-    border: 1px solid var(--accent);
-    background: var(--accent);
-    color: var(--card);
+    border: 1px solid var(--navy);
+    background: var(--navy);
+    color: var(--surface);
 
     &:hover:not(:disabled) {
-        background: var(--accent-hover);
+        background: var(--navy-deep);
     }
 
     &:disabled {
@@ -466,6 +467,6 @@ ol.preview-list li {
 }
 
 .btn-outline {
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: var(--navy);
+    color: var(--navy);
 }

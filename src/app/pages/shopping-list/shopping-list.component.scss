@@ -45,13 +45,13 @@
     align-items: center;
     gap: 4px;
     padding: 0 6px 0 14px;
-    border: 1px solid var(--accent-tint-border);
+    border: 1px solid var(--navy-tint-edge);
     border-radius: var(--radius-pill);
-    background: var(--accent-tint);
+    background: var(--navy-tint);
     min-height: 34px;
 
     a {
-        color: var(--accent-hover);
+        color: var(--navy-deep);
         font-size: 14px;
         font-weight: 600;
         text-decoration: none;
@@ -65,11 +65,11 @@
         border: 0;
         border-radius: var(--radius-pill);
         background: none;
-        color: var(--accent-hover);
+        color: var(--navy-deep);
         cursor: pointer;
 
         &:hover {
-            background: var(--accent-tint-border);
+            background: var(--navy-tint-edge);
         }
 
         mat-icon {
@@ -90,7 +90,7 @@
 
 .progress-fill {
     height: 100%;
-    background: var(--accent);
+    background: var(--navy);
     transition: width var(--motion-progress) var(--ease);
 }
 
@@ -104,7 +104,7 @@
     padding: 18px;
     border: 1px solid var(--rule);
     border-radius: var(--radius-card);
-    background: var(--card);
+    background: var(--surface);
 }
 
 .aisle-head {
@@ -115,7 +115,11 @@
     margin-bottom: 12px;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--rule);
-    font-size: 20px;
+    color: var(--navy);
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
 }
 
 .aisle-count {
@@ -142,19 +146,30 @@
 }
 
 .row-text {
+    display: grid;
+    grid-template-columns: 62px 1fr;
+    gap: 12px;
+    align-items: baseline;
     font-size: 15px;
     color: var(--ink-2);
 }
 
 .row-amount {
-    margin-right: 6px;
-    font-family: var(--font-mono);
-    font-size: 13px;
+    text-align: right;
+    font-size: 13.5px;
+    font-weight: 600;
     color: var(--ink-4);
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+}
+
+.row-name {
+    font-weight: 500;
+    color: var(--ink);
 }
 
 .row-source {
-    margin-left: 34px;
+    margin-left: 108px;
     color: var(--ink-4);
     font-size: 12.5px;
 }
@@ -178,7 +193,7 @@
     min-height: 40px;
     padding: 0 18px;
     border-radius: var(--radius-pill);
-    font-family: var(--font-ui);
+    font-family: var(--font);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -207,14 +222,14 @@
 }
 
 .btn-outline {
-    border: 1px solid var(--accent);
+    border: 1px solid var(--navy);
     background: transparent;
-    color: var(--accent);
+    color: var(--navy);
     text-decoration: none;
 
     &:hover {
-        background: var(--accent);
-        color: var(--card);
+        background: var(--navy);
+        color: var(--surface);
     }
 }
 
@@ -230,7 +245,7 @@
 
 .empty-line {
     margin: 0;
-    font-family: var(--font-display);
+    font-family: var(--font);
     font-size: clamp(22px, 3vw, 30px);
     color: var(--ink-2);
 }

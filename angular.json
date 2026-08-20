@@ -39,15 +39,12 @@
               "src/assets"
             ],
             "styles": [
-              "@fontsource/newsreader/latin-400.css",
-              "@fontsource/newsreader/latin-500.css",
-              "@fontsource/newsreader/latin-400-italic.css",
-              "@fontsource/karla/latin-400.css",
-              "@fontsource/karla/latin-500.css",
-              "@fontsource/karla/latin-600.css",
-              "@fontsource/karla/latin-700.css",
-              "@fontsource/ibm-plex-mono/latin-400.css",
-              "@fontsource/ibm-plex-mono/latin-500.css",
+              "@fontsource/figtree/latin-400.css",
+              "@fontsource/figtree/latin-400-italic.css",
+              "@fontsource/figtree/latin-500.css",
+              "@fontsource/figtree/latin-600.css",
+              "@fontsource/figtree/latin-700.css",
+              "@fontsource/figtree/latin-800.css",
               "src/styles.scss"
             ],
             "scripts": [],
@@ -117,15 +114,12 @@
               "src/assets"
             ],
             "styles": [
-              "@fontsource/newsreader/latin-400.css",
-              "@fontsource/newsreader/latin-500.css",
-              "@fontsource/newsreader/latin-400-italic.css",
-              "@fontsource/karla/latin-400.css",
-              "@fontsource/karla/latin-500.css",
-              "@fontsource/karla/latin-600.css",
-              "@fontsource/karla/latin-700.css",
-              "@fontsource/ibm-plex-mono/latin-400.css",
-              "@fontsource/ibm-plex-mono/latin-500.css",
+              "@fontsource/figtree/latin-400.css",
+              "@fontsource/figtree/latin-400-italic.css",
+              "@fontsource/figtree/latin-500.css",
+              "@fontsource/figtree/latin-600.css",
+              "@fontsource/figtree/latin-700.css",
+              "@fontsource/figtree/latin-800.css",
               "src/styles.scss"
             ],
             "scripts": []

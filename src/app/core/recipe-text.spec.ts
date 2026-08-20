@@ -1,4 +1,144 @@
-import { parseJsonLd, parseRecipeText, slugify, splitFrontMatter } from './recipe-text';
+import {
+  parseJsonLd,
+  parseRecipeText,
+  slugify,
+  splitFrontMatter,
+  stripInlineMarkdown,
+} from './recipe-text';
+
+describe('stripInlineMarkdown', () => {
+  it('removes emphasis', () => {
+    expect(stripInlineMarkdown('**red lentils**')).toBe('red lentils');
+    expect(stripInlineMarkdown('_butter_')).toBe('butter');
+    expect(stripInlineMarkdown('*olive oil*')).toBe('olive oil');
+    expect(stripInlineMarkdown('***everything***')).toBe('everything');
+    expect(stripInlineMarkdown('~~cancelled~~')).toBe('cancelled');
+    expect(stripInlineMarkdown('`code`')).toBe('code');
+  });
+
+  it('keeps the text of a link and drops the target', () => {
+    expect(stripInlineMarkdown('see [cold water](https://example.com) first')).toBe(
+      'see cold water first',
+    );
+    expect(stripInlineMarkdown('![a photo](pic.jpg)')).toBe('a photo');
+    expect(stripInlineMarkdown('<https://example.com>')).toBe('https://example.com');
+  });
+
+  it('leaves an underscore inside a word alone', () => {
+    // The rule only fires at word edges, so product names survive.
+    expect(stripInlineMarkdown('low_fat_cream')).toBe('low_fat_cream');
+  });
+
+  it('leaves plain text untouched', () => {
+    expect(stripInlineMarkdown('2 tbsp dried onion')).toBe('2 tbsp dried onion');
+  });
+
+  it('handles emphasis mid-sentence', () => {
+    expect(stripInlineMarkdown('Simmer **25 minutes**, until soft.')).toBe(
+      'Simmer 25 minutes, until soft.',
+    );
+  });
+});
+
+describe('parseRecipeText — markdown', () => {
+  it('strips inline markup before it becomes stored data', () => {
+    const draft = parseRecipeText(
+      ['# Dal', '## Ingredients', '- 1 cup **red lentils**', '- 2 tbsp _butter_', '## Steps', '1. Simmer **25 minutes**.'].join('\n'),
+    );
+    // The bug this guards: an ingredient stored as "**red lentils**", asterisks
+    // and all, showing up that way on the shopping list.
+    expect(draft.ingredients.map((i) => i.name)).toEqual(['red lentils', 'butter']);
+    expect(draft.steps).toEqual(['Simmer 25 minutes.']);
+    expect(draft.title).toBe('Dal');
+  });
+
+  it('reads a recipe written inside a table, as a Docs export produces', () => {
+    // Google Docs keeps each recipe card in a table and exports it as GFM pipe
+    // rows. Untreated, every row parsed as a step reading "| a | b |".
+    const draft = parseRecipeText(
+      [
+        '# Weeknight Dal',
+        '',
+        '| Ingredients | Steps |',
+        '| --- | --- |',
+        '| 1 cup red lentils | Rinse the lentils. |',
+        '| 2 tbsp butter | Simmer for 25 minutes. |',
+      ].join('\n'),
+    );
+    const text = [...draft.ingredients.map((i) => i.name), ...draft.steps].join(' ');
+    expect(text).not.toContain('|');
+    expect(text).not.toContain('---');
+    expect(draft.ingredients.map((i) => i.name)).toContain('red lentils');
+    expect(draft.steps.some((s) => s.includes('Rinse the lentils'))).toBe(true);
+  });
+
+  it('never emits a table divider or a rule as content', () => {
+    const draft = parseRecipeText(
+      ['Soup', '| a |', '| :-: |', '---', '***', 'Ingredients', '- 1 onion', 'Steps', 'Boil.'].join('\n'),
+    );
+    for (const step of draft.steps) {
+      expect(step).not.toMatch(/^[-*|:\s]+$/);
+    }
+    expect(draft.ingredients.map((i) => i.name)).toEqual(['onion']);
+  });
+
+  it('keeps the words of a blockquote and drops the marker', () => {
+    const draft = parseRecipeText('Rice\nIngredients\n- 1 cup rice\nSteps\nBoil.\n> Serve hot.');
+    expect(draft.steps).toEqual(['Boil.', 'Serve hot.']);
+  });
+
+  it('ignores an HTML comment', () => {
+    const draft = parseRecipeText('Cake\n<!-- draft note -->\nIngredients\n- 1 egg\nSteps\nBake.');
+    expect(draft.steps).toEqual(['Bake.']);
+  });
+
+  it('reads a label-and-value table, the other shape a card export takes', () => {
+    const draft = parseRecipeText(
+      [
+        '# Grandmas Chili',
+        '',
+        '| Ingredients | 1 lb hamburger |',
+        '| Steps | Brown the beef. |',
+      ].join('\n'),
+    );
+    expect(draft.ingredients.map((i) => i.name)).toEqual(['hamburger']);
+    expect(draft.steps).toEqual(['Brown the beef.']);
+  });
+
+  it('splits a cell that packs several lines behind <br>', () => {
+    // Docs exports multi-line cells as <br>, which would otherwise arrive as
+    // one very long ingredient.
+    const draft = parseRecipeText(
+      ['Dal', '| Ingredients | Steps |', '| --- | --- |', '| 1 cup lentils<br>2 tbsp butter | Rinse.<br>Simmer. |'].join('\n'),
+    );
+    expect(draft.ingredients.map((i) => i.name)).toEqual(['lentils', 'butter']);
+    expect(draft.steps).toEqual(['Rinse.', 'Simmer.']);
+  });
+
+  it('keeps two tables separate rather than merging them', () => {
+    const draft = parseRecipeText(
+      [
+        'Soup',
+        '| Ingredients |',
+        '| --- |',
+        '| 1 onion |',
+        '',
+        'Steps',
+        'Boil.',
+      ].join('\n'),
+    );
+    expect(draft.ingredients.map((i) => i.name)).toEqual(['onion']);
+    expect(draft.steps).toEqual(['Boil.']);
+  });
+
+  it('finds a heading even when it is written as a markdown heading in a cell', () => {
+    const draft = parseRecipeText(
+      ['Stew', '| ## Ingredients |', '| - 1 onion |', '| ## Steps |', '| Cook slowly. |'].join('\n'),
+    );
+    expect(draft.ingredients.map((i) => i.name)).toEqual(['onion']);
+    expect(draft.steps).toEqual(['Cook slowly.']);
+  });
+});
 
 describe('parseRecipeText', () => {
   it('is empty for empty input', () => {

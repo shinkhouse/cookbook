@@ -49,7 +49,7 @@ draft is substantially simpler as a signal than as a module plus a service.
 
 | Store | Holds | Persisted |
 |---|---|---|
-| `RecipeStore` | recipe collection, derived tag list, search + filter | no |
+| `RecipeStore` | recipe collection, derived tag list, search + filter | collection only |
 | `ListStore` | `cart` (recipe slugs), `bought` (item keys) | `localStorage` |
 
 A `bought` key is `` `${slug}:${ingredientIndex}` ``. It must be scoped per recipe,
@@ -65,6 +65,25 @@ cook-mode step index, running timers.
 `localStorage` access goes through a single injectable wrapper so it can be faked
 in tests and so a quota/private-mode failure degrades to in-memory rather than
 throwing.
+
+**Revised 2026-08-20.** The recipe collection is persisted after all. Leaving it
+in memory meant the create flow's "Save recipe" lasted until reload, which made
+the button a lie. The collection now goes through `RecipeRepository`, an abstract
+seam with a `localStorage` implementation:
+
+```
+RecipeStore → RecipeRepository (abstract, async)
+                └── LocalRecipeRepository   ← today
+                └── HttpRecipeRepository    ← api.samuelhinkhouse.com, later
+```
+
+The seam exists because the collection is expected to move to the MongoDB-backed
+`api.samuelhinkhouse.com`. Swapping it is one provider line; the store and every
+screen above it are untouched. The interface is async even though the local
+implementation resolves immediately — a networked version cannot be retrofitted
+into a synchronous contract without changing every caller.
+
+Search text and the tag selection stay ephemeral, as above.
 
 ### 2.3 Routing
 
@@ -363,6 +382,19 @@ Four tabs over one shared editable draft. **Nothing saves until confirmed.**
   ingredients, the rest steps.
 - **Markdown file** — drop `.md` / `.txt`, or a folder for bulk import.
   Front-matter supplies title, servings, tags.
+
+  Inline markdown is **stripped, never rendered**: an ingredient's name is stored
+  data, so `**red lentils**` must not be saved with its asterisks and turn up
+  that way on the shopping list. No HTML is ever bound, so there is no
+  sanitisation surface.
+
+  Tables are read, because a cookbook exported from Google Docs keeps each recipe
+  card in a table and GFM export writes those as pipe rows. Two shapes are
+  handled — column-oriented (`| Ingredients | Steps |` with cells beneath) and
+  label-and-value (`| Ingredients | 1 cup rice |`). They are told apart by
+  whether *every* row starts with a section name, since a two-column table is
+  otherwise ambiguous. Dividers, thematic breaks and HTML comments are dropped;
+  blockquote markers are stripped but their words kept.
 - **From a URL** — parses pasted schema.org `Recipe` JSON-LD, falling back to text
   parsing. Does not fetch (see non-goals).
 - **Manual** — the long form as fallback.

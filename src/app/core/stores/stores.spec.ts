@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { FAV_SEED } from '../mock/recipes.mock';
+import { provideLocalRecipes } from '../recipe-repository';
 import { ListStore, boughtKey } from './list.store';
 import { PrefsStore } from './prefs.store';
 import { RecipeStore, tagLabel } from './recipe.store';
@@ -9,7 +10,7 @@ describe('RecipeStore', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
     store = TestBed.inject(RecipeStore);
   });
 
@@ -162,7 +163,7 @@ describe('RecipeStore', () => {
 describe('PrefsStore', () => {
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
   });
 
   afterEach(() => localStorage.clear());
@@ -184,7 +185,7 @@ describe('PrefsStore', () => {
   it('persists favourites across a fresh injection', () => {
     TestBed.inject(PrefsStore).toggleFav('grandmas-spaghetti');
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
     expect(TestBed.inject(PrefsStore).isFav('grandmas-spaghetti')).toBe(false);
   });
 
@@ -194,7 +195,7 @@ describe('PrefsStore', () => {
     expect(prefs.favCount()).toBe(0);
 
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
     // The bug this guards: treating "empty" as "unseeded" and handing back the
     // seed, so clearing favourites silently undid itself on reload.
     expect(TestBed.inject(PrefsStore).favCount()).toBe(0);
@@ -207,7 +208,7 @@ describe('PrefsStore', () => {
     expect(prefs.layout()).toBe('single-column');
 
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
     expect(TestBed.inject(PrefsStore).layout()).toBe('single-column');
   });
 });
@@ -218,7 +219,7 @@ describe('ListStore', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
     list = TestBed.inject(ListStore);
     recipes = TestBed.inject(RecipeStore);
   });
@@ -318,7 +319,7 @@ describe('ListStore', () => {
   it('ignores a stored slug that no longer matches a recipe', () => {
     localStorage.setItem('cookbook.cart', JSON.stringify(['deleted-recipe']));
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
     const fresh = TestBed.inject(ListStore);
     expect(fresh.cart()).toEqual(['deleted-recipe']);
     expect(() => fresh.groups()).not.toThrow();
@@ -330,7 +331,7 @@ describe('ListStore', () => {
     list.toggleBought('grandmas-chili', 1);
 
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
     const fresh = TestBed.inject(ListStore);
     expect(fresh.cart()).toEqual(['grandmas-chili']);
     expect(fresh.isBought('grandmas-chili', 1)).toBe(true);

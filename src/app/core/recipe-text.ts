@@ -37,9 +37,176 @@ const LIST_MARKER = /^\s*(?:[-*•‣·–]|\d{1,2}[.)])\s+/;
 /** Front matter delimiters, for the markdown-file tab. */
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
+/** A GFM table row: `| cell | cell |`. */
+const TABLE_ROW = /^\s*\|.*\|?\s*$/;
+
+/** A table's alignment row: `| --- | :--: |`. Carries no content. */
+const TABLE_DIVIDER = /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/;
+
+/** A thematic break, which is only a divider and never content. */
+const THEMATIC_BREAK = /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/;
+
+/**
+ * Removes inline markdown, leaving the words.
+ *
+ * Necessary because an ingredient's name is *stored data*, not display markup:
+ * without this, "- 1 cup **red lentils**" is saved as an ingredient literally
+ * named "**red lentils**", and the asterisks turn up on the shopping list.
+ * Nothing here renders markdown — it is stripped, so no HTML is ever bound.
+ */
+export function stripInlineMarkdown(text: string): string {
+  return (
+    text
+      // Images before links: the image syntax contains the link syntax.
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+      // Bare autolinks.
+      .replace(/<((?:https?|mailto):[^>]+)>/g, '$1')
+      // Emphasis, longest marker first so ** is not read as two lots of *.
+      .replace(/\*\*\*([^*]+)\*\*\*/g, '$1')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/(^|\W)\*([^*\s][^*]*)\*(?=\W|$)/g, '$1$2')
+      .replace(/___([^_]+)___/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      // Underscore emphasis only at word edges, so "low_fat" survives intact.
+      .replace(/(^|\W)_([^_\s][^_]*)_(?=\W|$)/g, '$1$2')
+      .replace(/~~([^~]+)~~/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .trim()
+  );
+}
+
+/** Splits a pipe row into trimmed cells, dropping the leading/trailing empties. */
+function cellsOf(row: string): string[] {
+  return row
+    .replace(/^\s*\|/, '')
+    .replace(/\|\s*$/, '')
+    .split('|')
+    .map((c) => c.trim());
+}
+
+/** Which section a heading word names, if any. */
+function sectionOf(text: string): 'ingredients' | 'steps' | null {
+  if (INGREDIENT_HEADING.test(text)) return 'ingredients';
+  if (STEP_HEADING.test(text)) return 'steps';
+  return null;
+}
+
+/**
+ * Rewrites a GFM table into the linear form the section parser already
+ * understands, rather than teaching that parser about tables.
+ *
+ * This matters because a cookbook exported from Google Docs keeps each recipe
+ * card in a table. Two shapes are handled:
+ *
+ *   Column-oriented — the header names the sections, so each column is one
+ *   section and the cells below it are that section's lines:
+ *       | Ingredients | Steps |
+ *       | 1 cup rice  | Boil. |
+ *
+ *   Label-and-value — the first cell of each row names a section:
+ *       | Ingredients | 1 cup rice |
+ *
+ * Anything else falls back to reading the cells in order, which is no worse
+ * than treating the row as prose.
+ */
+function flattenTable(rows: string[][]): string[] {
+  const out: string[] = [];
+  if (rows.length === 0) return out;
+
+  const header = rows[0];
+  const headerSections = header.map(sectionOf);
+
+  // Tested before the column shape because the two are otherwise ambiguous:
+  // "| Ingredients | 1 lb beef |" has a section name in its first header cell
+  // just as a column-oriented table does. What separates them is that here
+  // *every* row starts with a section name, not only the first.
+  const isLabelValue =
+    rows.length > 1 &&
+    rows.every((row) => row.length === 2 && sectionOf(row[0]) !== null);
+
+  if (isLabelValue) {
+    for (const [label, value] of rows) {
+      out.push(label);
+      out.push(...value.split(/<br\s*\/?>|\n/).map((c) => c.trim()).filter(Boolean));
+    }
+    return out;
+  }
+
+  if (headerSections.some((s) => s !== null) && rows.length > 1) {
+    // Column-oriented: emit each column under its own heading, so the two
+    // sections stay separate instead of interleaving row by row.
+    header.forEach((name, column) => {
+      const section = headerSections[column];
+      if (section === null) return;
+      out.push(name);
+      for (const row of rows.slice(1)) {
+        const cell = row[column];
+        if (cell) out.push(...cell.split(/<br\s*\/?>|\n/).map((c) => c.trim()).filter(Boolean));
+      }
+    });
+    return out;
+  }
+
+  for (const row of rows) {
+    // Label-and-value: "| Ingredients | 1 cup rice |".
+    if (row.length === 2 && sectionOf(row[0]) !== null) {
+      out.push(row[0]);
+      out.push(...row[1].split(/<br\s*\/?>|\n/).map((c) => c.trim()).filter(Boolean));
+      continue;
+    }
+    for (const cell of row) {
+      if (cell) out.push(cell);
+    }
+  }
+  return out;
+}
+
+/**
+ * Flattens markdown structure into plain content lines before the section
+ * parser runs: tables become linear, dividers and comments go, and blockquote
+ * markers are dropped while their words are kept.
+ */
+function normaliseLines(body: string): string[] {
+  const out: string[] = [];
+  let table: string[][] | null = null;
+
+  const closeTable = () => {
+    if (table) out.push(...flattenTable(table));
+    table = null;
+  };
+
+  for (const raw of body.split(/\r?\n/)) {
+    const line = raw.trim();
+
+    // A divider belongs to the table it sits inside, so it must not close it.
+    if (TABLE_DIVIDER.test(line) && table) continue;
+
+    if (TABLE_ROW.test(line)) {
+      const cells = cellsOf(line);
+      if (table) table.push(cells);
+      else table = [cells];
+      continue;
+    }
+
+    closeTable();
+
+    if (!line) continue;
+    if (THEMATIC_BREAK.test(line)) continue;
+    // An HTML comment is never recipe content.
+    if (/^<!--/.test(line)) continue;
+
+    // A blockquote is usually a tip; keep the words, drop the marker.
+    out.push(line.replace(/^>\s?/, ''));
+  }
+
+  closeTable();
+  return out;
+}
+
 export function parseRecipeText(raw: string): RecipeDraft {
   const { body, meta } = splitFrontMatter(raw ?? '');
-  const lines = body.split(/\r?\n/);
+  const lines = normaliseLines(body);
 
   let title = meta.title ?? '';
   let section: 'unknown' | 'ingredients' | 'steps' = 'unknown';
@@ -65,11 +232,12 @@ export function parseRecipeText(raw: string): RecipeDraft {
 
     // The first surviving line is the title, unless front matter supplied one.
     if (!title) {
-      title = stripMarkers(line).replace(/^#{1,6}\s*/, '');
+      title = stripInlineMarkdown(stripMarkers(line).replace(/^#{1,6}\s*/, ''));
       continue;
     }
 
-    const text = stripMarkers(line);
+    // Inline markup is stripped here, before the line becomes stored data.
+    const text = stripInlineMarkdown(stripMarkers(line));
     if (!text) continue;
 
     if (section === 'ingredients') {

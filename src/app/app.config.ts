@@ -5,6 +5,7 @@ import {
 } from '@angular/core';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
+import { provideLocalRecipes } from './core/recipe-repository';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -23,5 +24,7 @@ export const appConfig: ApplicationConfig = {
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' }),
     ),
     provideAnimationsAsync(),
+    // Recipes persist to localStorage for now; see the note on the provider.
+    provideLocalRecipes(),
   ],
 };

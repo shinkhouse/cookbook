@@ -2,22 +2,37 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Recipe } from '../model/recipes.model';
 import { Recipes } from '../mock/recipes.mock';
 import { Facet, buildFacets, matchesSelection } from '../facets';
+import { RecipeRepository } from '../recipe-repository';
 import { PrefsStore } from './prefs.store';
 
 /**
- * The recipe collection plus the library's search and filter state, per spec
- * §2.2. Not persisted: the search text and the tag selection are deliberately
- * ephemeral, so a reload lands on the full library.
+ * The recipe collection plus the library's search and filter state.
+ *
+ * The collection persists through RecipeRepository. The search text and the tag
+ * selection deliberately do not (§2.2), so a reload lands on the full library
+ * rather than on whatever was last filtered.
  */
 @Injectable({ providedIn: 'root' })
 export class RecipeStore {
   // Favourites are a preference, so they live in PrefsStore; the dependency
   // runs this way only (PrefsStore knows nothing about recipes).
   private readonly prefs = inject(PrefsStore);
+  private readonly repo = inject(RecipeRepository);
 
+  /**
+   * Starts from the bundled data so the first paint has something to show, then
+   * the repository's answer replaces it. Without the synchronous seed the
+   * library would flash empty on every load.
+   */
   private readonly _recipes = signal<readonly Recipe[]>(Recipes);
 
   readonly recipes = computed(() => this._recipes());
+
+  constructor() {
+    void this.repo.load().then((loaded) => {
+      if (loaded.length > 0) this._recipes.set(loaded);
+    });
+  }
 
   readonly query = signal('');
   /**
@@ -55,17 +70,51 @@ export class RecipeStore {
   }
 
   /**
-   * Adds a recipe from the create flow. Session-scoped: RecipeStore is not
-   * persisted (§2.2) and there is no backend (§1), so a saved recipe lives
-   * until reload. "Copy JSON" in the create flow is how a recipe is actually
-   * kept — paste it into the seed data.
+   * Adds a recipe from the create flow and persists the collection.
    *
    * Returns the slug actually used, which may be suffixed to stay unique.
    */
   add(recipe: Recipe): string {
     const slug = this.uniqueSlug(recipe.slug);
     this._recipes.update((list) => [{ ...recipe, slug }, ...list]);
+    this.persist();
     return slug;
+  }
+
+  /** Removes a recipe and persists. Returns false if the slug was unknown. */
+  remove(slug: string): boolean {
+    const before = this._recipes().length;
+    this._recipes.update((list) => list.filter((r) => r.slug !== slug));
+    if (this._recipes().length === before) return false;
+    this.persist();
+    return true;
+  }
+
+  /** Replaces an existing recipe, matched on slug. */
+  update(recipe: Recipe): boolean {
+    let found = false;
+    this._recipes.update((list) =>
+      list.map((r) => {
+        if (r.slug !== recipe.slug) return r;
+        found = true;
+        return recipe;
+      }),
+    );
+    if (found) this.persist();
+    return found;
+  }
+
+  /** Throws away local changes and goes back to the bundled collection. */
+  resetToSeed(): void {
+    this._recipes.set([...Recipes]);
+    this.persist();
+  }
+
+  private persist(): void {
+    // Fire and forget: the in-memory signal is already the truth for this
+    // session, and a failed write must not take the interaction down with it.
+    // The Storage wrapper degrades to memory rather than throwing.
+    void this.repo.save(this._recipes());
   }
 
   private uniqueSlug(desired: string): string {

@@ -1,4 +1,20 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { ActivatedRouteSnapshot, ResolveFn, Routes } from '@angular/router';
+import { RecipeStore } from './core/stores/recipe.store';
+
+/**
+ * Names the tab after the recipe. Without this the routes that carry no title
+ * kept whatever the previous page set, so opening a recipe from the create flow
+ * left the tab reading "Add a recipe".
+ */
+const recipeTitle =
+  (suffix = ''): ResolveFn<string> =>
+  (route: ActivatedRouteSnapshot) => {
+    const slug = route.paramMap.get('slug') ?? '';
+    const recipe = inject(RecipeStore).bySlug(slug);
+    if (!recipe) return "Sam's Recipes";
+    return suffix ? `${recipe.title} — ${suffix}` : recipe.title;
+  };
 
 /**
  * Routing per design spec §2.3.
@@ -22,11 +38,13 @@ export const routes: Routes = [
   {
     path: 'recipes/:slug/cook',
     loadComponent: () => import('./pages/cook-mode/cook-mode.component').then((m) => m.CookModeComponent),
+    title: recipeTitle('cooking'),
   },
   {
     path: 'recipes/:slug',
     loadComponent: () =>
       import('./pages/recipe-detail/recipe-detail.component').then((m) => m.RecipeDetailComponent),
+    title: recipeTitle(),
   },
   {
     path: 'list',

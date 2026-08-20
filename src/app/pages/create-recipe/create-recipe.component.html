@@ -52,9 +52,10 @@
         @case ('file') {
           <label class="field-label">Drop a markdown or text file</label>
           <p class="hint">
-            Front matter fills in the title, servings and tags. Drop a folder to
-            bulk import — the first file opens here, the rest are added straight
-            away.
+            Front matter fills in the title, servings and tags. Recipes written
+            inside a table are read too, which is what a Google Docs export
+            produces. Drop a folder to bulk import — the first file opens here,
+            the rest are added straight away.
           </p>
           <div
             class="dropzone"
@@ -332,8 +333,8 @@
         <p class="hint">A title and at least one ingredient are needed to save.</p>
       } @else {
         <p class="hint">
-          Saving keeps this recipe for the session only — there is no backend.
-          Copy the JSON into the seed data to keep it for good.
+          Saving keeps this recipe on this device. Copy the JSON if you want it
+          in the seed data or on another machine.
         </p>
       }
     </aside>

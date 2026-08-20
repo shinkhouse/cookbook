@@ -1,74 +1,471 @@
-form {
+.create {
+    max-width: var(--max-detail);
+    margin: 0 auto;
+    padding: var(--pad-section);
+}
+
+.back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--touch);
+    color: var(--ink-3);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+        color: var(--accent);
+    }
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+    }
+}
+
+.create-head {
+    margin-bottom: 22px;
+
+    h1 {
+        margin-top: 6px;
+        font-size: var(--size-detail-h1);
+    }
+}
+
+.lede {
+    max-width: 52ch;
+    margin: 10px 0 0;
+    color: var(--ink-3);
+    font-size: 16.5px;
+}
+
+.tabs {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.tab {
+    min-height: 40px;
+    padding: 0 18px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+    background: var(--card);
+    color: var(--ink-2);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+        border-color: var(--ink-4);
+    }
+
+    &.is-on {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--card);
+    }
+}
+
+.columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gutter);
+    align-items: flex-start;
+}
+
+.panel {
+    flex: 2 1 420px;
+}
+
+.field-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+}
+
+.hint {
+    margin: 8px 0 0;
+    color: var(--ink-3);
+    font-size: 13.5px;
+
+    code {
+        font-family: var(--font-mono);
+        font-size: 12.5px;
+    }
+}
+
+textarea,
+input[type="text"],
+input[type="number"],
+select {
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-card);
+    background: var(--card);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 15px;
+    line-height: 1.5;
+
+    &::placeholder {
+        color: var(--ink-3);
+    }
+}
+
+textarea {
+    resize: vertical;
+    // Pasted recipe text is column-aligned; a mono face keeps it readable.
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+}
+
+// §6.4 — the dashed dropzone.
+.dropzone {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: calc(var(--pad-section) * 0.9) 20px;
+    border: 1px dashed var(--rule-strong);
+    border-radius: var(--radius-card);
+    background: var(--card);
+    text-align: center;
+    transition: border-color var(--motion-drawer) var(--ease);
+
+    &.is-active {
+        border-color: var(--accent);
+        background: var(--accent-tint);
+    }
+
+    p {
+        margin: 0;
+        color: var(--ink-3);
+    }
+
+    mat-icon {
+        font-size: 30px;
+        width: 30px;
+        height: 30px;
+        color: var(--ink-4);
+    }
+
+    code {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        color: var(--ink-2);
+    }
+}
+
+.file-pick {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+
+    input[type="file"] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+}
+
+.manual {
+    display: grid;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.field-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.field {
+    flex: 1 1 200px;
+    display: block;
+}
+
+.field-small {
+    flex: 0 1 130px;
+}
+
+.editor-block {
     padding: 16px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-card);
+    background: var(--card);
+}
 
-    div {
-        width: 100%;
+.editor-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.editor-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+
+    .grow {
+        flex: 1;
     }
 
-    .form-array-header{
-        display: flex;
-        flex-direction: row;
-        gap: 16px;
-        align-items: flex-start;
+    select {
+        flex: 0 0 110px;
+        font-size: 13px;
+    }
+}
+
+.icon-button {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    margin-top: 8px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--ink-3);
+    cursor: pointer;
+
+    &:hover {
+        border-color: var(--ink-4);
+        color: var(--ink);
     }
 
-    // Replaces the bare fxFlex spacers.
-    .spacer {
-        flex: 1 1 auto;
+    mat-icon {
+        font-size: 17px;
+        width: 17px;
+        height: 17px;
+    }
+}
+
+// §6.4 — sticky draft preview.
+.preview {
+    flex: 1 1 300px;
+    position: sticky;
+    top: 92px;
+    padding: 18px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-card);
+    background: var(--card);
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+.preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+
+    &[data-status="waiting"] {
+        border: 1px solid var(--rule-strong);
+        color: var(--ink-4);
     }
 
-    .form-arrays {
-        display: flex;
-        flex-direction: row;
-        gap: 16px;
+    &[data-status="check"] {
+        border: 1px solid #d9c48a;
+        background: #fbf3dd;
+        color: #6d5518;
+    }
 
-        // Was fxLayout.sm="column" fxLayout.md="column", i.e. flex-layout's sm+md
-        // range (600-1279px) only -- which left the xs range below 600px as a row.
-        // Stacking everything under 1280px instead, since that was plainly the
-        // intent and it fixes narrow screens.
-        @media (max-width: 1279px) {
-            flex-direction: column;
+    &[data-status="clean"] {
+        border: 1px solid var(--accent-tint-border);
+        background: var(--accent-tint);
+        color: var(--accent-hover);
+    }
+}
+
+.notice {
+    margin: 12px 0 0;
+    color: var(--ink-3);
+    font-size: 13px;
+}
+
+.preview-title {
+    margin-top: 14px;
+    font-size: 26px;
+}
+
+.preview-slug {
+    margin: 4px 0 0;
+}
+
+.preview-sub {
+    margin: 18px 0 8px;
+}
+
+.preview-list {
+    margin: 0;
+    padding: 0 0 0 2px;
+    list-style: none;
+    counter-reset: n;
+
+    li {
+        padding: 6px 0;
+        color: var(--ink-2);
+        font-size: 14px;
+
+        & + li {
+            border-top: 1px solid var(--rule);
         }
     }
 }
 
-.create-recipe-toolbar {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 16px;
+ol.preview-list li {
+    counter-increment: n;
 
-    .spacer {
-        flex: 1 1 auto;
+    &::before {
+        content: counter(n) ".";
+        margin-right: 8px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--ink-4);
     }
 }
 
-.recipe-preview-header {
+.preview-amount {
+    margin-right: 6px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--ink-4);
+}
+
+.preview-aisle {
+    float: right;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+}
+
+.review {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid #d9c48a;
+    border-radius: var(--radius-card);
+    background: #fbf3dd;
+
+    ul {
+        margin: 6px 0 0;
+        padding-left: 18px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: #6d5518;
+    }
+}
+
+.review-head {
     display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
     align-items: center;
-    gap: 16px;
+    gap: 6px;
+    margin: 0;
+    color: #6d5518;
+    font-size: 13px;
+    font-weight: 600;
+
+    mat-icon {
+        font-size: 17px;
+        width: 17px;
+        height: 17px;
+    }
 }
 
-.form-preview {
-    font-family: monospace;
-    padding: 16px;
-    background: #eaeaea;
-    border-radius: 8px;
+.preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
 }
 
-mat-form-field {
-    width: 100%;
+.btn-primary,
+.btn-ghost,
+.btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: var(--touch);
+    padding: 0 20px;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+
+    mat-icon {
+        font-size: 17px;
+        width: 17px;
+        height: 17px;
+    }
 }
 
-button:not(.mat-mdc-icon-button) .mat-icon {
-    width: 18px;
-    height: 18px;
-    font-size: 18px;
-    line-height: 18px;
-    margin-right: 8px;
+.btn-small {
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+}
+
+.btn-primary {
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--card);
+
+    &:hover:not(:disabled) {
+        background: var(--accent-hover);
+    }
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+}
+
+.btn-ghost,
+.btn-outline {
+    border: 1px solid var(--rule-strong);
+    background: transparent;
+    color: var(--ink-3);
+
+    &:hover {
+        border-color: var(--ink-4);
+        color: var(--ink);
+    }
+}
+
+.btn-outline {
+    border-color: var(--accent);
+    color: var(--accent);
 }

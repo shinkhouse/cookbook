@@ -1,0 +1,124 @@
+@if (recipe(); as r) {
+  <div class="cook">
+    <header class="cook-head">
+      <a class="exit" [routerLink]="['/recipes', r.slug]">
+        <mat-icon fontIcon="close" aria-hidden="true" />
+        <span>Leave cook mode</span>
+      </a>
+
+      <p class="cook-title">{{ r.title }}</p>
+
+      <!-- §6.3 — running timers count down in the header, m:ss. -->
+      <div class="timers">
+        @for (timer of timers(); track timer.id) {
+          <button
+            type="button"
+            class="timer"
+            [class.is-done]="timer.remaining <= 0"
+            (click)="dismissTimer(timer.id)"
+            [attr.aria-label]="
+              timer.remaining <= 0
+                ? timer.label + ' timer finished, dismiss'
+                : timer.label + ' timer, ' + clock(timer.remaining) + ' left, dismiss'
+            "
+          >
+            <mat-icon [fontIcon]="timer.remaining <= 0 ? 'notifications_active' : 'timer'" />
+            <span>{{ timer.remaining <= 0 ? 'Done' : clock(timer.remaining) }}</span>
+          </button>
+        }
+      </div>
+    </header>
+
+    <div class="progress-track" aria-hidden="true">
+      <div class="progress-fill" [style.width.%]="progress()"></div>
+    </div>
+
+    @if (stepCount() === 0) {
+      <div class="no-steps">
+        <p>This recipe has no steps written down yet.</p>
+        <a class="btn-accent" [routerLink]="['/recipes', r.slug]">Back to the recipe</a>
+      </div>
+    } @else {
+      <div class="cook-body">
+        <section class="stage">
+          <p class="step-counter label-mono">Step {{ stepIndex() + 1 }} of {{ stepCount() }}</p>
+
+          <p class="step-text">{{ currentStep() }}</p>
+
+          @if (stepDuration() !== null) {
+            <button
+              type="button"
+              class="btn-accent timer-start"
+              (click)="startTimer(stepDuration()!, stepDurationLabel())"
+            >
+              <mat-icon fontIcon="timer" aria-hidden="true" />
+              Start {{ stepDurationLabel() }} timer
+            </button>
+          }
+
+          <div class="stage-nav">
+            <button
+              type="button"
+              class="btn-outline-dark"
+              (click)="back()"
+              [disabled]="stepIndex() === 0"
+            >
+              <mat-icon fontIcon="arrow_back" aria-hidden="true" />
+              Back
+            </button>
+            <button type="button" class="btn-accent" (click)="next()">
+              {{ isLastStep() ? 'Done cooking' : 'Next step' }}
+              <mat-icon [fontIcon]="isLastStep() ? 'check' : 'arrow_forward'" aria-hidden="true" />
+            </button>
+          </div>
+        </section>
+
+        <aside class="sidebar">
+          <h2 class="sidebar-head label-mono">Ingredients</h2>
+          <ul class="ing-list">
+            @for (item of ingredients(); track item.index) {
+              <li [class.is-checked]="item.checked">
+                <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
+                  <span class="ing-text">
+                    @if (item.amount) {
+                      <span class="ing-amount">{{ item.amount }}</span>
+                    }
+                    <span class="ing-name">{{ item.name }}</span>
+                  </span>
+                </mat-checkbox>
+              </li>
+            }
+          </ul>
+        </aside>
+      </div>
+
+      <!-- §6.3 — the jump list, current step highlighted. -->
+      <nav class="jump" aria-label="All steps">
+        <h2 class="label-mono">All steps</h2>
+        <ol>
+          @for (step of steps(); track $index) {
+            <li>
+              <button
+                type="button"
+                [class.is-current]="$index === stepIndex()"
+                [attr.aria-current]="$index === stepIndex() ? 'step' : null"
+                (click)="jumpTo($index)"
+              >
+                <span class="jump-number label-mono">{{ $index + 1 }}</span>
+                <span class="jump-text">{{ step }}</span>
+              </button>
+            </li>
+          }
+        </ol>
+      </nav>
+    }
+
+    <!-- §7 — step changes are announced politely. -->
+    <p class="sr-only" role="status" aria-live="polite">{{ announcement() }}</p>
+  </div>
+} @else {
+  <div class="cook not-found">
+    <p>No recipe by that name.</p>
+    <a class="btn-accent" routerLink="/">Back to all recipes</a>
+  </div>
+}

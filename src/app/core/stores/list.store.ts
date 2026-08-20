@@ -10,6 +10,8 @@ const BOUGHT_KEY = 'cookbook.bought';
 /** One row on the shopping list: an ingredient plus where it came from. */
 export interface ListRow {
   key: string;
+  /** Position within its recipe's ingredient list — half of the bought key. */
+  index: number;
   ingredient: Ingredient;
   recipeSlug: string;
   recipeTitle: string;
@@ -59,6 +61,7 @@ export class ListStore {
         const key = boughtKey(slug, index);
         const row: ListRow = {
           key,
+          index,
           ingredient,
           recipeSlug: slug,
           recipeTitle: recipe.title,

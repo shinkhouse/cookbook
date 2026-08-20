@@ -1,0 +1,168 @@
+@if (recipe(); as r) {
+  <article class="detail" [class.single-column]="prefs.layout() === 'single-column'">
+    <div class="hero">
+      @if (showPhoto()) {
+        <img [src]="r.photo" [alt]="r.title" (error)="onPhotoError()" />
+      } @else {
+        <div class="photo-placeholder" aria-hidden="true"></div>
+      }
+    </div>
+
+    <div class="detail-body">
+      <a class="back" routerLink="/">
+        <mat-icon fontIcon="arrow_back" aria-hidden="true" />
+        All recipes
+      </a>
+
+      <h1>{{ r.title }}</h1>
+
+      @if (r.subtitle) {
+        <p class="credit detail-credit">{{ r.subtitle }}</p>
+      }
+
+      @if (r.desc) {
+        <p class="detail-desc">{{ r.desc }}</p>
+      }
+
+      <div class="tags">
+        @for (tag of r.tags; track tag) {
+          <span class="tag">{{ tagLabel(tag) }}</span>
+        }
+      </div>
+
+      <!-- §6.2 — the metadata rail: duration, servings stepper, times cooked. -->
+      <div class="rail">
+        <div class="rail-item">
+          <p class="label-mono">Duration</p>
+          <p class="rail-value">{{ r.time }}</p>
+        </div>
+
+        <div class="rail-item">
+          <p class="label-mono">Makes</p>
+          <div class="stepper">
+            <button
+              type="button"
+              (click)="stepServings(-1)"
+              [disabled]="servings() <= 1"
+              aria-label="One fewer serving"
+            >
+              <mat-icon fontIcon="remove" />
+            </button>
+            <span class="stepper-value">{{ servings() }}</span>
+            <button type="button" (click)="stepServings(1)" aria-label="One more serving">
+              <mat-icon fontIcon="add" />
+            </button>
+          </div>
+          <p class="rail-note">
+            {{ scaleLabel(factor()) }}
+            @if (factor() !== 1) {
+              <button type="button" class="link-button" (click)="resetServings()">reset</button>
+            }
+          </p>
+        </div>
+
+        <div class="rail-item">
+          <p class="label-mono">Times cooked</p>
+          <p class="rail-value">{{ r.cooked }}</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a class="btn-primary" [routerLink]="['/recipes', r.slug, 'cook']">
+          <mat-icon fontIcon="local_fire_department" aria-hidden="true" />
+          Start cooking
+        </a>
+
+        <button
+          type="button"
+          class="btn-ghost"
+          [class.is-on]="list.has(r.slug)"
+          (click)="list.toggleRecipe(r.slug)"
+        >
+          @if (list.has(r.slug)) {
+            <mat-icon fontIcon="check" aria-hidden="true" /> On the list
+          } @else {
+            <mat-icon fontIcon="add_shopping_cart" aria-hidden="true" /> Add to list
+          }
+        </button>
+
+        <button
+          type="button"
+          class="btn-ghost"
+          (click)="prefs.toggleFav(r.slug)"
+          [attr.aria-pressed]="prefs.isFav(r.slug)"
+        >
+          <mat-icon [fontIcon]="prefs.isFav(r.slug) ? 'star' : 'star_border'" aria-hidden="true" />
+          {{ prefs.isFav(r.slug) ? 'Favourite' : 'Add to favourites' }}
+        </button>
+
+        <button type="button" class="btn-ghost layout-toggle" (click)="prefs.toggleLayout()">
+          <mat-icon
+            [fontIcon]="prefs.layout() === 'side-by-side' ? 'view_agenda' : 'view_column'"
+            aria-hidden="true"
+          />
+          {{ prefs.layout() === 'side-by-side' ? 'Single column' : 'Side by side' }}
+        </button>
+      </div>
+
+      <div class="columns">
+        <aside class="ingredients-card">
+          <h2>
+            Ingredients
+            @if (checkedCount() > 0) {
+              <span class="checked-count label-mono">{{ checkedCount() }} in hand</span>
+            }
+          </h2>
+
+          <ul class="ingredient-list">
+            @for (item of ingredients(); track item.index) {
+              <li [class.is-checked]="item.checked">
+                <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
+                  <span class="ing-text">
+                    @if (amountLabel(item.amount, item.unit); as amt) {
+                      <span class="ing-amount">{{ amt }}</span>
+                    }
+                    <span class="ing-name">{{ item.name }}</span>
+                  </span>
+                </mat-checkbox>
+              </li>
+            }
+          </ul>
+        </aside>
+
+        <section class="steps">
+          <h2>Steps</h2>
+          @if (r.steps.length === 0) {
+            <p class="no-steps">No steps written down for this one yet.</p>
+          } @else {
+            <ol class="step-list">
+              @for (step of r.steps; track $index) {
+                <li>
+                  <span class="step-number label-mono">{{ $index + 1 }}</span>
+                  <p>{{ step }}</p>
+                </li>
+              }
+            </ol>
+          }
+
+          <!-- §6.2 — the notes panel renders only when there are notes. -->
+          @if (r.notes.length > 0) {
+            <div class="notes">
+              <h3>Notes</h3>
+              <ul>
+                @for (note of r.notes; track $index) {
+                  <li>{{ note }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </section>
+      </div>
+    </div>
+  </article>
+} @else {
+  <div class="not-found">
+    <p class="empty-line">No recipe by that name.</p>
+    <a class="btn-outline" routerLink="/">Back to all recipes</a>
+  </div>
+}

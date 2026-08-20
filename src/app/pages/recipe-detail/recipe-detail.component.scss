@@ -1,0 +1,404 @@
+.detail {
+    max-width: var(--max-detail);
+    margin: 0 auto;
+    padding-bottom: var(--pad-section);
+}
+
+// §6.2 — full-bleed hero band.
+.hero {
+    height: clamp(180px, 32vw, 340px);
+    background: var(--swatch-a);
+    overflow: hidden;
+
+    img,
+    .photo-placeholder {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+}
+
+.detail-body {
+    padding: 0 var(--pad-section);
+}
+
+.back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--touch);
+    color: var(--ink-3);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+        color: var(--accent);
+    }
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+    }
+}
+
+h1 {
+    margin-top: 8px;
+    font-size: var(--size-detail-h1);
+    max-width: 24ch;
+}
+
+.detail-credit {
+    margin: 10px 0 0;
+    font-size: 17px;
+}
+
+.detail-desc {
+    max-width: 68ch;
+    margin: 14px 0 0;
+    color: var(--ink-2);
+    font-size: 16.5px;
+}
+
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 16px;
+}
+
+.tag {
+    padding: 4px 12px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-pill);
+    background: var(--card);
+    color: var(--ink-3);
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+.rail {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gutter);
+    margin: 26px 0 22px;
+    padding: 18px 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+}
+
+.rail-item {
+    min-width: 140px;
+
+    p {
+        margin: 0;
+    }
+}
+
+.rail-value {
+    margin-top: 4px !important;
+    font-family: var(--font-display);
+    font-size: 24px;
+    color: var(--ink);
+}
+
+.rail-note {
+    margin-top: 6px !important;
+    color: var(--ink-4);
+    font-size: 12.5px;
+}
+
+.stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+
+    button {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius-pill);
+        background: var(--card);
+        color: var(--ink-2);
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+        }
+    }
+}
+
+.stepper-value {
+    min-width: 2ch;
+    font-family: var(--font-display);
+    font-size: 24px;
+    text-align: center;
+    color: var(--ink);
+}
+
+.link-button {
+    border: 0;
+    background: none;
+    padding: 0 0 0 4px;
+    color: var(--accent);
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: calc(var(--pad-section) * 0.6);
+}
+
+.btn-primary,
+.btn-ghost,
+.btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: var(--touch);
+    padding: 0 20px;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-ui);
+    font-size: 14.5px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+        background var(--motion-drawer) var(--ease),
+        color var(--motion-drawer) var(--ease);
+
+    mat-icon {
+        font-size: 19px;
+        width: 19px;
+        height: 19px;
+    }
+}
+
+.btn-primary {
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--card);
+
+    &:hover {
+        background: var(--accent-hover);
+    }
+}
+
+.btn-ghost {
+    border: 1px solid var(--rule-strong);
+    background: transparent;
+    color: var(--ink-3);
+
+    &:hover {
+        border-color: var(--ink-4);
+        color: var(--ink);
+    }
+
+    &.is-on {
+        border-color: var(--accent-tint-border);
+        background: var(--accent-tint);
+        color: var(--accent-hover);
+    }
+}
+
+.btn-outline {
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+}
+
+// §3.4 — two-column region that wraps rather than switching at a breakpoint.
+.columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gutter);
+    align-items: flex-start;
+}
+
+.ingredients-card {
+    flex: 1 1 280px;
+    padding: 20px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-card);
+    background: var(--card);
+    // §6.2 — sticky ingredient card in the side-by-side layout.
+    position: sticky;
+    top: 92px;
+
+    h2 {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+        font-size: 24px;
+    }
+}
+
+.checked-count {
+    color: var(--accent);
+}
+
+.ingredient-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+        padding: 3px 0;
+        min-height: var(--touch);
+        display: flex;
+        align-items: center;
+
+        & + li {
+            border-top: 1px solid var(--rule);
+        }
+    }
+}
+
+.ing-text {
+    font-size: 15px;
+    color: var(--ink-2);
+}
+
+.ing-amount {
+    margin-right: 6px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-4);
+}
+
+.ingredient-list li.is-checked {
+    .ing-name,
+    .ing-amount {
+        color: var(--ink-5);
+        text-decoration: line-through;
+    }
+}
+
+.steps {
+    flex: 2 1 420px;
+
+    h2 {
+        margin-bottom: 14px;
+        font-size: 28px;
+    }
+}
+
+.step-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+
+    li {
+        display: flex;
+        gap: 16px;
+        padding: 16px 0;
+
+        & + li {
+            border-top: 1px solid var(--rule);
+        }
+
+        p {
+            margin: 0;
+            color: var(--ink-2);
+            font-size: 16px;
+        }
+    }
+}
+
+.step-number {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--accent-tint-border);
+    border-radius: var(--radius-pill);
+    background: var(--accent-tint);
+    color: var(--accent-hover) !important;
+    font-size: 12px;
+    letter-spacing: 0;
+}
+
+.no-steps {
+    color: var(--ink-4);
+    font-style: italic;
+}
+
+// §6.2 — notes panel, on the accent tint.
+.notes {
+    margin-top: 26px;
+    padding: 18px 20px;
+    border: 1px solid var(--accent-tint-border);
+    border-radius: var(--radius-card);
+    background: var(--accent-tint);
+
+    h3 {
+        margin-bottom: 8px;
+        font-size: 20px;
+    }
+
+    ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--ink-2);
+    }
+
+    li + li {
+        margin-top: 6px;
+    }
+}
+
+// The "Single column" reading layout: one 68ch measure, nothing sticky.
+.detail.single-column {
+    .columns {
+        display: block;
+        max-width: 68ch;
+    }
+
+    .ingredients-card {
+        position: static;
+        margin-bottom: var(--gutter);
+    }
+}
+
+.not-found {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    padding: calc(var(--pad-section) * 1.5) var(--pad-section);
+    text-align: center;
+}
+
+.empty-line {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(24px, 3vw, 32px);
+    color: var(--ink-2);
+}

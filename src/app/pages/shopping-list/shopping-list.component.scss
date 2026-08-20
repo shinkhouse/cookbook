@@ -1,0 +1,241 @@
+.list-page {
+    max-width: var(--max-list);
+    margin: 0 auto;
+    padding: var(--pad-section);
+}
+
+.list-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--gutter);
+    margin-bottom: 22px;
+
+    h1 {
+        margin-top: 6px;
+        font-size: var(--size-detail-h1);
+    }
+
+    p {
+        margin: 0;
+    }
+}
+
+.head-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.progress-text {
+    margin-right: 4px !important;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 6px 0 14px;
+    border: 1px solid var(--accent-tint-border);
+    border-radius: var(--radius-pill);
+    background: var(--accent-tint);
+    min-height: 34px;
+
+    a {
+        color: var(--accent-hover);
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    button {
+        display: grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border: 0;
+        border-radius: var(--radius-pill);
+        background: none;
+        color: var(--accent-hover);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--accent-tint-border);
+        }
+
+        mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+        }
+    }
+}
+
+.progress-track {
+    height: 4px;
+    margin-bottom: calc(var(--pad-section) * 0.5);
+    border-radius: var(--radius-pill);
+    background: var(--rule);
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width var(--motion-progress) var(--ease);
+}
+
+.aisles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--grid-gap);
+}
+
+.aisle {
+    padding: 18px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-card);
+    background: var(--card);
+}
+
+.aisle-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 20px;
+}
+
+.aisle-count {
+    color: var(--ink-4);
+}
+
+.rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.row {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 0;
+    // §3.4 — 48px targets on shopping-list rows.
+    min-height: var(--touch-large);
+    justify-content: center;
+
+    & + .row {
+        border-top: 1px solid var(--rule);
+    }
+}
+
+.row-text {
+    font-size: 15px;
+    color: var(--ink-2);
+}
+
+.row-amount {
+    margin-right: 6px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-4);
+}
+
+.row-source {
+    margin-left: 34px;
+    color: var(--ink-4);
+    font-size: 12.5px;
+}
+
+// Struck-through rows use --ink-5, which is only AA-large; the line-through is
+// what actually communicates the state (see the token note in _tokens.scss).
+.row.is-bought {
+    .row-name,
+    .row-amount {
+        color: var(--ink-5);
+        text-decoration: line-through;
+    }
+}
+
+.btn-ghost,
+.btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 18px;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+
+    mat-icon {
+        font-size: 17px;
+        width: 17px;
+        height: 17px;
+    }
+}
+
+.btn-ghost {
+    border: 1px solid var(--rule-strong);
+    background: transparent;
+    color: var(--ink-3);
+
+    &:hover:not(:disabled) {
+        border-color: var(--ink-4);
+        color: var(--ink);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.btn-outline {
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    text-decoration: none;
+
+    &:hover {
+        background: var(--accent);
+        color: var(--card);
+    }
+}
+
+.empty {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    padding: calc(var(--pad-section) * 1.2) 0;
+    border: 1px dashed var(--rule-strong);
+    border-radius: var(--radius-card);
+    text-align: center;
+}
+
+.empty-line {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(22px, 3vw, 30px);
+    color: var(--ink-2);
+}
+
+.empty-hint {
+    margin: 0;
+    color: var(--ink-3);
+}

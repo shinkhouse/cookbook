@@ -48,6 +48,29 @@ export class RecipeStore {
   }
 
   /**
+   * Adds a recipe from the create flow. Session-scoped: RecipeStore is not
+   * persisted (§2.2) and there is no backend (§1), so a saved recipe lives
+   * until reload. "Copy JSON" in the create flow is how a recipe is actually
+   * kept — paste it into the seed data.
+   *
+   * Returns the slug actually used, which may be suffixed to stay unique.
+   */
+  add(recipe: Recipe): string {
+    const slug = this.uniqueSlug(recipe.slug);
+    this._recipes.update((list) => [{ ...recipe, slug }, ...list]);
+    return slug;
+  }
+
+  private uniqueSlug(desired: string): string {
+    const base = desired || 'untitled';
+    if (!this.bySlug(base)) return base;
+    for (let n = 2; ; n++) {
+      const candidate = `${base}-${n}`;
+      if (!this.bySlug(candidate)) return candidate;
+    }
+  }
+
+  /**
    * Search matches title, tags and ingredient names. The ingredient match is
    * the point of the feature (§6.1) — "what can I make with feta".
    *

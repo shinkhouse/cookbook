@@ -1,0 +1,148 @@
+<div class="library">
+  <header class="library-head">
+    <h1>Everything worth cooking twice.</h1>
+
+    @if (mostCooked(); as top) {
+      <div class="stat-block">
+        <p class="label-mono">Most cooked</p>
+        <p class="stat-value">
+          <a [routerLink]="['/recipes', top.slug]">{{ top.title }}</a>
+        </p>
+        <p class="stat-detail">{{ top.cooked }} times and counting</p>
+      </div>
+    }
+  </header>
+
+  <div class="controls">
+    <div class="search">
+      <mat-icon fontIcon="search" aria-hidden="true" />
+      <input
+        type="search"
+        [value]="typed()"
+        (input)="onSearch($any($event.target).value)"
+        placeholder="Search a title, a tag, or an ingredient"
+        aria-label="Search recipes by title, tag or ingredient"
+      />
+      @if (typed()) {
+        <button type="button" class="search-clear" (click)="clearSearch()" aria-label="Clear search">
+          <mat-icon fontIcon="close" />
+        </button>
+      }
+    </div>
+
+    <button
+      type="button"
+      class="pill pill-fav"
+      [class.is-on]="recipes.favsOnly()"
+      (click)="recipes.toggleFavsOnly()"
+      [attr.aria-pressed]="recipes.favsOnly()"
+    >
+      <mat-icon [fontIcon]="recipes.favsOnly() ? 'star' : 'star_border'" aria-hidden="true" />
+      Favourites
+    </button>
+  </div>
+
+  <div class="tags" role="group" aria-label="Filter by tag">
+    <button
+      type="button"
+      class="pill"
+      [class.is-on]="recipes.activeTag() === null"
+      (click)="selectTag(null)"
+      [attr.aria-pressed]="recipes.activeTag() === null"
+    >
+      All
+    </button>
+    @for (tag of tags(); track tag) {
+      <button
+        type="button"
+        class="pill"
+        [class.is-on]="recipes.activeTag() === tag"
+        (click)="selectTag(tag)"
+        [attr.aria-pressed]="recipes.activeTag() === tag"
+      >
+        {{ tagLabel(tag) }}
+      </button>
+    }
+  </div>
+
+  <p class="result-count label-mono" aria-live="polite">
+    {{ results().length }} {{ results().length === 1 ? 'recipe' : 'recipes' }}
+  </p>
+
+  @if (results().length === 0) {
+    <div class="empty">
+      <p class="empty-line">Nothing matches that yet.</p>
+      <button type="button" class="btn-outline" (click)="clearAll()">Clear filters</button>
+    </div>
+  } @else {
+    <ul class="grid">
+      @for (recipe of results(); track recipe.slug) {
+        <li class="card">
+          <a class="card-link" [routerLink]="['/recipes', recipe.slug]">
+            <div class="card-photo">
+              @if (showPhoto(recipe.slug, recipe.photo)) {
+                <img
+                  [src]="recipe.photo"
+                  [alt]="recipe.title"
+                  loading="lazy"
+                  (error)="onPhotoError(recipe.slug)"
+                />
+              } @else {
+                <div class="photo-placeholder" aria-hidden="true"></div>
+              }
+            </div>
+          </a>
+
+          <button
+            type="button"
+            class="fav-toggle"
+            (click)="toggleFav(recipe, $event)"
+            [attr.aria-pressed]="prefs.isFav(recipe.slug)"
+            [attr.aria-label]="
+              (prefs.isFav(recipe.slug) ? 'Remove ' : 'Add ') + recipe.title + ' to favourites'
+            "
+          >
+            <mat-icon [fontIcon]="prefs.isFav(recipe.slug) ? 'star' : 'star_border'" />
+          </button>
+
+          <div class="card-body">
+            <div class="card-meta label-mono">
+              <span>{{ recipe.time }}</span>
+              @if (recipe.cooked > 0) {
+                <span>Cooked {{ recipe.cooked }}×</span>
+              }
+            </div>
+
+            <h3>
+              <a [routerLink]="['/recipes', recipe.slug]">{{ recipe.title }}</a>
+            </h3>
+
+            @if (recipe.subtitle) {
+              <p class="credit card-credit">{{ recipe.subtitle }}</p>
+            }
+
+            <p class="card-blurb">{{ recipe.blurb }}</p>
+
+            <div class="card-actions">
+              <button type="button" class="btn-outline" (click)="cook(recipe, $event)">
+                Cook this
+              </button>
+              <button
+                type="button"
+                class="btn-ghost"
+                [class.is-on]="list.has(recipe.slug)"
+                (click)="toggleList(recipe, $event)"
+              >
+                @if (list.has(recipe.slug)) {
+                  <mat-icon fontIcon="check" aria-hidden="true" /> On list
+                } @else {
+                  <mat-icon fontIcon="add" aria-hidden="true" /> List
+                }
+              </button>
+            </div>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

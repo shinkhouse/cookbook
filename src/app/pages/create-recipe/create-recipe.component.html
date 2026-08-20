@@ -1,174 +1,341 @@
-<mat-toolbar color="primary">
-  <mat-toolbar-row class="create-recipe-toolbar">
-    <button mat-icon-button routerLink="/">
-      <mat-icon>navigate_before</mat-icon>
-    </button>
-    Create New Recipe
-    <span class="spacer"></span>
-    <button mat-button (click)="resetRecipeForm()">Reset Form</button>
-  </mat-toolbar-row>
-</mat-toolbar>
-<form [formGroup]="recipeForm">
-  <mat-form-field appearance="fill">
-    <mat-label>Title</mat-label>
-    <input matInput type="text" formControlName="title" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Subtitle</mat-label>
-    <input matInput type="text" formControlName="subtitle" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Cook time</mat-label>
-    <input matInput type="text" formControlName="cookTime" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Servings</mat-label>
-    <input matInput type="number" formControlName="servings" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Calories</mat-label>
-    <input matInput type="number" formControlName="calories" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Cover Image</mat-label>
-    <input matInput type="text" formControlName="coverImage" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Description</mat-label>
-    <textarea matInput type="text" formControlName="description"></textarea>
-  </mat-form-field>
-  <div class="form-arrays">
-    <div formArrayName="authors">
-      <div class="form-array-header">
-        <h2>Authors</h2>
-        <span class="spacer"></span>
-        <button mat-stroked-button (click)="addAuthor()" type="button">
-          <mat-icon>add</mat-icon>Add author
-        </button>
-      </div>
+<div class="create">
+  <header class="create-head">
+    <a class="back" routerLink="/">
+      <mat-icon fontIcon="arrow_back" aria-hidden="true" />
+      All recipes
+    </a>
+    <h1>Add a recipe.</h1>
+    <p class="lede">
+      Paste it, drop a file, or type it out. Nothing is saved until you say so.
+    </p>
+  </header>
 
-      @for (authors of getRecipeAuthors.controls; track authors; let i = $index) {
-        <div
-          >
-          <mat-form-field appearance="fill">
-            <mat-label>Author {{ i + 1 }}</mat-label>
-            <input
-              matInput
-              id="alias-{{ i }}"
-              type="text"
-              [formControlName]="i"
-              />
-          </mat-form-field>
-        </div>
-      }
-    </div>
-    <div formArrayName="ingredients">
-      <div class="form-array-header">
-        <h2>Ingredients</h2>
-        <span class="spacer"></span>
-        <button
-          mat-stroked-button
-          (click)="addIngredient()"
-          type="button"
-          >
-          <mat-icon>add</mat-icon>Add Ingredient
-        </button>
-      </div>
-
-      @for (
-        authors of getRecipeIngredients.controls; track
-        authors; let i = $index) {
-        <div
-          >
-          <mat-form-field appearance="fill">
-            <mat-label>Ingredient {{ i + 1 }}</mat-label>
-            <input
-              matInput
-              id="alias-{{ i }}"
-              type="text"
-              [formControlName]="i"
-              />
-          </mat-form-field>
-        </div>
-      }
-    </div>
-    <div formArrayName="steps">
-      <div class="form-array-header">
-        <h2>Steps</h2>
-        <span class="spacer"></span>
-        <button mat-stroked-button (click)="addStep()" type="button">
-          <mat-icon>add</mat-icon>Add Step
-        </button>
-      </div>
-
-      @for (authors of getRecipeSteps.controls; track authors; let i = $index) {
-        <div>
-          <mat-form-field appearance="fill">
-            <mat-label>Step {{ i + 1 }}</mat-label>
-            <input
-              matInput
-              id="alias-{{ i }}"
-              type="text"
-              [formControlName]="i"
-              />
-          </mat-form-field>
-        </div>
-      }
-    </div>
-    <div formArrayName="notes">
-      <div class="form-array-header">
-        <h2>Notes</h2>
-        <span class="spacer"></span>
-        <button mat-stroked-button (click)="addNote()" type="button">
-          <mat-icon>add</mat-icon>Add Note
-        </button>
-      </div>
-
-      @for (authors of getRecipeNotes.controls; track authors; let i = $index) {
-        <div>
-          <mat-form-field appearance="fill">
-            <mat-label>Note {{ i + 1 }}</mat-label>
-            <input
-              matInput
-              id="alias-{{ i }}"
-              type="text"
-              [formControlName]="i"
-              />
-          </mat-form-field>
-        </div>
-      }
-    </div>
-    <div formArrayName="tags">
-      <div class="form-array-header">
-        <h2>Tags</h2>
-        <span class="spacer"></span>
-        <button mat-stroked-button (click)="addTag()" type="button">
-          <mat-icon>add</mat-icon>Add Tag
-        </button>
-      </div>
-
-      @for (authors of getRecipeTags.controls; track authors; let i = $index) {
-        <div>
-          <mat-form-field appearance="fill">
-            <mat-label>Tag {{ i + 1 }}</mat-label>
-            <input
-              matInput
-              id="alias-{{ i }}"
-              type="text"
-              [formControlName]="i"
-              />
-          </mat-form-field>
-        </div>
-      }
-    </div>
+  <div class="tabs" role="tablist" aria-label="How to add a recipe">
+    @for (t of [
+      { id: 'paste', label: 'Paste text' },
+      { id: 'file', label: 'Markdown file' },
+      { id: 'url', label: 'From a URL' },
+      { id: 'manual', label: 'Manual' }
+    ]; track t.id) {
+      <button
+        type="button"
+        role="tab"
+        class="tab"
+        [class.is-on]="tab() === t.id"
+        [attr.aria-selected]="tab() === t.id"
+        (click)="setTab($any(t.id))"
+      >
+        {{ t.label }}
+      </button>
+    }
   </div>
-  <div class="recipe-preview-header">
-    <h2>Recipe Preview</h2>
-    <button mat-button (click)="copyRecipe()">
-      Copy Recipe to Clipboard
-    </button>
+
+  <div class="columns">
+    <section class="panel">
+      @switch (tab()) {
+        @case ('paste') {
+          <label class="field-label" for="paste-area">Paste the whole recipe</label>
+          <p class="hint">
+            First line becomes the title. An <em>Ingredients</em> or
+            <em>Steps</em> heading splits the sections; without one, lines
+            starting with an amount are read as ingredients.
+          </p>
+          <textarea
+            id="paste-area"
+            rows="18"
+            [value]="pasted()"
+            (input)="onPaste($any($event.target).value)"
+            placeholder="Grandma's Chili&#10;&#10;Ingredients&#10;1 lb hamburger&#10;1 can kidney beans&#10;&#10;Steps&#10;Brown the beef.&#10;Simmer for an hour."
+          ></textarea>
+        }
+
+        @case ('file') {
+          <label class="field-label">Drop a markdown or text file</label>
+          <p class="hint">
+            Front matter fills in the title, servings and tags. Drop a folder to
+            bulk import — the first file opens here, the rest are added straight
+            away.
+          </p>
+          <div
+            class="dropzone"
+            [class.is-active]="dropActive()"
+            (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave()"
+            (drop)="onDrop($event)"
+          >
+            <mat-icon fontIcon="upload_file" aria-hidden="true" />
+            <p>Drop <code>.md</code> or <code>.txt</code> here</p>
+            <label class="btn-outline file-pick">
+              Choose files
+              <input
+                type="file"
+                multiple
+                accept=".md,.markdown,.txt"
+                (change)="onFiles($any($event.target).files)"
+              />
+            </label>
+          </div>
+        }
+
+        @case ('url') {
+          <label class="field-label" for="url-area">Paste the page source</label>
+          <p class="hint">
+            This reads schema.org <code>Recipe</code> markup out of pasted HTML,
+            and falls back to plain text. It does not fetch the URL — that is
+            deliberately out of scope.
+          </p>
+          <textarea
+            id="url-area"
+            rows="14"
+            [value]="urlText()"
+            (input)="onUrlText($any($event.target).value)"
+            placeholder="Paste the page's HTML, or its JSON-LD block"
+          ></textarea>
+        }
+
+        @case ('manual') {
+          <div class="manual">
+            <div class="field-row">
+              <label class="field">
+                <span class="field-label">Title</span>
+                <input type="text" [value]="title()" (input)="title.set($any($event.target).value)" />
+              </label>
+              <label class="field">
+                <span class="field-label">Credit line</span>
+                <input
+                  type="text"
+                  [value]="subtitle()"
+                  (input)="subtitle.set($any($event.target).value)"
+                  placeholder="From The Modern Proper"
+                />
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label class="field field-small">
+                <span class="field-label">Servings</span>
+                <input
+                  type="number"
+                  min="1"
+                  [value]="servings()"
+                  (input)="servings.set(+$any($event.target).value || 1)"
+                />
+              </label>
+              <label class="field field-small">
+                <span class="field-label">Time</span>
+                <input
+                  type="text"
+                  [value]="time()"
+                  (input)="time.set($any($event.target).value)"
+                  placeholder="30 min"
+                />
+              </label>
+              <label class="field">
+                <span class="field-label">Tags</span>
+                <input
+                  type="text"
+                  [value]="tagsText()"
+                  (input)="tagsText.set($any($event.target).value)"
+                  placeholder="dinner, pasta"
+                />
+              </label>
+            </div>
+
+            <label class="field">
+              <span class="field-label">Card blurb</span>
+              <input
+                type="text"
+                [value]="blurb()"
+                (input)="blurb.set($any($event.target).value)"
+                placeholder="One line for the library card"
+              />
+            </label>
+
+            <label class="field">
+              <span class="field-label">Description</span>
+              <textarea
+                rows="3"
+                [value]="desc()"
+                (input)="desc.set($any($event.target).value)"
+              ></textarea>
+            </label>
+
+            <div class="editor-block">
+              <div class="editor-head">
+                <span class="field-label">Ingredients</span>
+                <button type="button" class="btn-ghost btn-small" (click)="addIngredient()">
+                  <mat-icon fontIcon="add" aria-hidden="true" /> Add
+                </button>
+              </div>
+              @for (ing of ingredients(); track $index) {
+                <div class="editor-row">
+                  <input
+                    type="text"
+                    class="grow"
+                    [value]="amountLabel(ing) ? amountLabel(ing) + ' ' + ing.name : ing.name"
+                    (change)="updateIngredientName($index, $any($event.target).value)"
+                    placeholder="2 tbsp olive oil"
+                  />
+                  <!-- §6.4 — the aisle is inferred, with a manual override. -->
+                  <select
+                    [value]="ing.aisle"
+                    (change)="setAisle($index, $any($event.target).value)"
+                    aria-label="Aisle"
+                  >
+                    @for (aisle of aisles; track aisle) {
+                      <option [value]="aisle">{{ aisle }}</option>
+                    }
+                  </select>
+                  <button
+                    type="button"
+                    class="icon-button"
+                    (click)="removeIngredient($index)"
+                    aria-label="Remove ingredient"
+                  >
+                    <mat-icon fontIcon="close" />
+                  </button>
+                </div>
+              } @empty {
+                <p class="hint">Nothing yet.</p>
+              }
+            </div>
+
+            <div class="editor-block">
+              <div class="editor-head">
+                <span class="field-label">Steps</span>
+                <button type="button" class="btn-ghost btn-small" (click)="addStep()">
+                  <mat-icon fontIcon="add" aria-hidden="true" /> Add
+                </button>
+              </div>
+              @for (step of steps(); track $index) {
+                <div class="editor-row">
+                  <textarea
+                    rows="2"
+                    class="grow"
+                    [value]="step"
+                    (input)="updateStep($index, $any($event.target).value)"
+                  ></textarea>
+                  <button
+                    type="button"
+                    class="icon-button"
+                    (click)="removeStep($index)"
+                    aria-label="Remove step"
+                  >
+                    <mat-icon fontIcon="close" />
+                  </button>
+                </div>
+              } @empty {
+                <p class="hint">Nothing yet.</p>
+              }
+            </div>
+
+            <div class="editor-block">
+              <div class="editor-head">
+                <span class="field-label">Notes</span>
+                <button type="button" class="btn-ghost btn-small" (click)="addNote()">
+                  <mat-icon fontIcon="add" aria-hidden="true" /> Add
+                </button>
+              </div>
+              @for (note of notes(); track $index) {
+                <div class="editor-row">
+                  <input
+                    type="text"
+                    class="grow"
+                    [value]="note"
+                    (input)="updateNote($index, $any($event.target).value)"
+                  />
+                  <button
+                    type="button"
+                    class="icon-button"
+                    (click)="removeNote($index)"
+                    aria-label="Remove note"
+                  >
+                    <mat-icon fontIcon="close" />
+                  </button>
+                </div>
+              } @empty {
+                <p class="hint">Nothing yet.</p>
+              }
+            </div>
+          </div>
+        }
+      }
+    </section>
+
+    <!-- §6.4 — sticky draft preview with the parse-status badge. -->
+    <aside class="preview">
+      <div class="preview-head">
+        <span class="label-mono">Draft</span>
+        <span class="badge" [attr.data-status]="status()">{{ statusLabel() }}</span>
+      </div>
+
+      @if (notice()) {
+        <p class="notice" role="status">{{ notice() }}</p>
+      }
+
+      @if (status() === 'waiting') {
+        <p class="hint">Nothing parsed yet.</p>
+      } @else {
+        <h2 class="preview-title">{{ title() || 'Untitled' }}</h2>
+        @if (slug()) {
+          <p class="preview-slug label-mono">/{{ slug() }}</p>
+        }
+
+        @if (review().length > 0) {
+          <div class="review">
+            <p class="review-head">
+              <mat-icon fontIcon="error_outline" aria-hidden="true" />
+              {{ review().length }}
+              {{ review().length === 1 ? 'line needs' : 'lines need' }} a look
+            </p>
+            <ul>
+              @for (line of review(); track line) {
+                <li>{{ line }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        <h3 class="preview-sub label-mono">
+          Ingredients · {{ ingredients().length }}
+        </h3>
+        <ul class="preview-list">
+          @for (ing of ingredients(); track $index) {
+            <li>
+              @if (amountLabel(ing); as amt) {
+                <span class="preview-amount">{{ amt }}</span>
+              }
+              {{ ing.name }}
+              <span class="preview-aisle">{{ ing.aisle }}</span>
+            </li>
+          }
+        </ul>
+
+        <h3 class="preview-sub label-mono">Steps · {{ steps().length }}</h3>
+        <ol class="preview-list">
+          @for (step of steps(); track $index) {
+            <li>{{ step }}</li>
+          }
+        </ol>
+      }
+
+      <div class="preview-actions">
+        <button type="button" class="btn-primary" (click)="save()" [disabled]="!canSave()">
+          Save recipe
+        </button>
+        <button type="button" class="btn-ghost" (click)="copyJson()">
+          <mat-icon fontIcon="content_copy" aria-hidden="true" /> Copy JSON
+        </button>
+      </div>
+
+      @if (!canSave()) {
+        <p class="hint">A title and at least one ingredient are needed to save.</p>
+      } @else {
+        <p class="hint">
+          Saving keeps this recipe for the session only — there is no backend.
+          Copy the JSON into the seed data to keep it for good.
+        </p>
+      }
+    </aside>
   </div>
-  <div class="form-preview">
-    {{ this.recipeForm.value | json }}
-  </div>
-</form>
+</div>

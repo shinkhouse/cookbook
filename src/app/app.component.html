@@ -1,19 +1,58 @@
-<main>
-    <header>
-        <div class="brand" routerLink="/">
-            <div class="recipe-icon">
-                <mat-icon>ramen_dining</mat-icon>
-            </div>
-            <h1>Sam's Recipes</h1>
-        </div>
-        <div class="search">
-            <mat-icon>search</mat-icon>
-            <input type="text" [(ngModel)]="searchTerm" (keyup.enter)="searchRecipes()" placeholder="What would you like to create?" />
-        </div>
-        <button routerLink="/create">
-            <mat-icon>add</mat-icon>
-            Add Recipe
-        </button>
-    </header>
-    <router-outlet></router-outlet>
+@if (!isCookMode()) {
+<header class="site-header">
+  <a class="brand" routerLink="/" aria-label="Sam's Recipes, home">
+    <span class="brand-mark" aria-hidden="true">
+      <mat-icon fontIcon="menu_book" />
+    </span>
+    <span class="brand-name">Sam's Recipes</span>
+  </a>
+
+  @if (isNarrow()) {
+    <button
+      class="drawer-trigger"
+      type="button"
+      [matMenuTriggerFor]="drawer"
+      aria-label="Open navigation"
+    >
+      <mat-icon fontIcon="menu" />
+    </button>
+    <mat-menu #drawer="matMenu" class="drawer-panel">
+      <a mat-menu-item routerLink="/">All recipes</a>
+      <a mat-menu-item routerLink="/list">
+        Shopping list
+        @if (listCount() > 0) {
+          <span class="count-badge">{{ listCount() }}</span>
+        }
+      </a>
+      <a mat-menu-item routerLink="/recipes/new">Add recipe</a>
+    </mat-menu>
+  } @else {
+    <nav class="site-nav" aria-label="Main">
+      <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">
+        All recipes
+      </a>
+      <a routerLink="/list" routerLinkActive="is-active">
+        Shopping list
+        @if (listCount() > 0) {
+          <span class="count-badge">{{ listCount() }}</span>
+        }
+      </a>
+    </nav>
+
+    <a class="btn-primary" routerLink="/recipes/new">
+      <mat-icon fontIcon="add" aria-hidden="true" />
+      Add recipe
+    </a>
+  }
+</header>
+}
+
+<main [class.is-cook]="isCookMode()">
+  <router-outlet />
 </main>
+
+@if (!isCookMode()) {
+  <footer class="site-footer">
+    <p class="credit">Cooked, eaten and written down.</p>
+  </footer>
+}

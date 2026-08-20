@@ -1,0 +1,79 @@
+<div class="list-page">
+  <header class="list-head">
+    <div>
+      <p class="label-mono">Shopping list</p>
+      <h1>What to buy.</h1>
+    </div>
+
+    @if (!isEmpty()) {
+      <div class="head-actions">
+        <p class="progress-text label-mono">
+          {{ list.boughtCount() }} of {{ list.totalItems() }} in the basket
+        </p>
+        <button type="button" class="btn-ghost" (click)="list.uncheckAll()">Uncheck all</button>
+        <!-- Present but inert, per the non-goals in §1. -->
+        <button type="button" class="btn-ghost" disabled title="Sharing is not built yet">
+          <mat-icon fontIcon="ios_share" aria-hidden="true" /> Share
+        </button>
+      </div>
+    }
+  </header>
+
+  @if (isEmpty()) {
+    <div class="empty">
+      <p class="empty-line">Nothing on the list yet.</p>
+      <p class="empty-hint">Add a recipe from the library and its ingredients land here.</p>
+      <a class="btn-outline" routerLink="/">Browse recipes</a>
+    </div>
+  } @else {
+    <div class="chips" role="group" aria-label="Recipes on this list">
+      @for (recipe of chips(); track recipe.slug) {
+        <span class="chip">
+          <a [routerLink]="['/recipes', recipe.slug]">{{ recipe.title }}</a>
+          <button
+            type="button"
+            (click)="list.removeRecipe(recipe.slug)"
+            [attr.aria-label]="'Remove ' + recipe.title + ' and its items'"
+          >
+            <mat-icon fontIcon="close" />
+          </button>
+        </span>
+      }
+    </div>
+
+    <div class="progress-track" aria-hidden="true">
+      <div class="progress-fill" [style.width.%]="progress()"></div>
+    </div>
+
+    <div class="aisles">
+      @for (group of groups(); track group.aisle) {
+        <section class="aisle">
+          <h2 class="aisle-head">
+            <span>{{ group.label }}</span>
+            <span class="aisle-count label-mono">{{ group.rows.length }}</span>
+          </h2>
+
+          <ul class="rows">
+            @for (row of group.rows; track row.key) {
+              <li class="row" [class.is-bought]="row.bought">
+                <!-- A real checkbox input, per the accessibility note in §7. -->
+                <mat-checkbox
+                  [checked]="row.bought"
+                  (change)="list.toggleBought(row.recipeSlug, row.index)"
+                >
+                  <span class="row-text">
+                    @if (amount(row.ingredient.qty, row.ingredient.unit); as amt) {
+                      <span class="row-amount">{{ amt }}</span>
+                    }
+                    <span class="row-name">{{ row.ingredient.name }}</span>
+                  </span>
+                </mat-checkbox>
+                <span class="row-source">{{ row.recipeTitle }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    </div>
+  }
+</div>

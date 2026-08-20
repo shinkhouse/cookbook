@@ -1,5 +1,6 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { Recipe } from 'src/app/core/model/recipes.model';
+import { FAV_SEED } from 'src/app/core/mock/recipes.mock';
 import { RecipesService } from 'src/app/core/services/recipes.service';
 
 @Component({
@@ -53,7 +54,7 @@ export class RecipesComponent implements OnInit {
             return this.recipes.filter((recipe) => {
                 if(this.onlyFavoritesShown) {
                     return (
-                        recipe.favorite &&
+                        FAV_SEED.includes(recipe.slug) &&
                         (recipe.title
                             .toLowerCase()
                             .trim()
@@ -102,7 +103,8 @@ export class RecipesComponent implements OnInit {
     }
 
     getRecipeAuthors(recipe: Recipe) {
-        return recipe.authors?.join(', ');
+        // `authors` is gone; the credit line lives in `subtitle` now.
+        return recipe.subtitle;
     }
 
     displayRecipe(recipe: Recipe) {

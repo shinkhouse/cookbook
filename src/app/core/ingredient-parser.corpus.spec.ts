@@ -8,11 +8,10 @@
  */
 
 import { parseIngredient } from './ingredient-parser';
-import { Recipes } from './mock/recipes.mock';
+import { INGREDIENT_CORPUS } from './ingredient-corpus.fixture';
 
-const ALL_LINES: { recipe: string; line: string }[] = Recipes.flatMap((r) =>
-  (r.ingredients as string[]).map((line) => ({ recipe: r.title, line })),
-);
+// The frozen originals, not the migrated data — see the fixture's own comment.
+const ALL_LINES = INGREDIENT_CORPUS;
 
 /**
  * Lines that legitimately need a human eye, with the reason. Everything else

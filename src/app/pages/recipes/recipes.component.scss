@@ -1,5 +1,10 @@
 @use "@angular/material" as mat;
 .search-actions {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
     margin: 0 auto;
     margin-bottom: 24px;
 
@@ -10,6 +15,15 @@
     }
 }
 .search-bar {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 16px;
+    // flex-layout applied box-sizing: border-box to every element it managed, so
+    // the 400px width used to absorb the 16px horizontal padding. Set it
+    // explicitly to keep the bar 400px wide rather than 432px.
+    box-sizing: border-box;
     background: white;
     padding: 0px 16px;
     height: 48px;
@@ -87,7 +101,24 @@
     }
 }
 
+.recipe-card-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 16px;
+
+    // Replaces the bare fxFlex spacer that pushed the favourite button right.
+    .spacer {
+        flex: 1 1 auto;
+    }
+}
+
 .no-recipes {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     padding: 16px;
     text-align: center;
 

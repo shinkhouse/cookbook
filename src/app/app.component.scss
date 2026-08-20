@@ -12,7 +12,21 @@ main {
 }
 
 header {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 48px;
     padding: 24px 16px 24px 16px;
+
+    .brand {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: center;
+        cursor: pointer;
+    }
+
     h1 {
         margin: 0px;
         font-size: 40px;

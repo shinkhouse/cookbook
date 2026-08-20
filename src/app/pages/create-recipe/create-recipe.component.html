@@ -1,10 +1,10 @@
 <mat-toolbar color="primary">
-    <mat-toolbar-row fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
+    <mat-toolbar-row class="create-recipe-toolbar">
         <button mat-icon-button routerLink="/">
             <mat-icon>navigate_before</mat-icon>
         </button>
         Create New Recipe
-        <div fxFlex></div>
+        <span class="spacer"></span>
         <button mat-button (click)="resetRecipeForm()">Reset Form</button>
     </mat-toolbar-row>
 </mat-toolbar>
@@ -37,11 +37,11 @@
         <mat-label>Description</mat-label>
         <textarea matInput type="text" formControlName="description"></textarea>
     </mat-form-field>
-    <div class="form-arrays" fxLayout="row" fxLayout.sm="column" fxLayout.md="column" fxLayoutGap="16px">
+    <div class="form-arrays">
         <div formArrayName="authors">
             <div class="form-array-header">
                 <h2>Authors</h2>
-                <div fxFlex></div>
+                <span class="spacer"></span>
                 <button mat-stroked-button (click)="addAuthor()" type="button">
                     <mat-icon>add</mat-icon>Add author
                 </button>
@@ -64,7 +64,7 @@
         <div formArrayName="ingredients">
             <div class="form-array-header">
                 <h2>Ingredients</h2>
-                <div fxFlex></div>
+                <span class="spacer"></span>
                 <button
                     mat-stroked-button
                     (click)="addIngredient()"
@@ -94,7 +94,7 @@
         <div formArrayName="steps">
             <div class="form-array-header">
                 <h2>Steps</h2>
-                <div fxFlex></div>
+                <span class="spacer"></span>
                 <button mat-stroked-button (click)="addStep()" type="button">
                     <mat-icon>add</mat-icon>Add Step
                 </button>
@@ -115,7 +115,7 @@
         <div formArrayName="notes">
             <div class="form-array-header">
                 <h2>Notes</h2>
-                <div fxFlex></div>
+                <span class="spacer"></span>
                 <button mat-stroked-button (click)="addNote()" type="button">
                     <mat-icon>add</mat-icon>Add Note
                 </button>
@@ -136,7 +136,7 @@
         <div formArrayName="tags">
             <div class="form-array-header">
                 <h2>Tags</h2>
-                <div fxFlex></div>
+                <span class="spacer"></span>
                 <button mat-stroked-button (click)="addTag()" type="button">
                     <mat-icon>add</mat-icon>Add Tag
                 </button>
@@ -155,12 +155,7 @@
             </div>
         </div>
     </div>
-    <div
-        class="recipe-preview-header"
-        fxLayout="row"
-        fxLayoutAlign="start center"
-        fxLayoutGap="16px"
-    >
+    <div class="recipe-preview-header">
         <h2>Recipe Preview</h2>
         <button mat-button (click)="copyRecipe()">
             Copy Recipe to Clipboard

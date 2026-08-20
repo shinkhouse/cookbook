@@ -2,8 +2,8 @@
     <h1>Simple, flavorful recipes</h1>
     <p>This is a collection of recipes my wife and I like to cook or have tried.</p>
 </div>
-<div class="search-actions" fxLayout="row" fxLayoutAlign="center center" fxLayoutGap="16px">
-    <div class="search-bar mat-elevation-z2" fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
+<div class="search-actions">
+    <div class="search-bar mat-elevation-z2">
         <mat-icon (click)="textarea1.focus()">search</mat-icon>
         <input #textarea1 type="text" placeholder="Search Recipes" [(ngModel)]="searchQuery" />
     </div>
@@ -18,10 +18,10 @@
             <mat-grid-tile *ngIf="onlyFavoritesShown ? recipe.favorite : true" routerLink="/recipe/{{ recipe.slug }}">
                 <mat-card appearance="outlined">
                     <img *ngIf="recipe.coverImage" mat-card-image [src]="recipe.coverImage" [alt]="recipe.title" />
-                    <mat-card-header fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
+                    <mat-card-header class="recipe-card-header">
                         <mat-card-title>{{ recipe.title }}</mat-card-title>
                         <mat-card-subtitle>{{ recipe.subtitle }}</mat-card-subtitle>
-                        <div fxFlex></div>
+                        <span class="spacer"></span>
                         <button class="mat-elevation-z2" mat-icon-button *ngIf="recipe.favorite">
                             <mat-icon matTooltip="Favorite Recipe!" class="favorite-icon">star</mat-icon>
                         </button>
@@ -39,7 +39,7 @@
         </ng-container>
     </mat-grid-list>
 
-    <div class="no-recipes" fxLayout="column" fxLayoutAlign="center center" *ngIf="getSearchResults().length === 0">
+    <div class="no-recipes" *ngIf="getSearchResults().length === 0">
         <mat-icon>ramen_dining</mat-icon>
         <p>Cannot find recipe, "{{ searchQuery }}"</p>
     </div>

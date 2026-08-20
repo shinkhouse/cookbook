@@ -13,6 +13,45 @@ form {
         gap: 16px;
         align-items: flex-start;
     }
+
+    // Replaces the bare fxFlex spacers.
+    .spacer {
+        flex: 1 1 auto;
+    }
+
+    .form-arrays {
+        display: flex;
+        flex-direction: row;
+        gap: 16px;
+
+        // Was fxLayout.sm="column" fxLayout.md="column", i.e. flex-layout's sm+md
+        // range (600-1279px) only -- which left the xs range below 600px as a row.
+        // Stacking everything under 1280px instead, since that was plainly the
+        // intent and it fixes narrow screens.
+        @media (max-width: 1279px) {
+            flex-direction: column;
+        }
+    }
+}
+
+.create-recipe-toolbar {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 16px;
+
+    .spacer {
+        flex: 1 1 auto;
+    }
+}
+
+.recipe-preview-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 16px;
 }
 
 .form-preview {

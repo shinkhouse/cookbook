@@ -17,9 +17,29 @@ export interface FacetDef {
 export interface Facet {
   id: string;
   label: string;
-  /** Only the tags that actually occur in the data, alphabetised. */
+  /**
+   * What the options mean. Tag facets match against a recipe's tags; the gap
+   * facet matches against what a recipe is still missing, which is derived
+   * rather than stored and so cannot live in the tag list.
+   */
+  kind: 'tag' | 'gap';
+  /** Tag names, or gap keys, depending on `kind`. */
   options: string[];
 }
+
+/** The id of the derived completeness facet. */
+export const GAP_FACET = 'gaps';
+
+/** Gap keys, in the order they are offered. */
+export const GAP_OPTIONS = ['method', 'steps', 'photo'] as const;
+export type GapKey = (typeof GAP_OPTIONS)[number];
+
+/** Display labels for the gap options. */
+export const GAP_LABELS: Record<GapKey, string> = {
+  method: 'No method',
+  steps: 'Few steps',
+  photo: 'No photo',
+};
 
 /** The catch-all's id, so callers can tell it apart if they need to. */
 export const OTHER_FACET = 'other';
@@ -70,14 +90,23 @@ export function buildFacets(allTags: readonly string[]): Facet[] {
     const options = def.tags.filter((tag) => available.has(tag));
     for (const tag of options) claimed.add(tag);
     if (options.length > 0) {
-      facets.push({ id: def.id, label: def.label, options });
+      facets.push({ id: def.id, label: def.label, kind: 'tag', options });
     }
   }
 
   const leftovers = [...available].filter((tag) => !claimed.has(tag)).sort();
   if (leftovers.length > 0) {
-    facets.push({ id: OTHER_FACET, label: 'Other', options: leftovers });
+    facets.push({ id: OTHER_FACET, label: 'Other', kind: 'tag', options: leftovers });
   }
+
+  // Last in the bar: what a recipe still needs is a different question from
+  // what it is, so it reads better after the descriptive facets.
+  facets.push({
+    id: GAP_FACET,
+    label: 'Needs work',
+    kind: 'gap',
+    options: [...GAP_OPTIONS],
+  });
 
   return facets;
 }

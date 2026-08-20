@@ -1,7 +1,19 @@
-import { OTHER_FACET, buildFacets, facetOf, groupSelection, matchesSelection } from './facets';
+import {
+  GAP_FACET,
+  GAP_OPTIONS,
+  OTHER_FACET,
+  buildFacets,
+  facetOf,
+  groupSelection,
+  matchesSelection,
+} from './facets';
 import { Recipes } from './mock/recipes.mock';
 
 const ALL_TAGS = [...new Set(Recipes.flatMap((r) => r.tags))].sort();
+
+/** The tag facets only — the trailing gap facet is not built from tags. */
+const tagFacets = (tags: readonly string[]) =>
+  buildFacets(tags).filter((f) => f.kind === 'tag');
 
 describe('buildFacets', () => {
   it('groups the real tag list into facets', () => {
@@ -21,31 +33,47 @@ describe('buildFacets', () => {
   });
 
   it('accounts for every tag in the data, so none becomes unfilterable', () => {
-    const covered = buildFacets(ALL_TAGS).flatMap((f) => f.options);
+    const covered = tagFacets(ALL_TAGS).flatMap((f) => f.options);
     expect([...covered].sort()).toEqual(ALL_TAGS);
   });
 
   it('collects anything uncategorised into a trailing Other facet', () => {
-    const facets = buildFacets([...ALL_TAGS, 'zzz-brand-new-tag']);
+    const facets = tagFacets([...ALL_TAGS, 'zzz-brand-new-tag']);
     const other = facets.find((f) => f.id === OTHER_FACET)!;
     // The guard this provides: tags are derived from data, so a new recipe can
     // introduce a tag this file has never heard of. It must still be offered.
     expect(other.options).toContain('zzz-brand-new-tag');
+    // Last of the tag facets; the gap facet comes after all of them.
     expect(facets.at(-1)?.id).toBe(OTHER_FACET);
   });
 
   it('drops a facet with no matching tags rather than offering an empty menu', () => {
-    const facets = buildFacets(['italian']);
-    expect(facets.map((f) => f.id)).toEqual(['cuisine']);
+    expect(tagFacets(['italian']).map((f) => f.id)).toEqual(['cuisine']);
   });
 
-  it('returns nothing for an empty tag list', () => {
-    expect(buildFacets([])).toEqual([]);
+  it('offers no tag facets for an empty tag list', () => {
+    expect(tagFacets([])).toEqual([]);
   });
 
   it('is case insensitive about the incoming tags', () => {
-    const facets = buildFacets(['Italian', 'DINNER']);
-    expect(facets.map((f) => f.id).sort()).toEqual(['cuisine', 'meal']);
+    expect(tagFacets(['Italian', 'DINNER']).map((f) => f.id).sort()).toEqual([
+      'cuisine',
+      'meal',
+    ]);
+  });
+
+  it('always offers the Needs-work facet, last, whatever the tags are', () => {
+    for (const tags of [[], ['italian'], ALL_TAGS]) {
+      const facets = buildFacets(tags);
+      const last = facets.at(-1)!;
+      expect(last.id).toBe(GAP_FACET);
+      expect(last.kind).toBe('gap');
+      expect(last.options).toEqual([...GAP_OPTIONS]);
+    }
+  });
+
+  it('marks tag facets as tag facets', () => {
+    for (const f of tagFacets(ALL_TAGS)) expect(f.kind).toBe('tag');
   });
 });
 

@@ -258,6 +258,15 @@
     }
 }
 
+// How many recipes carry this gap — the reason you would tick it.
+.option-count {
+    margin-left: auto;
+    padding-left: 10px;
+    color: var(--ink-4);
+    font-size: 12px;
+    font-weight: 600;
+}
+
 .facet-clear {
     display: block;
     width: 100%;
@@ -276,6 +285,16 @@
 
     &:hover {
         color: var(--navy-deep);
+    }
+}
+
+// The Needs-work facet asks what a recipe is missing rather than what it is, so
+// it sits slightly apart from the descriptive facets.
+.facet-trigger.is-gap {
+    border-style: dashed;
+
+    &.is-on {
+        border-style: solid;
     }
 }
 
@@ -580,25 +599,6 @@
     padding: 0 22px;
 }
 
-// The needs-work toggle carries its own count, since the number is the reason
-// you would press it.
-.pill-work .work-count {
-    display: inline-grid;
-    place-items: center;
-    min-width: 20px;
-    height: 19px;
-    padding: 0 5px;
-    border-radius: var(--radius-pill);
-    background: var(--surface-sunk);
-    color: var(--ink-3);
-    font-size: 10.5px;
-    font-weight: 700;
-}
-
-.pill-work.is-on .work-count {
-    background: rgb(255 255 255 / 0.22);
-    color: var(--paper);
-}
 
 // Sits over the photo corner opposite the favourite star.
 .gap-badge {

@@ -46,19 +46,6 @@
       <mat-icon [fontIcon]="recipes.favsOnly() ? 'star' : 'star_border'" aria-hidden="true" />
       Favourites
     </button>
-
-    <!-- Finds what still needs a photograph or a method written down. -->
-    <button
-      type="button"
-      class="pill-fav pill-work"
-      [class.is-on]="recipes.needsWorkOnly()"
-      (click)="recipes.toggleNeedsWorkOnly()"
-      [attr.aria-pressed]="recipes.needsWorkOnly()"
-    >
-      <mat-icon fontIcon="edit_note" aria-hidden="true" />
-      Needs work
-      <span class="work-count tnum">{{ recipes.needsWorkCount() }}</span>
-    </button>
   </div>
 
   <!-- Grouped multi-select facets. Picking two options in one menu widens the
@@ -69,6 +56,7 @@
         <button
           type="button"
           class="facet-trigger"
+          [class.is-gap]="facet.id === gapFacetId"
           [attr.data-facet-trigger]="facet.id"
           [class.is-open]="openFacet() === facet.id"
           [class.is-on]="facetCount(facet) > 0"
@@ -85,14 +73,17 @@
 
         @if (openFacet() === facet.id) {
           <div class="facet-menu" [id]="'facet-' + facet.id" role="group" [attr.aria-label]="facet.label">
-            @for (tag of facet.options; track tag) {
+            @for (option of facet.options; track option) {
               <label class="facet-option">
                 <input
                   type="checkbox"
-                  [checked]="recipes.isTagSelected(tag)"
-                  (change)="recipes.toggleTag(tag)"
+                  [checked]="recipes.isOptionSelected(facet, option)"
+                  (change)="recipes.toggleOption(facet, option)"
                 />
-                <span>{{ tagLabel(tag) }}</span>
+                <span>{{ optionLabel(facet, option) }}</span>
+                @if (optionCount(facet, option) !== null) {
+                  <span class="option-count tnum">{{ optionCount(facet, option) }}</span>
+                }
               </label>
             }
             @if (facetCount(facet) > 0) {
@@ -108,15 +99,15 @@
 
   @if (activeChips().length > 0) {
     <div class="active-filters">
-      @for (chip of activeChips(); track chip.tag) {
+      @for (chip of activeChips(); track chip.facet.id + ':' + chip.option) {
         <button
           type="button"
           class="filter-chip"
-          (click)="recipes.toggleTag(chip.tag)"
-          [attr.aria-label]="'Remove ' + tagLabel(chip.tag) + ' filter'"
+          (click)="recipes.toggleOption(chip.facet, chip.option)"
+          [attr.aria-label]="'Remove ' + chip.label + ' filter'"
         >
-          <span class="chip-facet">{{ chip.facet }}</span>
-          {{ tagLabel(chip.tag) }}
+          <span class="chip-facet">{{ chip.facetLabel }}</span>
+          {{ chip.label }}
           <mat-icon fontIcon="close" aria-hidden="true" />
         </button>
       }

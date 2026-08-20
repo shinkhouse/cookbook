@@ -49,6 +49,19 @@ export function gapsOf(recipe: Recipe): RecipeGaps {
   };
 }
 
+/**
+ * The gap keys that apply to a recipe, for the library's Needs-work facet.
+ * Empty when the recipe is complete.
+ */
+export function gapKeys(recipe: Recipe): string[] {
+  const gaps = gapsOf(recipe);
+  const keys: string[] = [];
+  if (gaps.needsMethod) keys.push('method');
+  if (gaps.thinMethod) keys.push('steps');
+  if (gaps.needsPhoto) keys.push('photo');
+  return keys;
+}
+
 /** Short label for the card badge, or '' when there is nothing to say. */
 export function gapLabel(gaps: RecipeGaps): string {
   // Ordered by how much it matters: a missing method beats a missing photo.

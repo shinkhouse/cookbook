@@ -118,6 +118,61 @@ describe('RecipeStore', () => {
     expect(store.facetCount(meal)).toBe(2);
   });
 
+  it('filters by a gap, which is derived rather than tagged', () => {
+    const gaps = store.facets().find((f) => f.id === 'gaps')!;
+    expect(gaps.kind).toBe('gap');
+
+    store.toggleOption(gaps, 'method');
+    const noMethod = store.results();
+    expect(noMethod.length).toBe(3);
+    for (const r of noMethod) expect(r.steps.length).toBe(0);
+  });
+
+  it('widens within the gap facet, as the tag facets do', () => {
+    const gaps = store.facets().find((f) => f.id === 'gaps')!;
+    store.toggleOption(gaps, 'method');
+    const method = store.results().length;
+    store.toggleOption(gaps, 'photo');
+    // method OR photo, so never fewer.
+    expect(store.results().length).toBeGreaterThan(method);
+  });
+
+  it('narrows a gap against a tag, since they are different facets', () => {
+    const gaps = store.facets().find((f) => f.id === 'gaps')!;
+    store.toggleOption(gaps, 'photo');
+    const photoless = store.results().length;
+    store.toggleTag('dinner');
+    expect(store.results().length).toBeLessThan(photoless);
+    for (const r of store.results()) {
+      expect(r.tags).toContain('dinner');
+      expect(r.photo).toBeFalsy();
+    }
+  });
+
+  it('counts each gap for the option labels', () => {
+    const counts = store.gapCounts();
+    expect(counts['method']).toBe(3);
+    expect(counts['photo']).toBe(58);
+    expect(counts['steps']).toBeGreaterThan(0);
+  });
+
+  it('clears the gap facet without disturbing the tag facets', () => {
+    const gaps = store.facets().find((f) => f.id === 'gaps')!;
+    store.toggleTag('dinner');
+    store.toggleOption(gaps, 'photo');
+    store.clearFacet(gaps);
+    expect(store.isOptionSelected(gaps, 'photo')).toBe(false);
+    expect(store.isTagSelected('dinner')).toBe(true);
+  });
+
+  it('counts gap selections toward the total, so Clear all shows up', () => {
+    const gaps = store.facets().find((f) => f.id === 'gaps')!;
+    store.toggleOption(gaps, 'photo');
+    expect(store.selectedCount()).toBe(1);
+    store.reset();
+    expect(store.selectedCount()).toBe(0);
+  });
+
   it('combines a tag filter with a query', () => {
     store.toggleTag('dinner');
     store.setQuery('chicken');

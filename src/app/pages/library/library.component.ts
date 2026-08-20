@@ -1,7 +1,7 @@
 import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
-import { Facet } from '../../core/facets';
+import { Facet, GAP_FACET, GAP_LABELS, GapKey } from '../../core/facets';
 import { gapLabel, gapsOf } from '../../core/recipe-health';
 import { Recipe } from '../../core/model/recipes.model';
 import { ListStore } from '../../core/stores/list.store';
@@ -31,6 +31,18 @@ export class LibraryComponent {
   protected readonly prefs = inject(PrefsStore);
 
   protected readonly tagLabel = tagLabel;
+
+  /** Option labels differ by facet: tags are title-cased, gaps have names. */
+  protected optionLabel(facet: Facet, option: string): string {
+    return facet.kind === 'gap' ? GAP_LABELS[option as GapKey] : tagLabel(option);
+  }
+
+  /** How many recipes carry a gap, shown beside its option. */
+  protected optionCount(facet: Facet, option: string): number | null {
+    return facet.kind === 'gap' ? (this.recipes.gapCounts()[option] ?? 0) : null;
+  }
+
+  protected readonly gapFacetId = GAP_FACET;
 
   /** The card badge text for a recipe still missing something, or ''. */
   protected gapFor(recipe: Recipe): string {
@@ -101,16 +113,20 @@ export class LibraryComponent {
     () =>
       this.recipes.query().length > 0 ||
       this.recipes.selectedCount() > 0 ||
-      this.recipes.favsOnly() ||
-      this.recipes.needsWorkOnly(),
+      this.recipes.favsOnly(),
   );
 
-  /** The selected tags as flat chips, so what is on stays visible when closed. */
+  /** Everything selected, as flat chips, so what is on stays visible when closed. */
   protected readonly activeChips = computed(() =>
     this.facets().flatMap((facet) =>
       facet.options
-        .filter((tag) => this.recipes.isTagSelected(tag))
-        .map((tag) => ({ tag, facet: facet.label })),
+        .filter((option) => this.recipes.isOptionSelected(facet, option))
+        .map((option) => ({
+          facet,
+          option,
+          label: this.optionLabel(facet, option),
+          facetLabel: facet.label,
+        })),
     ),
   );
 

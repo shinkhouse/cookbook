@@ -1,1 +1,19 @@
-<router-outlet></router-outlet>
+<main>
+    <header fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="48px">
+        <div fxLayout="row" fxLayoutAlign="start center" routerLink="/">
+            <div class="recipe-icon">
+                <mat-icon>ramen_dining</mat-icon>
+            </div>
+            <h1>Sam's Recipes</h1>
+        </div>
+        <div class="search">
+            <mat-icon>search</mat-icon>
+            <input type="text" [(ngModel)]="searchTerm" (keyup.enter)="searchRecipes()" placeholder="What would you like to create?" />
+        </div>
+        <button routerLink="/create">
+            <mat-icon>add</mat-icon>
+            Add Recipe
+        </button>
+    </header>
+    <router-outlet></router-outlet>
+</main>

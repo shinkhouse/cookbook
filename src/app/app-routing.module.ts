@@ -10,6 +10,13 @@ const routes: Routes = [
             ),
     },
     {
+        path: 'search',
+        loadChildren: () =>
+            import('./pages/search/search.module').then(
+                (m) => m.SearchModule
+            ),
+    },
+    {
         path: 'create',
         loadChildren: () =>
             import('./pages/create-recipe/create-recipe.module').then(

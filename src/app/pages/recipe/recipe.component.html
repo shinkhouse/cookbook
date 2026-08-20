@@ -1,14 +1,24 @@
 <div class="container" *ngIf="recipe">
     <div class="Description">
-        <h1>{{ recipe?.title }}</h1>
-        <h2>
-            <i>{{ recipe?.subtitle }}</i>
-        </h2>
-        <p>
-            <i>{{ recipe?.description }}</i>
-        </p>
+        <div>
+            <h1>{{ recipe?.title }}</h1>
+            <h2>
+                <i>{{ recipe?.subtitle }}</i>
+            </h2>
+            <h3 class="mat-h6">
+                <i>{{ recipe?.description }}</i>
+            </h3>
+            <div class="recipe-duration">
+                <h5>Duration</h5>
+                <h3>{{ recipe?.cookTime }}</h3>
+            </div>
+            <div class="recipe-servings" *ngIf="recipe?.servings">
+                <h5>Makes</h5>
+                <h3>{{ recipe?.servings }} servings</h3>
+            </div>
+        </div>
     </div>
-    <div class="Images">
+    <div class="Image">
         <img
             *ngIf="recipe.coverImage"
             [src]="recipe.coverImage"
@@ -17,9 +27,19 @@
     </div>
     <div class="Ingredients">
         <h2>Ingredients</h2>
+        <ul>
+            <li *ngFor="let ingredient of recipe?.ingredients">
+                {{ ingredient }}
+            </li>
+        </ul>
     </div>
     <div class="Steps">
         <h2>Steps</h2>
+        <ol>
+            <li *ngFor="let step of recipe?.steps">
+                {{ step }}
+            </li>
+        </ol>
     </div>
 </div>
 <!-- <div class="recipe-card" *ngIf="recipe">

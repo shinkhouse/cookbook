@@ -1,29 +1,9 @@
-<div class="drawer-header" fxLayout="row" fxLayoutAlign="start center">
-    <div class="recipe-icon">
-        <!-- <span>R</span> -->
-        <mat-icon>ramen_dining</mat-icon>
-    </div>
-    <h1>Sam's Recipes</h1>
-    <div fxFlex></div>
-    <button color="primary" mat-raised-button routerLink="/create">
-        <mat-icon>add</mat-icon>
-        Add Recipe
-    </button>
-</div>
 <div class="big-container-section">
     <h1>Simple, flavorful recipes</h1>
-    <p>
-        This is a collection of recipes my wife and I like to cook or have
-        tried.
-    </p>
+    <p>This is a collection of recipes my wife and I like to cook or have tried.</p>
 </div>
 <div class="search-actions" fxLayout="row" fxLayoutAlign="center center" fxLayoutGap="16px">
-    <div
-        class="search-bar mat-elevation-z2"
-        fxLayout="row"
-        fxLayoutAlign="start center"
-        fxLayoutGap="16px"
-    >
+    <div class="search-bar mat-elevation-z2" fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
         <mat-icon (click)="textarea1.focus()">search</mat-icon>
         <input #textarea1 type="text" placeholder="Search Recipes" [(ngModel)]="searchQuery" />
     </div>
@@ -33,62 +13,30 @@
     </button>
 </div>
 <main class="recipes">
-    <mat-grid-list
-        *ngIf="getSearchResults().length > 0"
-        rowHeight="400px"
-        [cols]="gridColumnSize"
-        gutterSize="16px"
-    >
-    <ng-container *ngFor="let recipe of getSearchResults()" >
-        <mat-grid-tile
-            *ngIf="onlyFavoritesShown ? recipe.favorite : true"
-            routerLink="/recipe/{{ recipe.slug }}"
-        >
-            <mat-card appearance="outlined">
-                <img
-                    *ngIf="recipe.coverImage"
-                    mat-card-image
-                    [src]="recipe.coverImage"
-                    [alt]="recipe.title"
-                />
-                <mat-card-header
-                    fxLayout="row"
-                    fxLayoutAlign="start center"
-                    fxLayoutGap="16px"
-                >
-                    <mat-card-title>{{ recipe.title }}</mat-card-title>
-                    <mat-card-subtitle>{{ recipe.subtitle }}</mat-card-subtitle>
-                    <div fxFlex></div>
-                    <button
-                        class="mat-elevation-z2"
-                        mat-icon-button
-                        *ngIf="recipe.favorite"
-                    >
-                        <mat-icon
-                            matTooltip="Favorite Recipe!"
-                            class="favorite-icon"
-                            >star</mat-icon
-                        >
-                    </button>
-                    <button
-                        class="mat-elevation-z2"
-                        mat-icon-button
-                        *ngIf="!recipe.favorite"
-                    >
-                        <mat-icon class="inactive-favorite-icon"
-                            >star_outline</mat-icon
-                        >
-                    </button>
-                </mat-card-header>
-                <mat-card-content>
-                    <p>
-                        {{ recipe.description }}
-                    </p>
-                </mat-card-content>
-            </mat-card>
-        </mat-grid-tile>
-    </ng-container>
-    
+    <mat-grid-list *ngIf="getSearchResults().length > 0" rowHeight="400px" [cols]="gridColumnSize">
+        <ng-container *ngFor="let recipe of getSearchResults()">
+            <mat-grid-tile *ngIf="onlyFavoritesShown ? recipe.favorite : true" routerLink="/recipe/{{ recipe.slug }}">
+                <mat-card appearance="outlined">
+                    <img *ngIf="recipe.coverImage" mat-card-image [src]="recipe.coverImage" [alt]="recipe.title" />
+                    <mat-card-header fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
+                        <mat-card-title>{{ recipe.title }}</mat-card-title>
+                        <mat-card-subtitle>{{ recipe.subtitle }}</mat-card-subtitle>
+                        <div fxFlex></div>
+                        <button class="mat-elevation-z2" mat-icon-button *ngIf="recipe.favorite">
+                            <mat-icon matTooltip="Favorite Recipe!" class="favorite-icon">star</mat-icon>
+                        </button>
+                        <button class="mat-elevation-z2" mat-icon-button *ngIf="!recipe.favorite">
+                            <mat-icon class="inactive-favorite-icon">star_outline</mat-icon>
+                        </button>
+                    </mat-card-header>
+                    <mat-card-content>
+                        <p>
+                            {{ recipe.description }}
+                        </p>
+                    </mat-card-content>
+                </mat-card>
+            </mat-grid-tile>
+        </ng-container>
     </mat-grid-list>
 
     <div class="no-recipes" fxLayout="column" fxLayoutAlign="center center" *ngIf="getSearchResults().length === 0">

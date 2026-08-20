@@ -1,36 +1,53 @@
 @use "@angular/material" as mat;
+@import "./theme";
+:root {
+    --red: #a11f53;
+    --blue: #2651a0;
+    --green: #025a4e;
+    --sea-green: #28915b;
+    --yellow: #bd9a19;
+    --orange: #c85c35;
+    --purple: #521945;
+    --pink: #a8399d;
+    --brown: #542821;
+}
 html,
 body {
     height: 100%;
-    background: #FAF9EF;
     font-size: 100%;
+    
+    @include red;
+    @include orange;
+    @include yellow;
+    @include green;
+    @include sea-green;
+    @include blue;
+    @include purple;
+    @include pink;
+    @include brown;
 }
 body {
     margin: 0;
     font-family: Roboto, "Helvetica Neue", sans-serif;
 }
+@include mat.core();
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    font-family: "Yeseva One";
-}
+$my-custom-typography-config: mat.define-typography-config(
+    $headline-1: mat.define-typography-level(64px, 1, 300, $letter-spacing: -0.05em, $font-family: "Yeseva One"),
+    $headline-2: mat.define-typography-level(48px, 1.33, 400, $letter-spacing: -0.02em, $font-family: "Yeseva One"),
+    $headline-3: mat.define-typography-level(40px, 1.33, 400, $letter-spacing: -0.005em, $font-family: "Merriweather Sans"),
+    $headline-4: mat.define-typography-level(32px, 1.33, 400, $font-family: "Merriweather Sans"),
+    $headline-5: mat.define-typography-level(24px, 1.33, 400, $font-family: "Merriweather Sans"),
+    $headline-6: mat.define-typography-level(20px, 1.33, 500, $font-family: "Merriweather Sans"),
+    $subtitle-1: mat.define-typography-level(14px, 1.33, 400, $letter-spacing: 0.00938em, $font-family: "Merriweather Sans"),
+    $subtitle-2: mat.define-typography-level(16px, 1.33, 500, $letter-spacing: 0.00714em, $font-family: "Merriweather Sans"),
+    $body-1: mat.define-typography-level(16px, 1.33, 400, $letter-spacing: 0.03125em, $font-family: "Merriweather Sans"),
+    $body-2: mat.define-typography-level(14px, 1.33, 400, $letter-spacing: 0.01786em, $font-family: "Merriweather Sans"),
+    $button: mat.define-typography-level(14px, 1.33, 500, $letter-spacing: 0.07813em, $font-family: "Merriweather Sans"),
+    $caption: mat.define-typography-level(12px, 1.33, 400, $letter-spacing: 0.03333em, $font-family: "Merriweather Sans"),
+);
 
-// TODO(v15): As of v15 mat.legacy-core no longer includes default typography styles.
-//  The following line adds:
-//    1. Default typography styles for all components
-//    2. Styles for typography hierarchy classes (e.g. .mat-headline-1)
-//  If you specify typography styles for the components you use elsewhere, you should delete this line.
-//  If you don't need the default component typographies but still want the hierarchy styles,
-//  you can delete this line and instead use:
-//    `@include mat.legacy-typography-hierarchy(mat.define-legacy-typography-config());`
-@include mat.all-legacy-component-typographies();
-@include mat.legacy-core();
-
-$my-primary: mat.define-palette(mat.$red-palette);
+$my-primary: mat.define-palette(mat.$green-palette, 900);
 $my-accent: mat.define-palette(mat.$pink-palette, A200, A100, A400);
 
 $my-theme: mat.define-light-theme(
@@ -39,10 +56,26 @@ $my-theme: mat.define-light-theme(
             primary: $my-primary,
             accent: $my-accent,
         ),
+        typography: $my-custom-typography-config,
     )
 );
+@include mat.all-component-themes($my-theme);
 
-@include mat.all-legacy-component-themes($my-theme);
+// Define CSS classes for heading tags
+@mixin mat-headline-styles($level) {
+    h#{$level},
+    .mat-h#{$level} {
+        @include mat.typography-level($my-custom-typography-config, headline-#{$level});
+    }
+}
+
+// Apply the Material headline styles to heading tags
+@include mat-headline-styles(1);
+@include mat-headline-styles(2);
+@include mat-headline-styles(3);
+@include mat-headline-styles(4);
+@include mat-headline-styles(5);
+@include mat-headline-styles(6);
 
 /* TODO(mdc-migration): The following rule targets internal classes of card that may no longer apply for the MDC version.*/
 .mat-card-header-text {

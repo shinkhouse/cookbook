@@ -1,16 +1,8 @@
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    font-family: "Yeseva One";
-}
-
-.recipe-card, .container {
-    margin: 8px;
+.recipe-card,
+.container {
+    max-width: 1440px;
+    margin: 0px auto;
     margin-bottom: 8px;
-    color: rgba(0, 0, 0, 0.87);
 
     img {
         object-fit: cover;
@@ -34,11 +26,9 @@ h6 {
     }
 
     h1 {
-        color: #e9c46a;
         margin: 0px;
     }
     h2 {
-        color: rgba(0, 0, 0, 0.54);
         margin: 0px;
         margin-bottom: 16px;
     }
@@ -57,7 +47,6 @@ h6 {
     }
     ol li::before {
         content: counter(incredient-counter) ". ";
-        color: #e9c46a;
         font-size: 24px;
         font-weight: bold;
         position: absolute;
@@ -112,7 +101,7 @@ hr {
 }
 
 .recipe-card-v2 *:after {
-    content: attr(class);
+    // content: attr(class);
     position: absolute;
     top: 0;
     left: 0;
@@ -123,39 +112,64 @@ hr {
     justify-content: center;
 }
 
-.container {  display: grid;
+.container {
+    display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 0.75fr 1fr;
+    grid-template-rows: 0.60fr 1fr;
     gap: 0px 0px;
     grid-auto-flow: row;
     grid-template-areas:
-      "Description Image"
-      "Ingredients Steps";
-  }
-  
-  .Description { grid-area: Description; }
-  
-  .Image { grid-area: Image; }
-  
-  .Ingredients { grid-area: Ingredients; }
-  
-  .Steps { grid-area: Steps; }
-  
-  
-  html, body , .container {
+        "Description Image"
+        "Ingredients Steps";
+    > div:not(.Image) {
+        padding: 24px 40px;
+    }
+}
+
+.Description {
+    display: grid;
+    grid-area: Description;
+    justify-content: space-evenly;
+    justify-items: center;
+    align-content: space-evenly;
+    align-items: center;
+
+    h1 {
+        margin-bottom: 24px;
+    }
+
+    h3 {
+
+    }
+}
+
+.Image {
+    grid-area: Image;
+}
+
+.Ingredients {
+    grid-area: Ingredients;
+}
+
+.Steps {
+    grid-area: Steps;
+}
+
+html,
+body,
+.container {
     height: 100%;
     margin: 0;
-  }
-  
-  /* For presentation only, no need to copy the code below */
-  
-  .container * {
-    border: 1px solid red;
+}
+
+/* For presentation only, no need to copy the code below */
+
+.container * {
     position: relative;
-  }
-  
-  .container *:after {
-    content:attr(class);
+}
+
+.container *:after {
+    // content: attr(class);
     position: absolute;
     top: 0;
     left: 0;
@@ -164,6 +178,11 @@ hr {
     display: grid;
     align-items: center;
     justify-content: center;
-  }
-  
-  
+}
+
+
+.recipe-duration, .recipe-servings {
+    h1,h2,h3,h4,h5,h6 {
+        margin: 0;
+    }
+}

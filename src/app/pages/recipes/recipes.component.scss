@@ -30,8 +30,6 @@
 .drawer-header {
     padding: 24px 16px 24px 16px;
     h1 {
-        color: #d62828;
-        font-family: "Merriweather", serif;
         margin: 0px;
     }
     p {
@@ -103,7 +101,6 @@
     }
 }
 main {
-    padding: 16px;
     mat-grid-tile {
         /* TODO(mdc-migration): The following rule targets internal classes of card that may no longer apply for the MDC version. */
         /* TODO(mdc-migration): The following rule targets internal classes of card that may no longer apply for the MDC version. */

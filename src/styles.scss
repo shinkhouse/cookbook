@@ -1,5 +1,6 @@
 @use "@angular/material" as mat;
-@import "./theme";
+// `as *` keeps the theme's mixins unqualified, matching the previous @import.
+@use "./theme" as *;
 :root {
     --red: #a11f53;
     --blue: #2651a0;

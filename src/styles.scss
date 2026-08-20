@@ -1,86 +1,176 @@
 @use "@angular/material" as mat;
-// `as *` keeps the theme's mixins unqualified, matching the previous @import.
-@use "./theme" as *;
-:root {
-    --red: #a11f53;
-    --blue: #2651a0;
-    --green: #025a4e;
-    --sea-green: #28915b;
-    --yellow: #bd9a19;
-    --orange: #c85c35;
-    --purple: #521945;
-    --pink: #a8399d;
-    --brown: #542821;
+@use "./styles/tokens";
+
+// §3.2 — fonts are self-hosted via @fontsource rather than fetched from the
+// Google CDN. The weight files are listed in angular.json's styles array, which
+// is where third-party CSS belongs; Sass @use would need a namespace per file.
+
+// Establishes Material's M3 token structure. The palette here is a starting
+// point only — the --mat-sys-* overrides below are what actually decide how
+// Material components look, so they match the tokens in _tokens.scss.
+html {
+    @include mat.theme(
+        (
+            color: (
+                primary: mat.$green-palette,
+                tertiary: mat.$green-palette,
+            ),
+            typography: (
+                plain-family: "Karla",
+                brand-family: "Newsreader",
+            ),
+            density: 0,
+        )
+    );
 }
+
+// §3.1 — map our tokens onto Material's system tokens so mat-checkbox,
+// mat-form-field, mat-menu and mat-icon inherit the palette instead of
+// fighting it.
+:root {
+    --mat-sys-primary: var(--accent);
+    --mat-sys-on-primary: var(--card);
+    --mat-sys-primary-container: var(--accent-tint);
+    --mat-sys-on-primary-container: var(--accent-hover);
+
+    --mat-sys-surface: var(--paper);
+    --mat-sys-surface-container: var(--card);
+    --mat-sys-surface-container-low: var(--card);
+    --mat-sys-surface-container-high: var(--card);
+    --mat-sys-surface-variant: var(--accent-tint);
+    --mat-sys-on-surface: var(--ink);
+    --mat-sys-on-surface-variant: var(--ink-3);
+
+    --mat-sys-background: var(--paper);
+    --mat-sys-on-background: var(--ink);
+
+    --mat-sys-outline: var(--rule-strong);
+    --mat-sys-outline-variant: var(--rule);
+
+    --mat-sys-error: #8c2f2f;
+
+    // Material's corner tokens, aligned to §3.3.
+    --mat-sys-corner-extra-small: var(--radius-card);
+    --mat-sys-corner-small: var(--radius-card);
+    --mat-sys-corner-medium: var(--radius-card);
+    --mat-sys-corner-large: var(--radius-card);
+    --mat-sys-corner-full: var(--radius-pill);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
 html,
 body {
     height: 100%;
-    font-size: 100%;
-    
-    @include red;
-    @include orange;
-    @include yellow;
-    @include green;
-    @include sea-green;
-    @include blue;
-    @include purple;
-    @include pink;
-    @include brown;
 }
+
 body {
     margin: 0;
-    font-family: Roboto, "Helvetica Neue", sans-serif;
-}
-@include mat.elevation-classes();
-@include mat.app-background();
-
-$my-custom-typography-config: mat.m2-define-typography-config(
-    $headline-1: mat.m2-define-typography-level(64px, 1, 300, $letter-spacing: -0.05em, $font-family: "Yeseva One"),
-    $headline-2: mat.m2-define-typography-level(48px, 1.33, 400, $letter-spacing: -0.02em, $font-family: "Yeseva One"),
-    $headline-3: mat.m2-define-typography-level(40px, 1.33, 400, $letter-spacing: -0.005em, $font-family: "Merriweather Sans"),
-    $headline-4: mat.m2-define-typography-level(32px, 1.33, 400, $font-family: "Merriweather Sans"),
-    $headline-5: mat.m2-define-typography-level(24px, 1.33, 400, $font-family: "Merriweather Sans"),
-    $headline-6: mat.m2-define-typography-level(20px, 1.33, 500, $font-family: "Merriweather Sans"),
-    $subtitle-1: mat.m2-define-typography-level(14px, 1.33, 400, $letter-spacing: 0.00938em, $font-family: "Merriweather Sans"),
-    $subtitle-2: mat.m2-define-typography-level(16px, 1.33, 500, $letter-spacing: 0.00714em, $font-family: "Merriweather Sans"),
-    $body-1: mat.m2-define-typography-level(16px, 1.33, 400, $letter-spacing: 0.03125em, $font-family: "Merriweather Sans"),
-    $body-2: mat.m2-define-typography-level(14px, 1.33, 400, $letter-spacing: 0.01786em, $font-family: "Merriweather Sans"),
-    $button: mat.m2-define-typography-level(14px, 1.33, 500, $letter-spacing: 0.07813em, $font-family: "Merriweather Sans"),
-    $caption: mat.m2-define-typography-level(12px, 1.33, 400, $letter-spacing: 0.03333em, $font-family: "Merriweather Sans"),
-);
-
-$my-primary: mat.m2-define-palette(mat.$m2-green-palette, 900);
-$my-accent: mat.m2-define-palette(mat.$m2-pink-palette, A200, A100, A400);
-
-$my-theme: mat.m2-define-light-theme(
-    (
-        color: (
-            primary: $my-primary,
-            accent: $my-accent,
-        ),
-        typography: $my-custom-typography-config,
-    )
-);
-@include mat.all-component-themes($my-theme);
-
-// Define CSS classes for heading tags
-@mixin mat-headline-styles($level) {
-    h#{$level},
-    .mat-h#{$level} {
-        @include mat.m2-typography-level($my-custom-typography-config, headline-#{$level});
-    }
+    background: var(--paper);
+    color: var(--ink-2);
+    font-family: var(--font-ui);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
-// Apply the Material headline styles to heading tags
-@include mat-headline-styles(1);
-@include mat-headline-styles(2);
-@include mat-headline-styles(3);
-@include mat-headline-styles(4);
-@include mat-headline-styles(5);
-@include mat-headline-styles(6);
+// §3.2 — display type. Newsreader, tightened at large sizes.
+h1,
+h2,
+h3,
+h4 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 400;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    text-wrap: balance;
+}
 
-/* TODO(mdc-migration): The following rule targets internal classes of card that may no longer apply for the MDC version.*/
-.mat-card-header-text {
-    padding: 0px;
-    margin: 0px !important;
+h1 {
+    font-size: var(--size-detail-h1);
+}
+h2 {
+    font-size: clamp(24px, 3vw, 34px);
+}
+h3 {
+    font-size: clamp(19px, 2vw, 23px);
+    line-height: 1.15;
+}
+h4 {
+    font-size: 17px;
+    line-height: 1.2;
+}
+
+p {
+    margin: 0 0 1em;
+    text-wrap: pretty;
+}
+
+// §3.2 — the mono label style, used for small uppercase captions.
+.label-mono {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+}
+
+// Credit lines and the footer (§3.2).
+.credit {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--ink-3);
+}
+
+a {
+    color: var(--accent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+}
+
+// §7 — a visible focus ring on everything interactive, not only inputs.
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+button {
+    font-family: var(--font-ui);
+}
+
+// §3.3 — the one elevation, reserved for device frames.
+.frame {
+    box-shadow: var(--elevation-frame);
+}
+
+// §6.1 / §6.2 — the striped placeholder that stands in for a missing photo.
+.photo-placeholder {
+    background: repeating-linear-gradient(
+        135deg,
+        var(--swatch-a) 0 14px,
+        var(--swatch-b) 14px 28px
+    );
+}
+
+// Screen-reader-only text, for the live regions cook mode needs (§7).
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }

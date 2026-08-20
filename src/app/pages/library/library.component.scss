@@ -137,30 +137,224 @@
     }
 }
 
-.tags {
+// The facet bar. Twenty-six tags as single-select pills filled three rows and
+// still only let you ask one question at a time; grouped multi-selects fit on
+// one row and answer the question people actually have.
+.facet-bar {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
 }
 
-.pill {
+.facet {
+    position: relative;
+}
+
+.facet-trigger {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    min-height: 36px;
-    padding: 0 16px;
+    gap: 7px;
+    min-height: 40px;
+    padding: 0 14px;
     border: 1px solid var(--rule-strong);
     border-radius: var(--radius-pill);
-    background: var(--surface);
+    background: var(--paper);
     color: var(--ink-2);
     font-family: var(--font);
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     transition:
-        background var(--motion-drawer) var(--ease),
-        color var(--motion-drawer) var(--ease);
+        border-color var(--motion-drawer) var(--ease),
+        background var(--motion-drawer) var(--ease);
+
+    &:hover {
+        border-color: var(--ink-4);
+    }
+
+    // A facet with something chosen keeps the navy so the state is legible
+    // whether or not its menu is open.
+    &.is-on {
+        border-color: var(--navy);
+        background: var(--navy-tint);
+        color: var(--navy-deep);
+    }
+
+    &.is-open {
+        border-color: var(--navy);
+    }
+
+    &.is-open .facet-chevron {
+        transform: rotate(180deg);
+    }
+}
+
+.facet-chevron {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: var(--ink-4);
+    transition: transform var(--motion-drawer) var(--ease);
+}
+
+.facet-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: var(--radius-pill);
+    background: var(--navy);
+    color: var(--paper);
+    font-size: 10.5px;
+    font-weight: 700;
+}
+
+.facet-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 30;
+    min-width: 208px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding: 6px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-card);
+    background: var(--paper);
+    box-shadow: var(--shadow-lift);
+    animation: facetIn var(--motion-drawer) var(--ease);
+}
+
+@keyframes facetIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+}
+
+.facet-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: var(--touch);
+    padding: 0 10px;
+    border-radius: 4px;
+    color: var(--ink-2);
+    font-size: 14.5px;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--surface);
+    }
+
+    input {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        accent-color: var(--navy);
+        cursor: pointer;
+    }
+}
+
+.facet-clear {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+    padding: 9px 10px;
+    border: 0;
+    border-top: 1px solid var(--rule);
+    border-radius: 0;
+    background: none;
+    color: var(--navy);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+        color: var(--navy-deep);
+    }
+}
+
+// What is on stays visible once the menu closes, and each chip removes itself.
+.active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 14px;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 10px 0 12px;
+    border: 1px solid var(--navy-tint-edge);
+    border-radius: var(--radius-pill);
+    background: var(--navy-tint);
+    color: var(--navy-deep);
+    font-family: var(--font);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+        border-color: var(--navy);
+    }
+
+    mat-icon {
+        font-size: 15px;
+        width: 15px;
+        height: 15px;
+    }
+}
+
+// Names which menu a chip came from, so two chips reading "Chicken" and
+// "Mexican" do not look like the same kind of thing.
+.chip-facet {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+}
+
+.filter-clear-all {
+    border: 0;
+    background: none;
+    padding: 4px 6px;
+    color: var(--ink-3);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+        color: var(--navy);
+    }
+}
+
+// The favourites toggle keeps the old pill shape.
+.pill-fav {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--touch);
+    padding: 0 18px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+    background: var(--paper);
+    color: var(--ink-2);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
 
     &:hover {
         border-color: var(--ink-4);
@@ -169,7 +363,7 @@
     &.is-on {
         border-color: var(--navy);
         background: var(--navy);
-        color: var(--surface);
+        color: var(--paper);
     }
 
     mat-icon {
@@ -177,11 +371,6 @@
         width: 17px;
         height: 17px;
     }
-}
-
-.pill-fav {
-    min-height: var(--touch);
-    padding: 0 20px;
 }
 
 .result-count {

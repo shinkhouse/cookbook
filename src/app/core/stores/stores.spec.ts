@@ -19,6 +19,13 @@ describe('RecipeStore', () => {
     expect(store.results().length).toBe(store.recipes().length);
   });
 
+  it('groups tags into facets for the filter controls', () => {
+    const ids = store.facets().map((f) => f.id);
+    expect(ids).toContain('meal');
+    expect(ids).toContain('cuisine');
+    expect(ids).toContain('protein');
+  });
+
   it('derives tags from the data rather than a hardcoded list', () => {
     const tags = store.tags();
     // Real tags off the 14 recipes; the handoff's illustrative set is absent.
@@ -58,14 +65,60 @@ describe('RecipeStore', () => {
     expect(store.results()).toEqual([]);
   });
 
-  it('filters by tag', () => {
-    store.setTag('dessert');
+  it('filters by a selected tag', () => {
+    store.toggleTag('dessert');
     expect(store.results().every((r) => r.tags.includes('dessert'))).toBe(true);
     expect(store.results().length).toBeGreaterThan(0);
   });
 
+  it('widens when two tags in the same facet are selected', () => {
+    store.toggleTag('dessert');
+    const desserts = store.results().length;
+    store.toggleTag('breakfast');
+    const either = store.results().length;
+    // Same facet, so this is dessert OR breakfast — never fewer results.
+    expect(either).toBeGreaterThan(desserts);
+    expect(store.results().every((r) =>
+      r.tags.includes('dessert') || r.tags.includes('breakfast'))).toBe(true);
+  });
+
+  it('narrows when tags from different facets are selected', () => {
+    store.toggleTag('dinner');
+    const dinners = store.results().length;
+    store.toggleTag('italian');
+    expect(store.results().length).toBeLessThan(dinners);
+    expect(store.results().every((r) =>
+      r.tags.includes('dinner') && r.tags.includes('italian'))).toBe(true);
+  });
+
+  it('untoggles a tag', () => {
+    store.toggleTag('dessert');
+    store.toggleTag('dessert');
+    expect(store.selectedCount()).toBe(0);
+    expect(store.results().length).toBe(store.recipes().length);
+  });
+
+  it('clears one facet without disturbing the others', () => {
+    store.toggleTag('dinner');
+    store.toggleTag('italian');
+    const cuisine = store.facets().find((f) => f.id === 'cuisine')!;
+    store.clearFacet(cuisine);
+    expect(store.isTagSelected('italian')).toBe(false);
+    expect(store.isTagSelected('dinner')).toBe(true);
+  });
+
+  it('counts what is selected inside a facet, for its badge', () => {
+    const meal = store.facets().find((f) => f.id === 'meal')!;
+    expect(store.facetCount(meal)).toBe(0);
+    store.toggleTag('dinner');
+    store.toggleTag('lunch');
+    store.toggleTag('italian');
+    // The italian selection belongs to another facet and must not be counted.
+    expect(store.facetCount(meal)).toBe(2);
+  });
+
   it('combines a tag filter with a query', () => {
-    store.setTag('dinner');
+    store.toggleTag('dinner');
     store.setQuery('chicken');
     for (const r of store.results()) {
       expect(r.tags).toContain('dinner');
@@ -92,11 +145,11 @@ describe('RecipeStore', () => {
 
   it('resets search and filter together', () => {
     store.setQuery('x');
-    store.setTag('dinner');
+    store.toggleTag('dinner');
     store.toggleFavsOnly();
     store.reset();
     expect(store.query()).toBe('');
-    expect(store.activeTag()).toBeNull();
+    expect(store.selectedCount()).toBe(0);
     expect(store.favsOnly()).toBe(false);
   });
 

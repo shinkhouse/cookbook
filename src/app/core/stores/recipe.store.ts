@@ -1,14 +1,12 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Recipe } from '../model/recipes.model';
 import { Recipes } from '../mock/recipes.mock';
+import { Facet, buildFacets, matchesSelection } from '../facets';
 import { PrefsStore } from './prefs.store';
-
-/** The "All" pill — no tag filter applied. */
-export const ALL_TAGS = null;
 
 /**
  * The recipe collection plus the library's search and filter state, per spec
- * §2.2. Not persisted: search text and the active tag are deliberately
+ * §2.2. Not persisted: the search text and the tag selection are deliberately
  * ephemeral, so a reload lands on the full library.
  */
 @Injectable({ providedIn: 'root' })
@@ -22,7 +20,11 @@ export class RecipeStore {
   readonly recipes = computed(() => this._recipes());
 
   readonly query = signal('');
-  readonly activeTag = signal<string | null>(ALL_TAGS);
+  /**
+   * Multi-select across grouped facets. Selections widen within a facet and
+   * narrow across facets — see core/facets.ts for why.
+   */
+  readonly selectedTags = signal<ReadonlySet<string>>(new Set());
   readonly favsOnly = signal(false);
 
   /**
@@ -34,6 +36,11 @@ export class RecipeStore {
     for (const r of this._recipes()) for (const t of r.tags) seen.add(t.toLowerCase());
     return [...seen].sort();
   });
+
+  /** The filter controls, grouped and pruned to what the data actually has. */
+  readonly facets = computed<Facet[]>(() => buildFacets(this.tags()));
+
+  readonly selectedCount = computed(() => this.selectedTags().size);
 
   /** The recipe the library header's stat block names. */
   readonly mostCooked = computed(() =>
@@ -78,11 +85,11 @@ export class RecipeStore {
    */
   readonly results = computed(() => {
     const needle = this.query().trim().toLowerCase();
-    const tag = this.activeTag();
+    const selected = this.selectedTags();
     const favsOnly = this.favsOnly();
 
     return this._recipes().filter((r) => {
-      if (tag !== null && !r.tags.some((t) => t.toLowerCase() === tag)) return false;
+      if (!matchesSelection(r.tags, selected)) return false;
       if (favsOnly && !this.prefs.isFav(r.slug)) return false;
       if (!needle) return true;
       return (
@@ -97,8 +104,32 @@ export class RecipeStore {
     this.query.set(query);
   }
 
-  setTag(tag: string | null): void {
-    this.activeTag.set(tag);
+  isTagSelected(tag: string): boolean {
+    return this.selectedTags().has(tag.toLowerCase());
+  }
+
+  toggleTag(tag: string): void {
+    const next = new Set(this.selectedTags());
+    const key = tag.toLowerCase();
+    if (!next.delete(key)) next.add(key);
+    this.selectedTags.set(next);
+  }
+
+  /** Clears one facet's selections, leaving the others alone. */
+  clearFacet(facet: Facet): void {
+    const next = new Set(this.selectedTags());
+    for (const tag of facet.options) next.delete(tag.toLowerCase());
+    this.selectedTags.set(next);
+  }
+
+  clearTags(): void {
+    this.selectedTags.set(new Set());
+  }
+
+  /** How many of a facet's options are currently on, for its button badge. */
+  facetCount(facet: Facet): number {
+    const selected = this.selectedTags();
+    return facet.options.reduce((n, tag) => n + (selected.has(tag) ? 1 : 0), 0);
   }
 
   toggleFavsOnly(): void {
@@ -107,7 +138,7 @@ export class RecipeStore {
 
   reset(): void {
     this.query.set('');
-    this.activeTag.set(ALL_TAGS);
+    this.selectedTags.set(new Set());
     this.favsOnly.set(false);
   }
 }

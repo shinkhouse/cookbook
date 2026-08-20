@@ -38,7 +38,7 @@
 
     <button
       type="button"
-      class="pill pill-fav"
+      class="pill-fav"
       [class.is-on]="recipes.favsOnly()"
       (click)="recipes.toggleFavsOnly()"
       [attr.aria-pressed]="recipes.favsOnly()"
@@ -48,28 +48,68 @@
     </button>
   </div>
 
-  <div class="tags" role="group" aria-label="Filter by tag">
-    <button
-      type="button"
-      class="pill"
-      [class.is-on]="recipes.activeTag() === null"
-      (click)="selectTag(null)"
-      [attr.aria-pressed]="recipes.activeTag() === null"
-    >
-      All
-    </button>
-    @for (tag of tags(); track tag) {
-      <button
-        type="button"
-        class="pill"
-        [class.is-on]="recipes.activeTag() === tag"
-        (click)="selectTag(tag)"
-        [attr.aria-pressed]="recipes.activeTag() === tag"
-      >
-        {{ tagLabel(tag) }}
-      </button>
+  <!-- Grouped multi-select facets. Picking two options in one menu widens the
+       result; picking across menus narrows it. -->
+  <div class="facet-bar">
+    @for (facet of facets(); track facet.id) {
+      <div class="facet">
+        <button
+          type="button"
+          class="facet-trigger"
+          [attr.data-facet-trigger]="facet.id"
+          [class.is-open]="openFacet() === facet.id"
+          [class.is-on]="facetCount(facet) > 0"
+          (click)="toggleFacet(facet.id)"
+          [attr.aria-expanded]="openFacet() === facet.id"
+          [attr.aria-controls]="'facet-' + facet.id"
+        >
+          {{ facet.label }}
+          @if (facetCount(facet) > 0) {
+            <span class="facet-count tnum">{{ facetCount(facet) }}</span>
+          }
+          <mat-icon class="facet-chevron" fontIcon="expand_more" aria-hidden="true" />
+        </button>
+
+        @if (openFacet() === facet.id) {
+          <div class="facet-menu" [id]="'facet-' + facet.id" role="group" [attr.aria-label]="facet.label">
+            @for (tag of facet.options; track tag) {
+              <label class="facet-option">
+                <input
+                  type="checkbox"
+                  [checked]="recipes.isTagSelected(tag)"
+                  (change)="recipes.toggleTag(tag)"
+                />
+                <span>{{ tagLabel(tag) }}</span>
+              </label>
+            }
+            @if (facetCount(facet) > 0) {
+              <button type="button" class="facet-clear" (click)="recipes.clearFacet(facet)">
+                Clear
+              </button>
+            }
+          </div>
+        }
+      </div>
     }
   </div>
+
+  @if (activeChips().length > 0) {
+    <div class="active-filters">
+      @for (chip of activeChips(); track chip.tag) {
+        <button
+          type="button"
+          class="filter-chip"
+          (click)="recipes.toggleTag(chip.tag)"
+          [attr.aria-label]="'Remove ' + tagLabel(chip.tag) + ' filter'"
+        >
+          <span class="chip-facet">{{ chip.facet }}</span>
+          {{ tagLabel(chip.tag) }}
+          <mat-icon fontIcon="close" aria-hidden="true" />
+        </button>
+      }
+      <button type="button" class="filter-clear-all" (click)="clearAll()">Clear all</button>
+    </div>
+  }
 
   <p class="result-count label" aria-live="polite">
     {{ results().length }} {{ results().length === 1 ? 'recipe' : 'recipes' }}

@@ -1,6 +1,7 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
+import { Facet } from '../../core/facets';
 import { Recipe } from '../../core/model/recipes.model';
 import { ListStore } from '../../core/stores/list.store';
 import { PrefsStore } from '../../core/stores/prefs.store';
@@ -14,9 +15,16 @@ const SEARCH_DEBOUNCE_MS = 150;
   imports: [RouterLink, MatIconModule],
   templateUrl: './library.component.html',
   styleUrl: './library.component.scss',
+  host: {
+    // Closing on an outside click and on Escape is what makes a hand-rolled
+    // dropdown acceptable; both are handled here rather than per menu.
+    '(document:click)': 'onDocumentClick($event)',
+    '(document:keydown.escape)': 'closeFacet(true)',
+  },
 })
 export class LibraryComponent {
   private readonly router = inject(Router);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly recipes = inject(RecipeStore);
   protected readonly list = inject(ListStore);
   protected readonly prefs = inject(PrefsStore);
@@ -32,8 +40,41 @@ export class LibraryComponent {
   private debounce?: ReturnType<typeof setTimeout>;
 
   protected readonly results = computed(() => this.recipes.results());
-  protected readonly tags = computed(() => this.recipes.tags());
+  protected readonly facets = computed(() => this.recipes.facets());
   protected readonly mostCooked = computed(() => this.recipes.mostCooked());
+
+  /** Which facet menu is open, if any. Only one at a time. */
+  protected readonly openFacet = signal<string | null>(null);
+
+  protected toggleFacet(id: string): void {
+    this.openFacet.update((current) => (current === id ? null : id));
+  }
+
+  /**
+   * @param restoreFocus true when the menu was dismissed by a key rather than
+   * by pointing somewhere else, in which case focus owes a return to the
+   * trigger that opened it.
+   */
+  protected closeFacet(restoreFocus = false): void {
+    const id = this.openFacet();
+    if (id === null) return;
+    this.openFacet.set(null);
+    if (!restoreFocus) return;
+    const trigger = this.host.nativeElement.querySelector<HTMLButtonElement>(
+      `[data-facet-trigger="${id}"]`,
+    );
+    trigger?.focus();
+  }
+
+  protected onDocumentClick(event: MouseEvent): void {
+    if (this.openFacet() === null) return;
+    const target = event.target as Node | null;
+    // A click inside the bar is either on a trigger or on an option; both are
+    // handled by their own handlers.
+    const bar = this.host.nativeElement.querySelector('.facet-bar');
+    if (target && bar?.contains(target)) return;
+    this.closeFacet();
+  }
 
   /**
    * Slugs whose photo failed to load. Several of the stored URLs are hotlink
@@ -53,9 +94,22 @@ export class LibraryComponent {
   protected readonly isFiltered = computed(
     () =>
       this.recipes.query().length > 0 ||
-      this.recipes.activeTag() !== null ||
+      this.recipes.selectedCount() > 0 ||
       this.recipes.favsOnly(),
   );
+
+  /** The selected tags as flat chips, so what is on stays visible when closed. */
+  protected readonly activeChips = computed(() =>
+    this.facets().flatMap((facet) =>
+      facet.options
+        .filter((tag) => this.recipes.isTagSelected(tag))
+        .map((tag) => ({ tag, facet: facet.label })),
+    ),
+  );
+
+  protected facetCount(facet: Facet): number {
+    return this.recipes.facetCount(facet);
+  }
 
   protected onSearch(value: string): void {
     this.typed.set(value);
@@ -69,14 +123,10 @@ export class LibraryComponent {
     this.recipes.setQuery('');
   }
 
-  protected selectTag(tag: string | null): void {
-    // Single-select: tapping the active pill returns to "All".
-    this.recipes.setTag(this.recipes.activeTag() === tag ? null : tag);
-  }
-
   protected clearAll(): void {
     this.clearSearch();
     this.recipes.reset();
+    this.closeFacet();
   }
 
   /** "Cook this" goes straight into cook mode, per §6.1. */

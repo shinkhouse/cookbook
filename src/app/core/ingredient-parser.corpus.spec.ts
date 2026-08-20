@@ -48,6 +48,27 @@ describe('ingredient corpus — the real recipe data', () => {
     expect(stranded).toEqual([]);
   });
 
+  it('never leaves measurement debris at the front of the name', () => {
+    // The bug this catches: U+2044 FRACTION SLASH is not '/', so "1⁄4 cup soy
+    // sauce" parsed as qty 1 with the name "⁄4 cup soy sauce". A leading slash,
+    // dash or fraction glyph always means the quantity was only half-consumed.
+    const debris = ALL_LINES.filter(({ line }) =>
+      /^[\/⁄∕\-–—.]/.test(parseIngredient(line).name.trim()),
+    ).map(({ line }) => line);
+    expect(debris).toEqual([]);
+  });
+
+  it('never leaves a unit word stranded at the front of the name', () => {
+    // "1/4 cup Water" must not name itself "cup Water".
+    const units = /^(cups?|tsps?|tbsps?|teaspoons?|tablespoons?|oz|ounces?|lbs?|pounds?|ml|g|grams?)\b/i;
+    const stranded = ALL_LINES.filter(({ line }) => {
+      const p = parseIngredient(line);
+      // Lines already flagged for review are the human's problem by design.
+      return p.qty !== null && !p.needsReview && units.test(p.name.trim());
+    }).map(({ line }) => line);
+    expect(stranded).toEqual([]);
+  });
+
   it('never leaves a connective at the front of the name', () => {
     const dangling = ALL_LINES.filter(({ line }) =>
       /^(of|the|a|an)\b/i.test(parseIngredient(line).name),

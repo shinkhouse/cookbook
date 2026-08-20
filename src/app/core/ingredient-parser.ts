@@ -75,8 +75,17 @@ const QUALIFIERS = new Set(['small', 'medium', 'large', 'big', 'heaping', 'scant
 /** Markers that a single line is really describing more than one ingredient. */
 const MULTI_MARKERS = [/\beach\s*:/i, /\s\+\s/, /\band\s+\d/i];
 
+/**
+ * Real data uses U+2044 FRACTION SLASH and U+2215 DIVISION SLASH as well as the
+ * plain solidus. Normalising up front means the fraction rules below only ever
+ * need to know about '/'.
+ */
+function normaliseSlashes(text: string): string {
+  return text.replace(/[⁄∕]/g, '/');
+}
+
 export function parseIngredient(raw: string): ParsedIngredient {
-  const line = raw.trim();
+  const line = normaliseSlashes(raw).trim();
   if (!line) {
     return { qty: null, unit: '', name: '', aisle: 'pantry', needsReview: false };
   }
@@ -130,20 +139,35 @@ function takeQuantity(text: string): Taken<number> | null {
     return { value: Number(range[2]), rest: text.slice(range[0].length) };
   }
 
-  const fraction = /^(\d+)\s*\/\s*(\d+)\b/.exec(text);
+  // No trailing \b: the real data contains "1/4cup Water" with no space, and a
+  // word boundary cannot fall between '4' and 'c'.
+  const fraction = /^(\d+)\s*\/\s*(\d+)(?!\d)/.exec(text);
   if (fraction) {
     const denominator = Number(fraction[2]);
     if (denominator !== 0) {
-      return { value: Number(fraction[1]) / denominator, rest: text.slice(fraction[0].length) };
+      return openRange(Number(fraction[1]) / denominator, text.slice(fraction[0].length));
     }
   }
 
   const integer = /^(\d+(?:\.\d+)?)\b/.exec(text);
   if (integer) {
-    return { value: Number(integer[1]), rest: text.slice(integer[0].length) };
+    return openRange(Number(integer[1]), text.slice(integer[0].length));
   }
 
   return null;
+}
+
+/**
+ * Catches a range whose lower bound was already consumed as a fraction, as in
+ * "1/2 -1 tsp chili sauce". Takes the upper bound like every other range.
+ */
+function openRange(value: number, rest: string): Taken<number> {
+  const upper = /^\s*[-–—]\s*(\d+(?:\.\d+)?)(?:\s*\/\s*(\d+))?(?!\d)/.exec(rest);
+  if (upper) {
+    const bound = upper[2] ? Number(upper[1]) / Number(upper[2]) : Number(upper[1]);
+    if (bound > value) return { value: bound, rest: rest.slice(upper[0].length) };
+  }
+  return { value, rest };
 }
 
 function takeUnit(text: string): Taken<string> | null {

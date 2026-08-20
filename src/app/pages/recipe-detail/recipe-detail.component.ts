@@ -2,6 +2,7 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
+import { gapSentence, gapsOf } from '../../core/recipe-health';
 import { formatQty, scaleFactor, scaleLabel } from '../../core/scale';
 import { ListStore } from '../../core/stores/list.store';
 import { PrefsStore } from '../../core/stores/prefs.store';
@@ -35,6 +36,12 @@ export class RecipeDetailComponent {
   protected readonly scaleLabel = scaleLabel;
 
   protected readonly recipe = computed(() => this.recipes.bySlug(this.slug()));
+
+  /** What this recipe is still missing, if anything. */
+  protected readonly gapNote = computed(() => {
+    const r = this.recipe();
+    return r ? gapSentence(gapsOf(r)) : '';
+  });
 
   /**
    * Ephemeral by design (§2.2): the chosen serving count and the checked

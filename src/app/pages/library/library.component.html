@@ -46,6 +46,19 @@
       <mat-icon [fontIcon]="recipes.favsOnly() ? 'star' : 'star_border'" aria-hidden="true" />
       Favourites
     </button>
+
+    <!-- Finds what still needs a photograph or a method written down. -->
+    <button
+      type="button"
+      class="pill-fav pill-work"
+      [class.is-on]="recipes.needsWorkOnly()"
+      (click)="recipes.toggleNeedsWorkOnly()"
+      [attr.aria-pressed]="recipes.needsWorkOnly()"
+    >
+      <mat-icon fontIcon="edit_note" aria-hidden="true" />
+      Needs work
+      <span class="work-count tnum">{{ recipes.needsWorkCount() }}</span>
+    </button>
   </div>
 
   <!-- Grouped multi-select facets. Picking two options in one menu widens the
@@ -125,6 +138,9 @@
       @for (recipe of results(); track recipe.slug) {
         <li class="card">
           <a class="card-link" [routerLink]="['/recipes', recipe.slug]">
+            @if (gapFor(recipe); as gap) {
+              <span class="gap-badge">{{ gap }}</span>
+            }
             <div class="card-photo">
               @if (showPhoto(recipe.slug, recipe.photo)) {
                 <img

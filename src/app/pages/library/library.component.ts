@@ -2,6 +2,7 @@ import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { Facet } from '../../core/facets';
+import { gapLabel, gapsOf } from '../../core/recipe-health';
 import { Recipe } from '../../core/model/recipes.model';
 import { ListStore } from '../../core/stores/list.store';
 import { PrefsStore } from '../../core/stores/prefs.store';
@@ -30,6 +31,11 @@ export class LibraryComponent {
   protected readonly prefs = inject(PrefsStore);
 
   protected readonly tagLabel = tagLabel;
+
+  /** The card badge text for a recipe still missing something, or ''. */
+  protected gapFor(recipe: Recipe): string {
+    return gapLabel(gapsOf(recipe));
+  }
 
   /**
    * The input is bound to this, not to the store: the store's query drives the
@@ -95,7 +101,8 @@ export class LibraryComponent {
     () =>
       this.recipes.query().length > 0 ||
       this.recipes.selectedCount() > 0 ||
-      this.recipes.favsOnly(),
+      this.recipes.favsOnly() ||
+      this.recipes.needsWorkOnly(),
   );
 
   /** The selected tags as flat chips, so what is on stays visible when closed. */

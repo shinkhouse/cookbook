@@ -442,3 +442,26 @@ h1 {
         margin-top: 4px;
     }
 }
+
+// A quiet note, not a warning: the recipe still works, it is just incomplete.
+.gap-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    max-width: 62ch;
+    margin: 0 0 18px;
+    padding: 11px 14px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--ink-3);
+    font-size: 14px;
+
+    mat-icon {
+        flex: none;
+        font-size: 19px;
+        width: 19px;
+        height: 19px;
+        color: var(--ink-4);
+    }
+}

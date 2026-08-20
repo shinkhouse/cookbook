@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Recipe } from '../model/recipes.model';
 import { Recipes } from '../mock/recipes.mock';
 import { Facet, buildFacets, matchesSelection } from '../facets';
+import { gapsOf } from '../recipe-health';
 import { RecipeRepository } from '../recipe-repository';
 import { PrefsStore } from './prefs.store';
 
@@ -41,6 +42,8 @@ export class RecipeStore {
    */
   readonly selectedTags = signal<ReadonlySet<string>>(new Set());
   readonly favsOnly = signal(false);
+  /** Narrows to recipes still missing a photo or a method. */
+  readonly needsWorkOnly = signal(false);
 
   /**
    * Tag list derived from the data rather than hardcoded (§4.1), deduped and
@@ -56,6 +59,11 @@ export class RecipeStore {
   readonly facets = computed<Facet[]>(() => buildFacets(this.tags()));
 
   readonly selectedCount = computed(() => this.selectedTags().size);
+
+  /** How many recipes are still incomplete, for the toggle's badge. */
+  readonly needsWorkCount = computed(
+    () => this._recipes().filter((r) => gapsOf(r).any).length,
+  );
 
   /** The recipe the library header's stat block names. */
   readonly mostCooked = computed(() =>
@@ -136,10 +144,12 @@ export class RecipeStore {
     const needle = this.query().trim().toLowerCase();
     const selected = this.selectedTags();
     const favsOnly = this.favsOnly();
+    const needsWork = this.needsWorkOnly();
 
     return this._recipes().filter((r) => {
       if (!matchesSelection(r.tags, selected)) return false;
       if (favsOnly && !this.prefs.isFav(r.slug)) return false;
+      if (needsWork && !gapsOf(r).any) return false;
       if (!needle) return true;
       return (
         r.title.toLowerCase().includes(needle) ||
@@ -185,10 +195,15 @@ export class RecipeStore {
     this.favsOnly.update((v) => !v);
   }
 
+  toggleNeedsWorkOnly(): void {
+    this.needsWorkOnly.update((v) => !v);
+  }
+
   reset(): void {
     this.query.set('');
     this.selectedTags.set(new Set());
     this.favsOnly.set(false);
+    this.needsWorkOnly.set(false);
   }
 }
 

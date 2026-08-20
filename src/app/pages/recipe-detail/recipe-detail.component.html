@@ -69,6 +69,13 @@
         </div>
       </div>
 
+      @if (gapNote()) {
+        <p class="gap-note">
+          <mat-icon fontIcon="edit_note" aria-hidden="true" />
+          <span>{{ gapNote() }} Worth filling in next time you make it.</span>
+        </p>
+      }
+
       <div class="actions">
         <a class="btn-primary" [routerLink]="['/recipes', r.slug, 'cook']">
           <mat-icon fontIcon="local_fire_department" aria-hidden="true" />

@@ -32,25 +32,25 @@ body {
 }
 @include mat.core();
 
-$my-custom-typography-config: mat.define-typography-config(
-    $headline-1: mat.define-typography-level(64px, 1, 300, $letter-spacing: -0.05em, $font-family: "Yeseva One"),
-    $headline-2: mat.define-typography-level(48px, 1.33, 400, $letter-spacing: -0.02em, $font-family: "Yeseva One"),
-    $headline-3: mat.define-typography-level(40px, 1.33, 400, $letter-spacing: -0.005em, $font-family: "Merriweather Sans"),
-    $headline-4: mat.define-typography-level(32px, 1.33, 400, $font-family: "Merriweather Sans"),
-    $headline-5: mat.define-typography-level(24px, 1.33, 400, $font-family: "Merriweather Sans"),
-    $headline-6: mat.define-typography-level(20px, 1.33, 500, $font-family: "Merriweather Sans"),
-    $subtitle-1: mat.define-typography-level(14px, 1.33, 400, $letter-spacing: 0.00938em, $font-family: "Merriweather Sans"),
-    $subtitle-2: mat.define-typography-level(16px, 1.33, 500, $letter-spacing: 0.00714em, $font-family: "Merriweather Sans"),
-    $body-1: mat.define-typography-level(16px, 1.33, 400, $letter-spacing: 0.03125em, $font-family: "Merriweather Sans"),
-    $body-2: mat.define-typography-level(14px, 1.33, 400, $letter-spacing: 0.01786em, $font-family: "Merriweather Sans"),
-    $button: mat.define-typography-level(14px, 1.33, 500, $letter-spacing: 0.07813em, $font-family: "Merriweather Sans"),
-    $caption: mat.define-typography-level(12px, 1.33, 400, $letter-spacing: 0.03333em, $font-family: "Merriweather Sans"),
+$my-custom-typography-config: mat.m2-define-typography-config(
+    $headline-1: mat.m2-define-typography-level(64px, 1, 300, $letter-spacing: -0.05em, $font-family: "Yeseva One"),
+    $headline-2: mat.m2-define-typography-level(48px, 1.33, 400, $letter-spacing: -0.02em, $font-family: "Yeseva One"),
+    $headline-3: mat.m2-define-typography-level(40px, 1.33, 400, $letter-spacing: -0.005em, $font-family: "Merriweather Sans"),
+    $headline-4: mat.m2-define-typography-level(32px, 1.33, 400, $font-family: "Merriweather Sans"),
+    $headline-5: mat.m2-define-typography-level(24px, 1.33, 400, $font-family: "Merriweather Sans"),
+    $headline-6: mat.m2-define-typography-level(20px, 1.33, 500, $font-family: "Merriweather Sans"),
+    $subtitle-1: mat.m2-define-typography-level(14px, 1.33, 400, $letter-spacing: 0.00938em, $font-family: "Merriweather Sans"),
+    $subtitle-2: mat.m2-define-typography-level(16px, 1.33, 500, $letter-spacing: 0.00714em, $font-family: "Merriweather Sans"),
+    $body-1: mat.m2-define-typography-level(16px, 1.33, 400, $letter-spacing: 0.03125em, $font-family: "Merriweather Sans"),
+    $body-2: mat.m2-define-typography-level(14px, 1.33, 400, $letter-spacing: 0.01786em, $font-family: "Merriweather Sans"),
+    $button: mat.m2-define-typography-level(14px, 1.33, 500, $letter-spacing: 0.07813em, $font-family: "Merriweather Sans"),
+    $caption: mat.m2-define-typography-level(12px, 1.33, 400, $letter-spacing: 0.03333em, $font-family: "Merriweather Sans"),
 );
 
-$my-primary: mat.define-palette(mat.$green-palette, 900);
-$my-accent: mat.define-palette(mat.$pink-palette, A200, A100, A400);
+$my-primary: mat.m2-define-palette(mat.$m2-green-palette, 900);
+$my-accent: mat.m2-define-palette(mat.$m2-pink-palette, A200, A100, A400);
 
-$my-theme: mat.define-light-theme(
+$my-theme: mat.m2-define-light-theme(
     (
         color: (
             primary: $my-primary,
@@ -65,7 +65,7 @@ $my-theme: mat.define-light-theme(
 @mixin mat-headline-styles($level) {
     h#{$level},
     .mat-h#{$level} {
-        @include mat.typography-level($my-custom-typography-config, headline-#{$level});
+        @include mat.m2-typography-level($my-custom-typography-config, headline-#{$level});
     }
 }
 

@@ -46,6 +46,7 @@ const KEYWORDS: ReadonlyArray<readonly [Aisle, readonly string[]]> = [
       'peppers', 'bell pepper', 'bell peppers', 'jalapeno', 'jalapeño',
       'chili pepper', 'green pepper', 'green peppers',
       'broccoli', 'cauliflower', 'spinach', 'kale', 'lettuce', 'cabbage',
+      'tomatillo', 'tomatillos', 'scallions', 'shallots', 'chives',
       'zucchini', 'squash',
       'mushroom', 'mushrooms', 'cucumber', 'lemon', 'lime', 'orange', 'apple',
       'avocado', 'ginger', 'corn', 'peas', 'green beans', 'asparagus',

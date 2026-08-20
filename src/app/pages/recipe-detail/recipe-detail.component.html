@@ -1,6 +1,6 @@
 @if (recipe(); as r) {
   <article class="detail" [class.single-column]="prefs.layout() === 'single-column'">
-    <div class="hero">
+    <div class="hero" [class.is-empty]="!showPhoto()">
       @if (showPhoto()) {
         <img [src]="r.photo" [alt]="r.title" (error)="onPhotoError()" />
       } @else {
@@ -32,10 +32,12 @@
 
       <!-- §6.2 — the metadata rail: duration, servings stepper, times cooked. -->
       <div class="rail">
-        <div class="rail-item">
-          <p class="label">Duration</p>
-          <p class="rail-value">{{ r.time }}</p>
-        </div>
+        @if (r.time) {
+          <div class="rail-item">
+            <p class="label">Duration</p>
+            <p class="rail-value">{{ r.time }}</p>
+          </div>
+        }
 
         <div class="rail-item">
           <p class="label">Makes</p>
@@ -112,20 +114,25 @@
             <h2 class="section-title">Ingredients</h2>
           </div>
 
-          <ul class="ingredient-list">
-            @for (item of ingredients(); track item.index) {
-              <li [class.is-checked]="item.checked">
-                <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
-                  <!-- Amount and name are separate columns so figures line up
-                       down the list, the way a printed recipe card sets them. -->
-                  <span class="ing-row">
-                    <span class="ing-amount tnum">{{ amountLabel(item.amount, item.unit) }}</span>
-                    <span class="ing-name">{{ item.name }}</span>
-                  </span>
-                </mat-checkbox>
-              </li>
+          @for (group of ingredientGroups(); track $index) {
+            @if (group.name) {
+              <h3 class="ing-group">{{ group.name }}</h3>
             }
-          </ul>
+            <ul class="ingredient-list">
+              @for (item of group.items; track item.index) {
+                <li [class.is-checked]="item.checked">
+                  <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
+                    <!-- Amount and name are separate columns so figures line up
+                         down the list, the way a printed recipe card sets them. -->
+                    <span class="ing-row">
+                      <span class="ing-amount tnum">{{ amountLabel(item.amount, item.unit) }}</span>
+                      <span class="ing-name">{{ item.name }}</span>
+                    </span>
+                  </mat-checkbox>
+                </li>
+              }
+            </ul>
+          }
 
           @if (checkedCount() > 0) {
             <p class="checked-count label">{{ checkedCount() }} of {{ ingredients().length }} in hand</p>

@@ -9,6 +9,15 @@ export interface Ingredient {
   unit: string;
   name: string;
   aisle: Aisle;
+  /**
+   * The sub-component this belongs to, for recipes built from parts — "For the
+   * marinade", "Braised chicken", "Rice". Absent on the majority of recipes.
+   *
+   * Needed because the imported family cookbook has recipes whose ingredient
+   * list is really three lists; without it a marinade's soy sauce sits
+   * indistinguishable among the stir-fry ingredients.
+   */
+  group?: string;
 }
 
 export interface Recipe {

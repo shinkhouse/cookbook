@@ -1,4 +1,5 @@
 import { Recipe } from '../model/recipes.model';
+import { ImportedRecipes } from './imported-recipes';
 
 /**
  * Seed data, migrated from the pre-revamp shape per the design spec §4.1.
@@ -12,7 +13,7 @@ import { Recipe } from '../model/recipes.model';
  * real source), calories, urls and equipment — no screen in the new design uses
  * them. `favorite` moved to PrefsStore; see FAV_SEED below.
  */
-export const Recipes: Recipe[] = [
+export const CuratedRecipes: Recipe[] = [
   {
     slug: 'grandmas-spaghetti',
     title: 'Grandma\'s Spaghetti',
@@ -493,3 +494,12 @@ export const FAV_SEED: readonly string[] = [
   'homemade-mozzarella-sticks',
   'chicken-taco-baked-sweet-potatoes',
 ];
+
+/**
+ * The whole collection: the fourteen hand-curated recipes first, then the
+ * family cookbook import.
+ *
+ * Curated first on purpose — those are the ones with photos, blurbs and
+ * times-cooked counts, so they are what the library shows before you scroll.
+ */
+export const Recipes: Recipe[] = [...CuratedRecipes, ...ImportedRecipes];

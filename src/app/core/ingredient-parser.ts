@@ -153,9 +153,11 @@ function takeQuantity(text: string): Taken<number> | null {
     }
   }
 
-  // (?!\s*%) keeps "0% Greek yogurt" from reading as a quantity of zero —
-  // the number is part of the product name, not an amount.
-  const integer = /^(\d+(?:\.\d+)?)\b(?!\s*%)/.exec(text);
+  // No trailing \b: recipes written "1tsp lazy garlic" with no space would
+  // otherwise lose the quantity entirely, since there is no word boundary
+  // between '1' and 't'. (?!\s*%) keeps "0% Greek yogurt" from reading as a
+  // quantity of zero — there the number is part of the product name.
+  const integer = /^(\d+(?:\.\d+)?)(?![\d.])(?!\s*%)/.exec(text);
   if (integer) {
     return openRange(Number(integer[1]), text.slice(integer[0].length));
   }

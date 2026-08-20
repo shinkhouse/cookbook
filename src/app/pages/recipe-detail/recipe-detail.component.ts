@@ -7,6 +7,16 @@ import { ListStore } from '../../core/stores/list.store';
 import { PrefsStore } from '../../core/stores/prefs.store';
 import { RecipeStore, tagLabel } from '../../core/stores/recipe.store';
 
+/** One row of the ingredient card, with its amount already scaled. */
+interface DetailIngredient {
+  index: number;
+  name: string;
+  unit: string;
+  amount: string;
+  checked: boolean;
+  group?: string;
+}
+
 @Component({
   selector: 'app-recipe-detail',
   imports: [RouterLink, MatIconModule, MatCheckboxModule],
@@ -42,7 +52,7 @@ export class RecipeDetailComponent {
   );
 
   /** Amounts scale; step text never does (§5.1). */
-  protected readonly ingredients = computed(() => {
+  protected readonly ingredients = computed<DetailIngredient[]>(() => {
     const recipe = this.recipe();
     if (!recipe) return [];
     const factor = this.factor();
@@ -51,9 +61,27 @@ export class RecipeDetailComponent {
       index,
       name: ingredient.name,
       unit: ingredient.unit,
+      group: ingredient.group,
       amount: ingredient.qty === null ? '' : formatQty(ingredient.qty * factor),
       checked: checked.has(index),
     }));
+  });
+
+  /**
+   * Ingredients grouped by sub-component, for the recipes whose list is really
+   * several lists — a marinade, a sauce, the thing itself. Recipes with no
+   * groups come back as one unnamed run, so the template has a single shape to
+   * render either way.
+   */
+  protected readonly ingredientGroups = computed(() => {
+    const groups: { name: string | null; items: DetailIngredient[] }[] = [];
+    for (const item of this.ingredients()) {
+      const name = item.group ?? null;
+      const last = groups.at(-1);
+      if (last && last.name === name) last.items.push(item);
+      else groups.push({ name, items: [item] });
+    }
+    return groups;
   });
 
   protected readonly checkedCount = computed(() => this.checked().size);

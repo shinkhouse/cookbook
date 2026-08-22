@@ -15,6 +15,7 @@ function recipe(over: Partial<Recipe> = {}): Recipe {
     ingredients: [{ qty: 1, unit: '', name: 'water', aisle: 'pantry' }],
     steps: ['Boil it.'],
     notes: [],
+    cookbooks: [],
     ...over,
   };
 }

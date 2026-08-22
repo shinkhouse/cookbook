@@ -40,7 +40,25 @@ export interface Recipe {
   steps: string[];
   notes: string[];
   photo?: string;
+  /**
+   * Ids of the cookbooks this recipe appears in — a recipe can sit in several
+   * at once, and in none at all. Empty is legal: an unfiled recipe still
+   * belongs to you and still shows in the pooled library.
+   *
+   * Required rather than optional so consumers need not write
+   * `r.cookbooks ?? []` everywhere; records stored before cookbooks existed are
+   * normalised by the repository on the way out.
+   */
+  cookbooks: string[];
 }
+
+/**
+ * A recipe as authored, before it is filed into any cookbook.
+ *
+ * The seed data is written in this shape so that filing happens in one place
+ * (`fileInto`) rather than being repeated across 72 literals.
+ */
+export type RecipeSource = Omit<Recipe, 'cookbooks'>;
 
 /** A blank draft for the create flow. */
 export const RecipeTemplate: Recipe = {
@@ -55,4 +73,7 @@ export const RecipeTemplate: Recipe = {
   ingredients: [],
   steps: [],
   notes: [],
+  // Starts unfiled. Which cookbook a new recipe lands in is a question for the
+  // create screen, which does not ask it yet.
+  cookbooks: [],
 };

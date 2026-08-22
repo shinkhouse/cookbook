@@ -92,6 +92,8 @@ export class CreateRecipeComponent {
     ingredients: this.ingredients(),
     steps: this.steps(),
     notes: this.notes(),
+    // Unfiled until this screen offers a cookbook to file into.
+    cookbooks: [],
   }));
 
   protected readonly draftJson = computed(() => JSON.stringify(this.draft(), null, 2));
@@ -142,6 +144,10 @@ export class CreateRecipeComponent {
         ingredients: parsed.ingredients,
         steps: parsed.steps,
         notes: [],
+        // Unfiled, matching RecipeTemplate: this screen does not ask which
+        // cookbook to import into yet, and guessing would file a folder drop
+        // into a cookbook the user never chose.
+        cookbooks: [],
       });
       saved++;
     }

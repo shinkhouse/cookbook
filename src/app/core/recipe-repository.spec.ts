@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { DEFAULT_COOKBOOK_ID } from './model/cookbooks.model';
 import { Recipe } from './model/recipes.model';
 import { Recipes } from './mock/recipes.mock';
 import { LocalRecipeRepository, RecipeRepository, provideLocalRecipes } from './recipe-repository';
@@ -19,6 +20,7 @@ function draft(slug: string, title = 'A Recipe'): Recipe {
     ingredients: [{ qty: 1, unit: 'cup', name: 'water', aisle: 'pantry' }],
     steps: ['Boil it.'],
     notes: [],
+    cookbooks: [DEFAULT_COOKBOOK_ID],
   };
 }
 
@@ -64,6 +66,39 @@ describe('LocalRecipeRepository', () => {
   it('falls back to the seed when the stored entry is corrupt', async () => {
     localStorage.setItem(KEY, '{ broken json');
     expect((await repo.load()).length).toBe(Recipes.length);
+  });
+
+  it('files a recipe stored before cookbooks existed into the default cookbook', async () => {
+    const { cookbooks, ...legacy } = draft('pre-cookbooks');
+    localStorage.setItem(KEY, JSON.stringify([legacy]));
+    const loaded = await repo.load();
+    expect(loaded[0].cookbooks).toEqual([DEFAULT_COOKBOOK_ID]);
+  });
+
+  it('keeps a deliberately unfiled recipe unfiled', async () => {
+    // The counterpart to the test above, and the reason `save` must always write
+    // the field: if backfilling treated an empty array as "absent", taking a
+    // recipe out of its last cookbook would silently undo itself on reload.
+    await repo.save([{ ...draft('unfiled'), cookbooks: [] }]);
+    const loaded = await repo.load();
+    expect(loaded[0].cookbooks).toEqual([]);
+  });
+
+  it('keeps a recipe filed in several cookbooks in all of them', async () => {
+    await repo.save([{ ...draft('shared'), cookbooks: ['sams-cookbook', 'grandmas'] }]);
+    const loaded = await repo.load();
+    expect(loaded[0].cookbooks).toEqual(['sams-cookbook', 'grandmas']);
+  });
+
+  it('normalises a cookbooks value that is not an array', async () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify([{ ...draft('corrupt'), cookbooks: 'sams-cookbook' }]),
+    );
+    const loaded = await repo.load();
+    // Normalised rather than dropped: the recipe itself is fine, and a string
+    // here would break every consumer that expects to iterate.
+    expect(loaded[0].cookbooks).toEqual([DEFAULT_COOKBOOK_ID]);
   });
 
   it('drops a malformed recipe rather than letting it reach a screen', async () => {

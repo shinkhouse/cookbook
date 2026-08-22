@@ -1,6 +1,10 @@
 import { TestBed } from '@angular/core/testing';
+import { provideLocalCookbooks } from '../cookbook-repository';
 import { FAV_SEED } from '../mock/recipes.mock';
+import { DEFAULT_COOKBOOK_ID } from '../model/cookbooks.model';
+import { RecipeTemplate } from '../model/recipes.model';
 import { provideLocalRecipes } from '../recipe-repository';
+import { CookbookStore } from './cookbook.store';
 import { ListStore, boughtKey } from './list.store';
 import { PrefsStore } from './prefs.store';
 import { RecipeStore, tagLabel } from './recipe.store';
@@ -212,6 +216,166 @@ describe('RecipeStore', () => {
   it('title-cases tags for display', () => {
     expect(tagLabel('ground beef')).toBe('Ground Beef');
     expect(tagLabel('pasta')).toBe('Pasta');
+  });
+});
+
+describe('RecipeStore cookbook membership', () => {
+  let store: RecipeStore;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    store = TestBed.inject(RecipeStore);
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('starts with every seeded recipe in the default cookbook', () => {
+    expect(store.inCookbook(DEFAULT_COOKBOOK_ID).length).toBe(store.recipes().length);
+  });
+
+  it('starts a newly drafted recipe unfiled rather than guessing a cookbook', () => {
+    // The create screen does not offer a cookbook yet, so a draft must not be
+    // filed into one behind the user's back. Pinned here because that screen has
+    // no spec of its own, and it builds this literal in two places.
+    expect(RecipeTemplate.cookbooks).toEqual([]);
+  });
+
+  it('files a recipe into an additional cookbook, keeping the one it had', () => {
+    expect(store.addToCookbook('grandmas-chili', 'grandmas')).toBe(true);
+    expect(store.bySlug('grandmas-chili')?.cookbooks).toEqual([DEFAULT_COOKBOOK_ID, 'grandmas']);
+  });
+
+  it('files the same recipe into two cookbooks at once', () => {
+    store.addToCookbook('grandmas-chili', 'grandmas');
+    store.addToCookbook('grandmas-chili', 'bobs');
+    expect(store.inCookbook('grandmas').map((r) => r.slug)).toContain('grandmas-chili');
+    expect(store.inCookbook('bobs').map((r) => r.slug)).toContain('grandmas-chili');
+  });
+
+  it('ignores a second filing into the same cookbook', () => {
+    store.addToCookbook('grandmas-chili', 'grandmas');
+    expect(store.addToCookbook('grandmas-chili', 'grandmas')).toBe(false);
+    // Without the guard the id would appear twice, and every count derived from
+    // membership would double for this recipe.
+    expect(store.bySlug('grandmas-chili')?.cookbooks).toEqual([DEFAULT_COOKBOOK_ID, 'grandmas']);
+  });
+
+  it('reports false when filing a slug that is not there', () => {
+    expect(store.addToCookbook('no-such-recipe', 'grandmas')).toBe(false);
+  });
+
+  it('unfiles a recipe without deleting it', () => {
+    expect(store.removeFromCookbook('grandmas-chili', DEFAULT_COOKBOOK_ID)).toBe(true);
+    expect(store.bySlug('grandmas-chili')?.cookbooks).toEqual([]);
+    // The point of allowing zero cookbooks: the recipe is still yours.
+    expect(store.bySlug('grandmas-chili')).toBeDefined();
+  });
+
+  it('reports false when unfiling from a cookbook it was never in', () => {
+    expect(store.removeFromCookbook('grandmas-chili', 'grandmas')).toBe(false);
+  });
+
+  it('strips a cookbook from every recipe that carried it', () => {
+    store.addToCookbook('grandmas-chili', 'grandmas');
+    store.addToCookbook('grandmas-spaghetti', 'grandmas');
+    store.stripCookbook('grandmas');
+    expect(store.inCookbook('grandmas')).toEqual([]);
+    // Only that membership goes; the recipes and their other cookbooks stay.
+    expect(store.recipes().length).toBe(72);
+    expect(store.bySlug('grandmas-chili')?.cookbooks).toEqual([DEFAULT_COOKBOOK_ID]);
+  });
+
+  it('keeps membership across a fresh injection', async () => {
+    store.addToCookbook('grandmas-chili', 'grandmas');
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    const fresh = TestBed.inject(RecipeStore);
+    await new Promise<void>((r) => setTimeout(r, 0));
+    expect(fresh.bySlug('grandmas-chili')?.cookbooks).toContain('grandmas');
+  });
+});
+
+describe('CookbookStore', () => {
+  let cookbooks: CookbookStore;
+  let recipes: RecipeStore;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideLocalRecipes(), provideLocalCookbooks()],
+    });
+    cookbooks = TestBed.inject(CookbookStore);
+    recipes = TestBed.inject(RecipeStore);
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('starts with the seeded cookbook', () => {
+    expect(cookbooks.cookbooks().map((c) => c.id)).toEqual([DEFAULT_COOKBOOK_ID]);
+  });
+
+  it('finds a cookbook by id', () => {
+    expect(cookbooks.byId(DEFAULT_COOKBOOK_ID)?.name).toBe("Sam's Cookbook");
+    expect(cookbooks.byId('nope')).toBeUndefined();
+  });
+
+  it('adds a cookbook', () => {
+    expect(cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" })).toBe('grandmas');
+    expect(cookbooks.byId('grandmas')?.name).toBe("Grandma's Cookbook");
+  });
+
+  it('suffixes an id that is already taken, and keeps both', () => {
+    const id = cookbooks.add({ id: DEFAULT_COOKBOOK_ID, name: 'A Clash' });
+    expect(id).toBe(`${DEFAULT_COOKBOOK_ID}-2`);
+    expect(cookbooks.byId(DEFAULT_COOKBOOK_ID)?.name).toBe("Sam's Cookbook");
+    expect(cookbooks.byId(`${DEFAULT_COOKBOOK_ID}-2`)?.name).toBe('A Clash');
+  });
+
+  it('renames a cookbook', () => {
+    expect(cookbooks.rename(DEFAULT_COOKBOOK_ID, "Sam's Recipes")).toBe(true);
+    expect(cookbooks.byId(DEFAULT_COOKBOOK_ID)?.name).toBe("Sam's Recipes");
+    expect(cookbooks.rename('nope', 'Ghost')).toBe(false);
+  });
+
+  it('counts the recipes filed in a cookbook', () => {
+    expect(cookbooks.countIn(DEFAULT_COOKBOOK_ID)).toBe(72);
+    expect(cookbooks.countIn('grandmas')).toBe(0);
+  });
+
+  it('lists the recipes filed in a cookbook', () => {
+    cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" });
+    recipes.addToCookbook('grandmas-chili', 'grandmas');
+    expect(cookbooks.recipesIn('grandmas').map((r) => r.slug)).toEqual(['grandmas-chili']);
+  });
+
+  it('removes a cookbook and strips it from every recipe, keeping the recipes', () => {
+    cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" });
+    recipes.addToCookbook('grandmas-chili', 'grandmas');
+
+    expect(cookbooks.remove('grandmas')).toBe(true);
+    expect(cookbooks.byId('grandmas')).toBeUndefined();
+    // The cascade: no recipe may be left pointing at a cookbook that is gone.
+    expect(recipes.recipes().some((r) => r.cookbooks.includes('grandmas'))).toBe(false);
+    expect(recipes.bySlug('grandmas-chili')).toBeDefined();
+    expect(recipes.recipes().length).toBe(72);
+  });
+
+  it('reports false when removing an id that is not there', () => {
+    expect(cookbooks.remove('nope')).toBe(false);
+  });
+
+  it('keeps an added cookbook across a fresh injection', async () => {
+    cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" });
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideLocalRecipes(), provideLocalCookbooks()],
+    });
+    const fresh = TestBed.inject(CookbookStore);
+    await new Promise<void>((r) => setTimeout(r, 0));
+    expect(fresh.byId('grandmas')?.name).toBe("Grandma's Cookbook");
   });
 });
 

@@ -1,4 +1,4 @@
-import { Recipe } from '../model/recipes.model';
+import { RecipeSource } from '../model/recipes.model';
 
 /**
  * The Hinkhouse/Stokes family cookbook, imported from the Google Docs export
@@ -15,7 +15,7 @@ import { Recipe } from '../model/recipes.model';
  * Fields the source does not carry: `time`, `blurb`, `desc`, `photo`, and
  * `cooked`. They are left empty rather than invented.
  */
-export const ImportedRecipes: Recipe[] = [
+export const ImportedRecipes: RecipeSource[] = [
   {
     slug: 'la-tatemada-cremosa-salsa',
     title: 'La Tatemada Cremosa (Salsa)',
@@ -805,7 +805,8 @@ export const ImportedRecipes: Recipe[] = [
       { qty: null, unit: '', name: 'chopped fresh basil for garnish', aisle: 'produce' },
     ],
     steps: [
-      'Preheat oven to 400°. Line 10" loose-bottom tart pan with pastry dough. Spread bottom of pastry with cheese and sprinkle with basil. Cover with tomato slices, arranging to cover as evenly as possible.',
+      'Preheat oven to 400° and line 10" loose-bottom tart pan with pastry dough. ',
+      'Spread bottom of pastry with cheese and sprinkle with basil. Cover with tomato slices, arranging to cover as evenly as possible.',
       'Sprinkle tomatoes with salt and pepper and drizzle with olive oil. Bake 30 to 40 minutes. Garnish with fresh chopped basil. Slice in wedges and serve warm or at room temperature.',
     ],
     notes: [
@@ -836,6 +837,9 @@ export const ImportedRecipes: Recipe[] = [
     steps: [
       'Brown rice in oil.',
       'Add onion, tomato, cumin, garlic powder, salt, and tomato sauce.',
+      'Add chicken bouillon cube and water.',
+      'Cover and simmer until rice is done.',
+      'Add chopped cilantro.',
     ],
     notes: [
     ],
@@ -1275,8 +1279,14 @@ export const ImportedRecipes: Recipe[] = [
       { qty: null, unit: '', name: 'Salt and freshly ground pEpper', aisle: 'pantry' },
     ],
     steps: [
-      'Heat the olive oil in a 2-quart saucepan over medium heat. Stir in the shallot, and once it takes on some color, 5 to 6 minutes, add the apple and carrot. Stir until the apple starts releasing some liquid and the carrot is beginning to soften. Pour in the full bottle of red wine, add the thyme bouquet, bring to a simmer, and simmer until the wine has reduced by half. Strain the mixture and return to the clean pan.',
-      'Add the port wine and stock, bring to a slow boil, and boil until the liquid has reduced by half again. Remove the sauce from the heat and whisk in the butter piece by piece. Season with salt and pepper to taste and serve.',
+      'Heat the olive oil in a 2-quart saucepan over medium heat.',
+      'Stir in the shallot and cook until it takes on some color, 5 to 6 minutes.',
+      'Add the apple and carrot. Stir until the apple starts releasing some liquid and the carrot is beginning to soften.',
+      'Pour in the full bottle of red wine and add the thyme bouquet. Bring to a simmer and simmer until the wine has reduced by half.',
+      'Strain the mixture and return it to the clean pan.',
+      'Add the port wine and stock. Bring to a slow boil and boil until the liquid has reduced by half again.',
+      'Remove the sauce from the heat and whisk in the butter piece by piece.',
+      'Season with salt and pepper to taste and serve.',
     ],
     notes: [
     ],
@@ -1828,8 +1838,14 @@ export const ImportedRecipes: Recipe[] = [
       { qty: null, unit: '', name: 'Salt and pepper', aisle: 'pantry' },
     ],
     steps: [
-      'Melt butter in small saucepan over medium heat. Add onion and cook, stirring occasionally, until softened, 2 to 3 minutes. Stir in chili powder and garlic and cook until fragrant, about 30 seconds. Add tomato juice, ½ cup vinegar, Worcestershire, molasses, chipotle, mustard mixture, ½ teaspoon salt, and ¼ teaspoon pepper. Bring to simmer and cook over medium heat, stirring occasionally, until slightly thickened and reduced to 1½ cups, 30 to 40 minutes.',
-      'Off heat, stir in remaining ¼ cup vinegar and season with salt and pepper to taste. Let cool to room temperature before serving.',
+      'Melt butter in a small saucepan over medium heat.',
+      'Add onion and cook, stirring occasionally, until softened, 2 to 3 minutes.',
+      'Stir in chili powder and garlic and cook until fragrant, about 30 seconds.',
+      'Add tomato juice, ½ cup vinegar, Worcestershire, molasses, chipotle, mustard mixture, ½ teaspoon salt, and ¼ teaspoon pepper.',
+      'Bring to a simmer and cook over medium heat, stirring occasionally, until slightly thickened and reduced to 1½ cups, 30 to 40 minutes.',
+      'Remove from the heat and stir in the remaining ¼ cup vinegar.',
+      'Season with salt and pepper to taste.',
+      'Let cool to room temperature before serving.',
     ],
     notes: [
     ],
@@ -1989,7 +2005,7 @@ export const ImportedRecipes: Recipe[] = [
     blurb: '',
     desc: '',
     ingredients: [
-      { qty: null, unit: '', name: 'Shrimp and Pasta', aisle: 'seafood' },
+      { qty: null, unit: '', name: 'Angel hair pasta', aisle: 'pantry' },
       { qty: 1, unit: 'lb', name: 'shrimp', aisle: 'seafood' },
       { qty: 0.25, unit: 'tsp', name: 'white pepper', aisle: 'pantry' },
       { qty: 0.25, unit: '', name: 'black peoper', aisle: 'pantry' },
@@ -2004,6 +2020,11 @@ export const ImportedRecipes: Recipe[] = [
       { qty: 1, unit: 'tbsp', name: 'garlic', aisle: 'produce' },
     ],
     steps: [
+      'Cook pasta according to package directions. Drain and set aside.',
+      'In a large skillet, melt butter and olive oil over medium heat. Add garlic and sauté for 1-2 minutes until fragrant.',
+      'Add shrimp to the skillet and season with white pepper, black pepper, red pepper, paprika, thyme, salt, and onion powder. Cook for 2-3 minutes on each side until shrimp are pink and opaque.',
+      'Add cooked pasta to the skillet and toss to combine with the shrimp and sauce. Cook for an additional 1-2 minutes to heat through.',
+      'Garnish with chopped green onions before serving.',
     ],
     notes: [
     ],

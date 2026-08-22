@@ -1,6 +1,7 @@
 import { AISLE_ORDER } from '../aisle';
+import { CookbookSeed, DEFAULT_COOKBOOK_ID } from '../model/cookbooks.model';
 import { ImportedRecipes } from './imported-recipes';
-import { CuratedRecipes, FAV_SEED, Recipes } from './recipes.mock';
+import { CuratedRecipes, FAV_SEED, Recipes, fileInto } from './recipes.mock';
 
 describe('migrated seed data', () => {
   it('carries the 14 curated recipes plus the family cookbook import', () => {
@@ -10,7 +11,10 @@ describe('migrated seed data', () => {
   });
 
   it('puts the curated recipes first, since those are the ones with photos', () => {
-    expect(Recipes.slice(0, 14)).toEqual(CuratedRecipes);
+    // Compared by slug rather than by value: the exported collection is filed
+    // into a cookbook, so its records carry a `cookbooks` field the unfiled
+    // sources do not.
+    expect(Recipes.slice(0, 14).map((r) => r.slug)).toEqual(CuratedRecipes.map((r) => r.slug));
   });
 
   it('gives every recipe the fields every screen depends on', () => {
@@ -49,6 +53,18 @@ describe('migrated seed data', () => {
       }
       expect(r.steps.length).withContext(r.slug).toBeGreaterThan(0);
     }
+  });
+
+  it('files every seeded recipe into the default cookbook', () => {
+    for (const r of Recipes) {
+      expect(r.cookbooks).withContext(r.slug).toEqual([DEFAULT_COOKBOOK_ID]);
+    }
+  });
+
+  it('seeds exactly one cookbook, and it is the one the recipes are filed into', () => {
+    expect(CookbookSeed.length).toBe(1);
+    expect(CookbookSeed[0].id).toBe(DEFAULT_COOKBOOK_ID);
+    expect(CookbookSeed[0].name).toBeTruthy();
   });
 
   it('has unique slugs', () => {
@@ -173,5 +189,39 @@ describe('migrated seed data', () => {
       [...r.steps, ...r.notes, r.desc, r.blurb].filter((t) => /cauli!ower|le"over/.test(t)),
     );
     expect(suspect).toEqual([]);
+  });
+});
+
+describe('fileInto', () => {
+  const source = {
+    slug: 'a',
+    title: 'A',
+    tags: [],
+    time: '',
+    servings: 1,
+    cooked: 0,
+    blurb: '',
+    desc: '',
+    ingredients: [],
+    steps: [],
+    notes: [],
+  };
+
+  it('stamps the cookbook onto every recipe it is given', () => {
+    const filed = fileInto('grandmas', [source, { ...source, slug: 'b' }]);
+    expect(filed.map((r) => r.cookbooks)).toEqual([['grandmas'], ['grandmas']]);
+  });
+
+  it('leaves the source records untouched, since they are shared module state', () => {
+    // The sources are exported consts imported by several modules. Mutating
+    // them here would file recipes into a cookbook everywhere at once.
+    fileInto('grandmas', [source]);
+    expect('cookbooks' in source).toBe(false);
+  });
+
+  it('keeps everything else about the recipe', () => {
+    const [filed] = fileInto('grandmas', [{ ...source, title: 'Kept', cooked: 7 }]);
+    expect(filed.title).toBe('Kept');
+    expect(filed.cooked).toBe(7);
   });
 });

@@ -1,4 +1,5 @@
 import { Injectable, Provider, inject } from '@angular/core';
+import { DEFAULT_COOKBOOK_ID } from './model/cookbooks.model';
 import { Recipe } from './model/recipes.model';
 import { Recipes } from './mock/recipes.mock';
 import { Storage } from './storage';
@@ -53,7 +54,7 @@ export class LocalRecipeRepository extends RecipeRepository {
     // A stored value that is not an array means the entry was corrupted by
     // something other than this app; fall back rather than render nothing.
     if (!Array.isArray(stored)) return [...Recipes];
-    return stored.filter(isRecipe);
+    return stored.filter(isRecipe).map(withCookbooks);
   }
 
   override async save(recipes: readonly Recipe[]): Promise<void> {
@@ -62,8 +63,31 @@ export class LocalRecipeRepository extends RecipeRepository {
 }
 
 /**
+ * Backfills `cookbooks` on records stored before cookbooks existed.
+ *
+ * Runs on every load rather than behind a version flag: it is idempotent, so a
+ * downgrade-then-upgrade cycle self-heals, and there is no migration state to
+ * get out of step with the data.
+ *
+ * The test on `Array.isArray` is deliberate, and not a length or truthiness
+ * check. An empty array is a decision — the recipe was taken out of its last
+ * cookbook — and must survive the round trip, which it does because `save`
+ * always writes the field. Treating `[]` as absent here would make unfiling a
+ * recipe silently undo itself on the next load.
+ */
+function withCookbooks(recipe: Recipe): Recipe {
+  if (Array.isArray(recipe.cookbooks)) return recipe;
+  return { ...recipe, cookbooks: [DEFAULT_COOKBOOK_ID] };
+}
+
+/**
  * Enough of a shape check to keep a malformed entry from reaching the screens,
  * where a missing `ingredients` array would throw on render.
+ *
+ * Deliberately says nothing about `cookbooks`: a record without it is the normal
+ * migration case rather than a malformed one, and rejecting on it would discard
+ * every recipe stored before cookbooks existed. `withCookbooks` above repairs it
+ * instead.
  */
 function isRecipe(value: unknown): value is Recipe {
   if (!value || typeof value !== 'object') return false;

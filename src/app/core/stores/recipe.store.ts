@@ -124,6 +124,64 @@ export class RecipeStore {
     return found;
   }
 
+  /**
+   * The recipes filed in a cookbook.
+   *
+   * A scan rather than an index: membership lives on the recipe (design §2), and
+   * at 72 records an index would cost more to keep correct than it saves.
+   */
+  inCookbook(cookbookId: string): Recipe[] {
+    return this._recipes().filter((r) => r.cookbooks.includes(cookbookId));
+  }
+
+  /**
+   * Files a recipe into a cookbook.
+   *
+   * Returns false when the slug is unknown or the recipe is already filed there,
+   * so a repeat call is a no-op rather than a duplicate id — every count derived
+   * from membership would otherwise double for that recipe.
+   */
+  addToCookbook(slug: string, cookbookId: string): boolean {
+    const recipe = this.bySlug(slug);
+    if (!recipe || recipe.cookbooks.includes(cookbookId)) return false;
+    return this.update({ ...recipe, cookbooks: [...recipe.cookbooks, cookbookId] });
+  }
+
+  /**
+   * Takes a recipe out of a cookbook, leaving the recipe alone. Removing its
+   * last cookbook is allowed — an unfiled recipe is still yours.
+   *
+   * Returns false when the slug is unknown or it was never filed there.
+   */
+  removeFromCookbook(slug: string, cookbookId: string): boolean {
+    const recipe = this.bySlug(slug);
+    if (!recipe || !recipe.cookbooks.includes(cookbookId)) return false;
+    return this.update({
+      ...recipe,
+      cookbooks: recipe.cookbooks.filter((id) => id !== cookbookId),
+    });
+  }
+
+  /**
+   * Drops a cookbook id from every recipe carrying it.
+   *
+   * Named for what it does rather than for its caller: this store knows nothing
+   * about cookbooks as entities, only that a recipe carries a list of ids, the
+   * same way it carries tags. CookbookStore.remove is what calls it, so that no
+   * recipe is left pointing at a cookbook that no longer exists.
+   */
+  stripCookbook(cookbookId: string): void {
+    let touched = false;
+    this._recipes.update((list) =>
+      list.map((r) => {
+        if (!r.cookbooks.includes(cookbookId)) return r;
+        touched = true;
+        return { ...r, cookbooks: r.cookbooks.filter((id) => id !== cookbookId) };
+      }),
+    );
+    if (touched) this.persist();
+  }
+
   /** Throws away local changes and goes back to the bundled collection. */
   resetToSeed(): void {
     this._recipes.set([...Recipes]);

@@ -1,4 +1,5 @@
-import { Recipe } from '../model/recipes.model';
+import { DEFAULT_COOKBOOK_ID } from '../model/cookbooks.model';
+import { Recipe, RecipeSource } from '../model/recipes.model';
 import { ImportedRecipes } from './imported-recipes';
 
 /**
@@ -13,7 +14,7 @@ import { ImportedRecipes } from './imported-recipes';
  * real source), calories, urls and equipment — no screen in the new design uses
  * them. `favorite` moved to PrefsStore; see FAV_SEED below.
  */
-export const CuratedRecipes: Recipe[] = [
+export const CuratedRecipes: RecipeSource[] = [
   {
     slug: 'grandmas-spaghetti',
     title: 'Grandma\'s Spaghetti',
@@ -66,6 +67,8 @@ export const CuratedRecipes: Recipe[] = [
       { qty: null, unit: 'can', name: 'diced tomatoes (optional)', aisle: 'pantry' },
     ],
     steps: [
+      'In a large pot, season the meat andbrown the hamburger and drain excess fat.',
+      'After the meat is browned, combine all of these items into a large crock pot and cook for a few hours.'
     ],
     notes: [
     ],
@@ -172,6 +175,9 @@ export const CuratedRecipes: Recipe[] = [
       { qty: 0.25, unit: 'tsp', name: 'crushed red pepper flakes', aisle: 'pantry' },
     ],
     steps: [
+      'Combine all of the ingredients into a pot. ',
+      'Place on the stove over medium-low heat and bring the sauce to a simmer. Once the butter has melted and the sugar and honey have dissolved, remove from the heat. ',
+      'Let cool and place into a mason jar. The sauce will thicken as it cools down. ',
     ],
     notes: [
     ],
@@ -496,10 +502,30 @@ export const FAV_SEED: readonly string[] = [
 ];
 
 /**
+ * Files authored recipes into a cookbook, returning new records.
+ *
+ * Pure on purpose: the source arrays are exported consts that several modules
+ * import, so stamping them in place would file recipes into a cookbook
+ * everywhere at once.
+ */
+export function fileInto(cookbookId: string, sources: readonly RecipeSource[]): Recipe[] {
+  return sources.map((source) => ({ ...source, cookbooks: [cookbookId] }));
+}
+
+/**
  * The whole collection: the fourteen hand-curated recipes first, then the
  * family cookbook import.
  *
  * Curated first on purpose — those are the ones with photos, blurbs and
  * times-cooked counts, so they are what the library shows before you scroll.
+ *
+ * Everything starts in one cookbook. Splitting the collection by source is a
+ * change to this one expression rather than to the recipes themselves:
+ *
+ *     [...fileInto('sams-cookbook', CuratedRecipes),
+ *      ...fileInto('family-cookbook', ImportedRecipes)]
  */
-export const Recipes: Recipe[] = [...CuratedRecipes, ...ImportedRecipes];
+export const Recipes: Recipe[] = fileInto(DEFAULT_COOKBOOK_ID, [
+  ...CuratedRecipes,
+  ...ImportedRecipes,
+]);

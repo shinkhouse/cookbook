@@ -5,6 +5,7 @@ import {
 } from '@angular/core';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
+import { provideLocalCookbooks } from './core/cookbook-repository';
 import { provideLocalRecipes } from './core/recipe-repository';
 import { routes } from './app.routes';
 
@@ -26,5 +27,8 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     // Recipes persist to localStorage for now; see the note on the provider.
     provideLocalRecipes(),
+    // Cookbooks are a separate resource behind their own seam, so either
+    // collection can move to the API without the other.
+    provideLocalCookbooks(),
   ],
 };

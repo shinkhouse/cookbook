@@ -45,7 +45,12 @@ lazy NgModules. Signals for all component state.
 The create flow is the reason this matters most: four tabs sharing one editable
 draft is substantially simpler as a signal than as a module plus a service.
 
-### 2.2 State — three stores
+### 2.2 State — four stores
+
+**Revised 2026-08-21.** `CookbookStore` joined the three below, holding the
+cookbook collection and persisting through its own `CookbookRepository` seam. It
+depends on `RecipeStore` and not the reverse, the same direction `ListStore`
+uses. See `2026-08-21-multiple-cookbooks-design.md` §5.
 
 | Store | Holds | Persisted |
 |---|---|---|
@@ -260,8 +265,15 @@ type Recipe = {
   steps: string[];
   notes: string[];
   photo?: string;
+  cookbooks: string[];  // added 2026-08-21; see below
 };
 ```
+
+**Revised 2026-08-21.** `Recipe` carries a `cookbooks: string[]` of the cookbooks
+it appears in, and a `Cookbook` entity joins it. A recipe can be in several
+cookbooks and in none. See `2026-08-21-multiple-cookbooks-design.md` for the
+entity, the migration, and why membership sits on the recipe rather than on the
+cookbook.
 
 ### 4.1 Migration from the current shape
 

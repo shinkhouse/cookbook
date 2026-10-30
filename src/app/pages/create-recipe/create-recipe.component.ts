@@ -7,6 +7,7 @@ import { parseIngredient } from '../../core/ingredient-parser';
 import { parseJsonLd, parseRecipeText, slugify, splitFrontMatter } from '../../core/recipe-text';
 import { formatQty } from '../../core/scale';
 import { RecipeStore } from '../../core/stores/recipe.store';
+import { describeWriteError } from '../../core/write-error';
 
 type Tab = 'paste' | 'file' | 'url' | 'manual';
 
@@ -20,7 +21,7 @@ type Status = 'waiting' | 'check' | 'clean';
   styleUrl: './create-recipe.component.scss',
 })
 export class CreateRecipeComponent {
-  private readonly recipes = inject(RecipeStore);
+  protected readonly recipes = inject(RecipeStore);
   private readonly router = inject(Router);
 
   protected readonly aisles = AISLE_ORDER;
@@ -31,6 +32,8 @@ export class CreateRecipeComponent {
   protected readonly urlText = signal('');
   protected readonly dropActive = signal(false);
   protected readonly notice = signal('');
+  /** True from pressing Save until the API answers; the button and `save()` both honour it. */
+  protected readonly saving = signal(false);
 
   /**
    * One editable draft behind all four tabs (§6.4). Each tab writes into it;
@@ -127,31 +130,45 @@ export class CreateRecipeComponent {
     await this.loadFile(first);
 
     let saved = 0;
+    let failed = 0;
+    let firstError: unknown;
     for (const file of rest) {
       const text = await file.text();
       const { meta } = splitFrontMatter(text);
       const parsed = parseRecipeText(text);
       if (!parsed.title || parsed.ingredients.length === 0) continue;
-      await this.recipes.add({
-        slug: slugify(parsed.title),
-        title: parsed.title,
-        tags: meta.tags ?? [],
-        time: '',
-        servings: meta.servings ?? 4,
-        cooked: 0,
-        blurb: '',
-        desc: '',
-        ingredients: parsed.ingredients,
-        steps: parsed.steps,
-        notes: [],
-        // Unfiled, matching RecipeTemplate: this screen does not ask which
-        // cookbook to import into yet, and guessing would file a folder drop
-        // into a cookbook the user never chose.
-        cookbooks: [],
-      });
-      saved++;
+      try {
+        await this.recipes.add({
+          slug: slugify(parsed.title),
+          title: parsed.title,
+          tags: meta.tags ?? [],
+          time: '',
+          servings: meta.servings ?? 4,
+          cooked: 0,
+          blurb: '',
+          desc: '',
+          ingredients: parsed.ingredients,
+          steps: parsed.steps,
+          notes: [],
+          // Unfiled, matching RecipeTemplate: this screen does not ask which
+          // cookbook to import into yet, and guessing would file a folder drop
+          // into a cookbook the user never chose.
+          cookbooks: [],
+        });
+        saved++;
+      } catch (err) {
+        // One bad file must not strand the rest of the folder.
+        if (failed === 0) firstError = err;
+        failed++;
+      }
     }
 
+    if (failed > 0) {
+      this.notice.set(
+        `Saved ${saved} of ${saved + failed}. The rest failed: ${describeWriteError(firstError)}`,
+      );
+      return;
+    }
     this.notice.set(
       saved > 0
         ? `Loaded ${first.name}, and imported ${saved} more ${saved === 1 ? 'recipe' : 'recipes'}.`
@@ -266,16 +283,27 @@ export class CreateRecipeComponent {
   // ---- Confirm -----------------------------------------------------------
 
   protected async save(): Promise<void> {
-    if (!this.canSave()) return;
+    // The button is disabled too, but a second call can arrive before the
+    // first re-renders, so the guard lives here as well.
+    if (!this.canSave() || this.saving()) return;
+    this.saving.set(true);
+    this.notice.set('');
     const recipe = this.draft();
-    const slug = await this.recipes.add({
-      ...recipe,
-      // Drop the blank rows the manual editor leaves behind.
-      steps: recipe.steps.map((s) => s.trim()).filter(Boolean),
-      notes: recipe.notes.map((n) => n.trim()).filter(Boolean),
-      ingredients: recipe.ingredients.filter((i) => i.name.trim()),
-    });
-    void this.router.navigate(['/recipes', slug]);
+    try {
+      const slug = await this.recipes.add({
+        ...recipe,
+        // Drop the blank rows the manual editor leaves behind.
+        steps: recipe.steps.map((s) => s.trim()).filter(Boolean),
+        notes: recipe.notes.map((n) => n.trim()).filter(Boolean),
+        ingredients: recipe.ingredients.filter((i) => i.name.trim()),
+      });
+      void this.router.navigate(['/recipes', slug]);
+    } catch (err) {
+      // Stay here with the draft untouched so nothing typed is lost.
+      this.notice.set(describeWriteError(err));
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   protected async copyJson(): Promise<void> {

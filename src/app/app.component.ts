@@ -5,6 +5,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { ListStore } from './core/stores/list.store';
+import { RecipeStore } from './core/stores/recipe.store';
 
 @Component({
   selector: 'app-root',
@@ -15,6 +16,9 @@ import { ListStore } from './core/stores/list.store';
 export class AppComponent {
   private readonly list = inject(ListStore);
   private readonly router = inject(Router);
+
+  /** Production builds are read-only, so the Add recipe links are left out. */
+  readonly writable = inject(RecipeStore).writable;
 
   /**
    * Cook mode is a full-screen dark view (§6.3), so the site header and footer

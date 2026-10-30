@@ -24,7 +24,9 @@
           <span class="count-badge">{{ listCount() }}</span>
         }
       </a>
-      <a mat-menu-item routerLink="/recipes/new">Add recipe</a>
+      @if (writable) {
+        <a mat-menu-item routerLink="/recipes/new">Add recipe</a>
+      }
     </mat-menu>
   } @else {
     <nav class="site-nav" aria-label="Main">
@@ -39,10 +41,12 @@
       </a>
     </nav>
 
-    <a class="btn-primary" routerLink="/recipes/new">
-      <mat-icon fontIcon="add" aria-hidden="true" />
-      Add recipe
-    </a>
+    @if (writable) {
+      <a class="btn-primary" routerLink="/recipes/new">
+        <mat-icon fontIcon="add" aria-hidden="true" />
+        Add recipe
+      </a>
+    }
   }
 </header>
 }

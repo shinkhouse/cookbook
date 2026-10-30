@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { ActivatedRouteSnapshot, ResolveFn, Routes } from '@angular/router';
+import { ActivatedRouteSnapshot, ResolveFn, Router, Routes } from '@angular/router';
 import { RecipeStore } from './core/stores/recipe.store';
 
 /**
@@ -31,6 +31,8 @@ export const routes: Routes = [
   {
     // Must precede ':slug', or "new" is read as a slug.
     path: 'recipes/new',
+    // Authoring is a development-only feature; elsewhere the URL goes home.
+    canMatch: [() => inject(RecipeStore).writable || inject(Router).createUrlTree(['/'])],
     loadComponent: () =>
       import('./pages/create-recipe/create-recipe.component').then((m) => m.CreateRecipeComponent),
     title: 'Add a recipe',

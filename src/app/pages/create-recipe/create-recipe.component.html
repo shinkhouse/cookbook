@@ -321,8 +321,9 @@
       }
 
       <div class="preview-actions">
-        <button type="button" class="btn-primary" (click)="save()" [disabled]="!canSave()">
-          Save recipe
+        <button type="button" class="btn-primary" (click)="save()"
+          [disabled]="!canSave() || saving() || recipes.status() !== 'ready'">
+          {{ saving() ? 'Saving…' : 'Save recipe' }}
         </button>
         <button type="button" class="btn-ghost" (click)="copyJson()">
           <mat-icon fontIcon="content_copy" aria-hidden="true" /> Copy JSON

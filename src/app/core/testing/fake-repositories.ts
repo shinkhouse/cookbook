@@ -5,6 +5,11 @@ import { Recipes } from '../mock/recipes.mock';
 import { Recipe } from '../model/recipes.model';
 import { RecipeRepository } from '../recipe-repository';
 
+/** What the API answers for a duplicate id or slug. */
+function conflict(): Error {
+  return Object.assign(new Error('conflict'), { status: 409 });
+}
+
 /**
  * In-memory stand-in for the API, with the same contract: null/false only for a
  * missing id, a rejection for everything else. `failNext` is how a test makes
@@ -33,7 +38,7 @@ export class FakeCookbookRepository extends CookbookRepository {
 
   override async create(cookbook: Cookbook): Promise<Cookbook> {
     this.maybeFail();
-    if (this.items.some((c) => c.id === cookbook.id)) throw new Error('conflict');
+    if (this.items.some((c) => c.id === cookbook.id)) throw conflict();
     this.items.push({ ...cookbook });
     return { ...cookbook };
   }
@@ -98,7 +103,7 @@ export class FakeRecipeRepository extends RecipeRepository {
 
   override async create(recipe: Recipe): Promise<Recipe> {
     this.maybeFail();
-    if (this.items.some((r) => r.slug === recipe.slug)) throw new Error('conflict');
+    if (this.items.some((r) => r.slug === recipe.slug)) throw conflict();
     this.items.push({ ...recipe });
     return { ...recipe };
   }

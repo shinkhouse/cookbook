@@ -112,7 +112,31 @@
           />
           {{ prefs.layout() === 'side-by-side' ? 'Single column' : 'Side by side' }}
         </button>
+
+        @if (writable && !confirmingArchive()) {
+          <button type="button" class="btn-ghost btn-quiet" (click)="askArchive()">
+            <mat-icon fontIcon="archive" aria-hidden="true" />
+            Archive recipe
+          </button>
+        }
       </div>
+
+      @if (confirmingArchive()) {
+        <div class="archive-confirm">
+          <p>Archive “{{ r.title }}”? It will be hidden from the site.</p>
+          <div class="archive-buttons">
+            <button type="button" class="btn-ghost" [disabled]="archiving()" (click)="cancelArchive()">
+              Cancel
+            </button>
+            <button type="button" class="btn-outline" [disabled]="archiving()" (click)="archive()">
+              {{ archiving() ? 'Archiving…' : 'Archive' }}
+            </button>
+          </div>
+          @if (archiveError()) {
+            <p class="archive-error" role="alert">{{ archiveError() }}</p>
+          }
+        </div>
+      }
 
       <div class="columns">
         <aside class="ingredients-card">

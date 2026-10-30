@@ -21,12 +21,17 @@ export class RecipeStore {
   private readonly prefs = inject(PrefsStore);
   private readonly repo = inject(RecipeRepository);
 
-  /** Empty until the API answers; `status` says whether that has happened. */
+  /**
+   * Empty until the API answers; `status` says whether that has happened. Holds
+   * archived recipes too (a writable build loads them), so slugs stay unique.
+   */
   private readonly _recipes = signal<readonly Recipe[]>([]);
+  /** What the screens see: everything loaded except the archived. */
+  private readonly visible = computed(() => this._recipes().filter((r) => !r.archived));
   private readonly _status = signal<'loading' | 'ready' | 'error'>('loading');
   private inflight: Promise<void> | null = null;
 
-  readonly recipes = computed(() => this._recipes());
+  readonly recipes = this.visible;
   readonly status = this._status.asReadonly();
 
   /** Whether this build may write; screens omit add/edit/delete when not. */
@@ -83,7 +88,7 @@ export class RecipeStore {
    */
   readonly tags = computed(() => {
     const seen = new Set<string>();
-    for (const r of this._recipes()) for (const t of r.tags) seen.add(t.toLowerCase());
+    for (const r of this.visible()) for (const t of r.tags) seen.add(t.toLowerCase());
     return [...seen].sort();
   });
 
@@ -95,26 +100,26 @@ export class RecipeStore {
   /** How many recipes carry each gap, for the counts beside the options. */
   readonly gapCounts = computed(() => {
     const counts: Record<string, number> = { method: 0, steps: 0, photo: 0 };
-    for (const r of this._recipes()) {
+    for (const r of this.visible()) {
       for (const key of gapKeys(r)) counts[key] = (counts[key] ?? 0) + 1;
     }
     return counts;
   });
 
   readonly needsWorkCount = computed(
-    () => this._recipes().filter((r) => gapsOf(r).any).length,
+    () => this.visible().filter((r) => gapsOf(r).any).length,
   );
 
   /** The recipe the library header's stat block names. */
   readonly mostCooked = computed(() =>
-    this._recipes().reduce<Recipe | null>(
+    this.visible().reduce<Recipe | null>(
       (best, r) => (best === null || r.cooked > best.cooked ? r : best),
       null,
     ),
   );
 
   bySlug(slug: string): Recipe | undefined {
-    return this._recipes().find((r) => r.slug === slug);
+    return this.visible().find((r) => r.slug === slug);
   }
 
   /**
@@ -150,11 +155,25 @@ export class RecipeStore {
    * unknown, here or on the server. Throws if the API refuses.
    */
   async update(recipe: Recipe): Promise<boolean> {
-    if (!this.bySlug(recipe.slug)) return false;
+    if (!this._recipes().some((r) => r.slug === recipe.slug)) return false;
     const stored = await this.repo.update(recipe);
     if (!stored) return false;
     this._recipes.update((list) => list.map((r) => (r.slug === stored.slug ? stored : r)));
     return true;
+  }
+
+  /**
+   * Soft-deletes a recipe: sets `archived` and sends the whole record, so it
+   * disappears from every screen but stays stored. Favourites and list entries
+   * are kept; they just stop resolving while it is archived.
+   *
+   * Returns false when the slug is unknown, here or on the server. Throws if the
+   * API refuses, leaving the list as it was.
+   */
+  async archive(slug: string): Promise<boolean> {
+    const recipe = this._recipes().find((r) => r.slug === slug);
+    if (!recipe) return false;
+    return this.update({ ...recipe, archived: true });
   }
 
   /**
@@ -164,7 +183,7 @@ export class RecipeStore {
    * at 72 records an index would cost more to keep correct than it saves.
    */
   inCookbook(cookbookId: string): Recipe[] {
-    return this._recipes().filter((r) => r.cookbooks.includes(cookbookId));
+    return this.visible().filter((r) => r.cookbooks.includes(cookbookId));
   }
 
   /**
@@ -199,10 +218,12 @@ export class RecipeStore {
 
   private uniqueSlug(desired: string): string {
     const base = desired || 'untitled';
-    if (!this.bySlug(base)) return base;
+    // Against everything loaded, archived included: their slugs are still taken.
+    const taken = (slug: string) => this._recipes().some((r) => r.slug === slug);
+    if (!taken(base)) return base;
     for (let n = 2; ; n++) {
       const candidate = `${base}-${n}`;
-      if (!this.bySlug(candidate)) return candidate;
+      if (!taken(candidate)) return candidate;
     }
   }
 
@@ -218,7 +239,7 @@ export class RecipeStore {
     const favsOnly = this.favsOnly();
     const gaps = this.selectedGaps();
 
-    return this._recipes().filter((r) => {
+    return this.visible().filter((r) => {
       if (!matchesSelection(r.tags, selected)) return false;
       if (favsOnly && !this.prefs.isFav(r.slug)) return false;
       // OR within the gap facet, matching how the tag facets behave.

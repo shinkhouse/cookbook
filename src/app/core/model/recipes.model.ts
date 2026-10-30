@@ -50,6 +50,11 @@ export interface Recipe {
    * normalised by the repository on the way out.
    */
   cookbooks: string[];
+  /**
+   * Soft delete: an archived recipe is hidden from the site but stays in the
+   * database. There is no restore in the app — clear the flag by hand in Mongo.
+   */
+  archived?: boolean;
 }
 
 /**

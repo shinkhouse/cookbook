@@ -391,6 +391,57 @@ describe('RecipeStore lifecycle and writes', () => {
     expect(store.recipes()).toBe(before);
   });
 
+  describe('archiving', () => {
+    it('hides an archived recipe from every public read', async () => {
+      const seed = [
+        fixture('kept', { title: 'Kept', tags: ['dinner'], cookbooks: ['c1'] }),
+        { ...fixture('gone', { title: 'Gone', tags: ['rareTag'], cookbooks: ['c1'] }), archived: true },
+      ];
+      const store = setup(new FakeRecipeRepository(seed));
+      await store.whenLoaded();
+      expect(store.recipes().map((r) => r.slug)).toEqual(['kept']);
+      expect(store.results().map((r) => r.slug)).toEqual(['kept']);
+      expect(store.bySlug('gone')).toBeUndefined();
+      expect(store.inCookbook('c1').map((r) => r.slug)).toEqual(['kept']);
+      expect(store.tags()).not.toContain('raretag');
+      expect(store.facets().flatMap((f) => f.options)).not.toContain('raretag');
+    });
+
+    it('suffixes a new slug that belongs to an archived recipe', async () => {
+      const seed = [{ ...fixture('soup', { title: 'Soup' }), archived: true }];
+      const fake = new FakeRecipeRepository(seed);
+      const store = setup(fake);
+      await store.whenLoaded();
+      expect(await store.add(fixture('soup', { title: 'Soup' }))).toBe('soup-2');
+    });
+
+    it('sends archived: true and drops the recipe from view', async () => {
+      const fake = new FakeRecipeRepository();
+      const store = setup(fake);
+      await store.whenLoaded();
+      const updateSpy = spyOn(fake, 'update').and.callThrough();
+      expect(await store.archive('grandmas-chili')).toBe(true);
+      expect(updateSpy.calls.mostRecent().args[0].archived).toBe(true);
+      expect(store.bySlug('grandmas-chili')).toBeUndefined();
+    });
+
+    it('returns false for an unknown slug', async () => {
+      const store = setup();
+      await store.whenLoaded();
+      expect(await store.archive('no-such-recipe')).toBe(false);
+    });
+
+    it('leaves the list untouched when an archive is rejected', async () => {
+      const fake = new FakeRecipeRepository();
+      const store = setup(fake);
+      await store.whenLoaded();
+      const before = store.recipes();
+      fake.failNext(new Error('x'));
+      await expectAsync(store.archive('grandmas-chili')).toBeRejected();
+      expect(store.recipes()).toBe(before);
+    });
+  });
+
   it('keeps the derived facets in step with an added recipe', async () => {
     const store = setup();
     await store.whenLoaded();

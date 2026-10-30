@@ -1,12 +1,13 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { gapSentence, gapsOf } from '../../core/recipe-health';
 import { formatQty, scaleFactor, scaleLabel } from '../../core/scale';
 import { ListStore } from '../../core/stores/list.store';
 import { PrefsStore } from '../../core/stores/prefs.store';
 import { RecipeStore, tagLabel } from '../../core/stores/recipe.store';
+import { describeWriteError } from '../../core/write-error';
 
 /** One row of the ingredient card, with its amount already scaled. */
 interface DetailIngredient {
@@ -29,6 +30,7 @@ export class RecipeDetailComponent {
   readonly slug = input.required<string>();
 
   private readonly recipes = inject(RecipeStore);
+  private readonly router = inject(Router);
   protected readonly list = inject(ListStore);
   protected readonly prefs = inject(PrefsStore);
 
@@ -39,6 +41,42 @@ export class RecipeDetailComponent {
 
   /** 'loading' until the collection arrives; "not found" is only true after that. */
   protected readonly status = this.recipes.status;
+
+  /** Archiving is a write, so only a writable build offers it. */
+  protected readonly writable = this.recipes.writable;
+
+  protected readonly confirmingArchive = signal(false);
+  protected readonly archiving = signal(false);
+  protected readonly archiveError = signal('');
+
+  protected askArchive(): void {
+    this.archiveError.set('');
+    this.confirmingArchive.set(true);
+  }
+
+  protected cancelArchive(): void {
+    this.confirmingArchive.set(false);
+    this.archiveError.set('');
+  }
+
+  /**
+   * Archives, then leaves for the library. A false answer means the recipe is
+   * already gone, which is where the user wanted it anyway. A failure stays on
+   * the page with the reason, so the recipe is not lost from view.
+   */
+  protected async archive(): Promise<void> {
+    if (this.archiving()) return;
+    this.archiving.set(true);
+    this.archiveError.set('');
+    try {
+      await this.recipes.archive(this.slug());
+      void this.router.navigate(['/']);
+    } catch (err) {
+      this.archiveError.set(describeWriteError(err));
+    } finally {
+      this.archiving.set(false);
+    }
+  }
 
   /** Try again after a failed first load. */
   protected retry(): void {

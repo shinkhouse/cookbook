@@ -240,6 +240,37 @@ h1 {
     color: var(--navy);
 }
 
+.btn-quiet {
+    border-color: transparent;
+    font-weight: 500;
+}
+
+.archive-confirm {
+    margin-bottom: calc(var(--pad-section) * 0.6);
+    padding: 14px 16px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+
+    p {
+        margin: 0 0 10px;
+        color: var(--ink);
+        font-size: 14.5px;
+    }
+
+    .archive-error {
+        margin: 10px 0 0;
+        color: var(--ink-3);
+        font-size: 13px;
+    }
+}
+
+.archive-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
 // §3.4 — two-column region that wraps rather than switching at a breakpoint.
 .columns {
     display: flex;

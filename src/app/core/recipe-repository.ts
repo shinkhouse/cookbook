@@ -49,8 +49,14 @@ export class HttpRecipeRepository extends RecipeRepository {
 
   override readonly writable = !environment.production;
 
+  /**
+   * A writable build asks for archived recipes too. Slugs are unique across
+   * them, so without them `uniqueSlug` could pick a taken slug and the API would
+   * answer 409. The store hides them from every screen.
+   */
   override async list(): Promise<Recipe[]> {
-    const all = await firstValueFrom(this.http.get<unknown[]>(this.url));
+    const url = this.writable ? `${this.url}?includeArchived=true` : this.url;
+    const all = await firstValueFrom(this.http.get<unknown[]>(url));
     return all.filter(isRecipe).map(withCookbooks);
   }
 

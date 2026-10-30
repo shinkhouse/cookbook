@@ -6,6 +6,8 @@ import { Recipe } from './model/recipes.model';
 import { HttpRecipeRepository, RecipeRepository, provideHttpRecipes } from './recipe-repository';
 
 const URL = '/api/recipes';
+/** A writable build, as every dev build is, lists archived recipes too. */
+const LIST_URL = `${URL}?includeArchived=true`;
 
 function draft(slug: string, title = 'A Recipe'): Recipe {
   return {
@@ -43,16 +45,25 @@ describe('HttpRecipeRepository', () => {
     expect(repo.writable).toBe(true);
   });
 
-  it('lists from GET /recipes', async () => {
+  it('asks for archived recipes too when writable, so slugs stay unique', async () => {
     const result = repo.list();
-    httpMock.expectOne({ method: 'GET', url: URL }).flush([draft('a'), draft('b')]);
-    expect((await result).map((r) => r.slug)).toEqual(['a', 'b']);
+    httpMock
+      .expectOne({ method: 'GET', url: LIST_URL })
+      .flush([draft('a')]);
+    expect((await result).map((r) => r.slug)).toEqual(['a']);
+  });
+
+  it('asks for the plain list when not writable', async () => {
+    (repo as { writable: boolean }).writable = false;
+    const result = repo.list();
+    httpMock.expectOne({ method: 'GET', url: URL }).flush([draft('a')]);
+    expect((await result).map((r) => r.slug)).toEqual(['a']);
   });
 
   it('drops a malformed recipe rather than letting it reach a screen', async () => {
     const result = repo.list();
     httpMock
-      .expectOne(URL)
+      .expectOne(LIST_URL)
       .flush([draft('good'), { slug: 'bad', title: 'No arrays here' }, { title: 'no slug' }]);
     // A recipe missing its ingredients array would throw on render.
     expect((await result).map((r) => r.slug)).toEqual(['good']);
@@ -61,14 +72,14 @@ describe('HttpRecipeRepository', () => {
   it('drops a record without ingredients', async () => {
     const { ingredients, ...noIngredients } = draft('hollow');
     const result = repo.list();
-    httpMock.expectOne(URL).flush([noIngredients]);
+    httpMock.expectOne(LIST_URL).flush([noIngredients]);
     expect(await result).toEqual([]);
   });
 
   it('files a recipe without cookbooks into the default cookbook', async () => {
     const { cookbooks, ...legacy } = draft('pre-cookbooks');
     const result = repo.list();
-    httpMock.expectOne(URL).flush([legacy]);
+    httpMock.expectOne(LIST_URL).flush([legacy]);
     expect((await result)[0].cookbooks).toEqual([DEFAULT_COOKBOOK_ID]);
   });
 
@@ -76,21 +87,21 @@ describe('HttpRecipeRepository', () => {
     // An empty array is a decision, not an absence: treating it as missing would
     // make unfiling a recipe silently undo itself on the next load.
     const result = repo.list();
-    httpMock.expectOne(URL).flush([{ ...draft('unfiled'), cookbooks: [] }]);
+    httpMock.expectOne(LIST_URL).flush([{ ...draft('unfiled'), cookbooks: [] }]);
     expect((await result)[0].cookbooks).toEqual([]);
   });
 
   it('keeps a recipe filed in several cookbooks in all of them', async () => {
     const result = repo.list();
     httpMock
-      .expectOne(URL)
+      .expectOne(LIST_URL)
       .flush([{ ...draft('shared'), cookbooks: ['sams-cookbook', 'grandmas'] }]);
     expect((await result)[0].cookbooks).toEqual(['sams-cookbook', 'grandmas']);
   });
 
   it('normalises a cookbooks value that is not an array', async () => {
     const result = repo.list();
-    httpMock.expectOne(URL).flush([{ ...draft('corrupt'), cookbooks: 'sams-cookbook' }]);
+    httpMock.expectOne(LIST_URL).flush([{ ...draft('corrupt'), cookbooks: 'sams-cookbook' }]);
     // Normalised rather than dropped: the recipe itself is fine, and a string
     // here would break every consumer that expects to iterate.
     expect((await result)[0].cookbooks).toEqual([DEFAULT_COOKBOOK_ID]);
@@ -98,7 +109,7 @@ describe('HttpRecipeRepository', () => {
 
   it('rejects a list that fails', async () => {
     const result = repo.list();
-    httpMock.expectOne(URL).flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    httpMock.expectOne(LIST_URL).flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
     await expectAsync(result).toBeRejected();
   });
 

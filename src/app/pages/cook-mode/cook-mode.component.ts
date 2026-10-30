@@ -35,6 +35,9 @@ export class CookModeComponent {
 
   protected readonly recipe = computed(() => this.recipes.bySlug(this.slug()));
 
+  /** 'loading' until the collection arrives; "not found" is only true after that. */
+  protected readonly status = this.recipes.status;
+
   protected readonly stepIndex = signal(0);
   private readonly checked = signal<ReadonlySet<number>>(new Set());
   protected readonly timers = signal<readonly RunningTimer[]>([]);

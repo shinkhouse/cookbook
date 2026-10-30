@@ -183,6 +183,8 @@
       </div>
     </div>
   </article>
+} @else if (status() === 'loading') {
+  <p data-state="loading" aria-busy="true">Loading…</p>
 } @else {
   <div class="not-found">
     <p class="empty-line">No recipe by that name.</p>

@@ -32,6 +32,9 @@ export class LibraryComponent {
 
   protected readonly tagLabel = tagLabel;
 
+  /** Placeholder cards shown while the collection is being fetched. */
+  protected readonly skeletons = [0, 1, 2, 3, 4, 5];
+
   /** Option labels differ by facet: tags are title-cased, gaps have names. */
   protected optionLabel(facet: Facet, option: string): string {
     return facet.kind === 'gap' ? GAP_LABELS[option as GapKey] : tagLabel(option);

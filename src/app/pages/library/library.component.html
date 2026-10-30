@@ -115,89 +115,113 @@
     </div>
   }
 
-  <p class="result-count label" aria-live="polite">
-    {{ results().length }} {{ results().length === 1 ? 'recipe' : 'recipes' }}
-  </p>
-
-  @if (results().length === 0) {
-    <div class="empty">
-      <p class="empty-line">Nothing matches that yet.</p>
-      <button type="button" class="btn-outline" (click)="clearAll()">Clear filters</button>
-    </div>
-  } @else {
-    <ul class="grid">
-      @for (recipe of results(); track recipe.slug) {
-        <li class="card">
-          <a class="card-link" [routerLink]="['/recipes', recipe.slug]">
-            @if (gapFor(recipe); as gap) {
-              <span class="gap-badge">{{ gap }}</span>
-            }
-            <div class="card-photo">
-              @if (showPhoto(recipe.slug, recipe.photo)) {
-                <img
-                  [src]="recipe.photo"
-                  [alt]="recipe.title"
-                  loading="lazy"
-                  (error)="onPhotoError(recipe.slug)"
-                />
-              } @else {
-                <div class="photo-placeholder" aria-hidden="true"></div>
-              }
+  @switch (recipes.status()) {
+    @case ('loading') {
+      <ul class="grid" data-state="loading" aria-busy="true" aria-label="Loading recipes">
+        @for (n of skeletons; track n) {
+          <li class="card skeleton" aria-hidden="true">
+            <div class="card-photo"></div>
+            <div class="card-body">
+              <span class="skeleton-line short"></span>
+              <span class="skeleton-line"></span>
+              <span class="skeleton-line"></span>
             </div>
-          </a>
+          </li>
+        }
+      </ul>
+    }
+    @case ('error') {
+      <div class="empty" data-state="error" role="alert">
+        <p class="empty-line">Couldn't load the recipes.</p>
+        <button type="button" class="btn-outline" (click)="recipes.load()">Try again</button>
+      </div>
+    }
+    @default {
+      <p class="result-count label" aria-live="polite">
+        {{ results().length }} {{ results().length === 1 ? 'recipe' : 'recipes' }}
+      </p>
 
-          <button
-            type="button"
-            class="fav-toggle"
-            (click)="toggleFav(recipe, $event)"
-            [attr.aria-pressed]="prefs.isFav(recipe.slug)"
-            [attr.aria-label]="
-              (prefs.isFav(recipe.slug) ? 'Remove ' : 'Add ') + recipe.title + ' to favourites'
-            "
-          >
-            <mat-icon [fontIcon]="prefs.isFav(recipe.slug) ? 'star' : 'star_border'" />
-          </button>
+      @if (results().length === 0) {
+        <div class="empty">
+          <p class="empty-line">Nothing matches that yet.</p>
+          <button type="button" class="btn-outline" (click)="clearAll()">Clear filters</button>
+        </div>
+      } @else {
+        <ul class="grid">
+          @for (recipe of results(); track recipe.slug) {
+            <li class="card">
+              <a class="card-link" [routerLink]="['/recipes', recipe.slug]">
+                @if (gapFor(recipe); as gap) {
+                  <span class="gap-badge">{{ gap }}</span>
+                }
+                <div class="card-photo">
+                  @if (showPhoto(recipe.slug, recipe.photo)) {
+                    <img
+                      [src]="recipe.photo"
+                      [alt]="recipe.title"
+                      loading="lazy"
+                      (error)="onPhotoError(recipe.slug)"
+                    />
+                  } @else {
+                    <div class="photo-placeholder" aria-hidden="true"></div>
+                  }
+                </div>
+              </a>
 
-          <div class="card-body">
-            <div class="card-meta label">
-              @if (recipe.time) {
-                <span>{{ recipe.time }}</span>
-              }
-              @if (recipe.cooked > 0) {
-                <span>Cooked {{ recipe.cooked }}×</span>
-              }
-            </div>
-
-            <h3>
-              <a [routerLink]="['/recipes', recipe.slug]">{{ recipe.title }}</a>
-            </h3>
-
-            @if (recipe.subtitle) {
-              <p class="credit card-credit">{{ recipe.subtitle }}</p>
-            }
-
-            <p class="card-blurb">{{ recipe.blurb }}</p>
-
-            <div class="card-actions">
-              <button type="button" class="btn-outline" (click)="cook(recipe, $event)">
-                Cook this
-              </button>
               <button
                 type="button"
-                class="btn-ghost"
-                [class.is-on]="list.has(recipe.slug)"
-                (click)="toggleList(recipe, $event)"
+                class="fav-toggle"
+                (click)="toggleFav(recipe, $event)"
+                [attr.aria-pressed]="prefs.isFav(recipe.slug)"
+                [attr.aria-label]="
+                  (prefs.isFav(recipe.slug) ? 'Remove ' : 'Add ') + recipe.title + ' to favourites'
+                "
               >
-                @if (list.has(recipe.slug)) {
-                  <mat-icon fontIcon="check" aria-hidden="true" /> On list
-                } @else {
-                  <mat-icon fontIcon="add" aria-hidden="true" /> List
-                }
+                <mat-icon [fontIcon]="prefs.isFav(recipe.slug) ? 'star' : 'star_border'" />
               </button>
-            </div>
-          </div>
-        </li>
+
+              <div class="card-body">
+                <div class="card-meta label">
+                  @if (recipe.time) {
+                    <span>{{ recipe.time }}</span>
+                  }
+                  @if (recipe.cooked > 0) {
+                    <span>Cooked {{ recipe.cooked }}×</span>
+                  }
+                </div>
+
+                <h3>
+                  <a [routerLink]="['/recipes', recipe.slug]">{{ recipe.title }}</a>
+                </h3>
+
+                @if (recipe.subtitle) {
+                  <p class="credit card-credit">{{ recipe.subtitle }}</p>
+                }
+
+                <p class="card-blurb">{{ recipe.blurb }}</p>
+
+                <div class="card-actions">
+                  <button type="button" class="btn-outline" (click)="cook(recipe, $event)">
+                    Cook this
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-ghost"
+                    [class.is-on]="list.has(recipe.slug)"
+                    (click)="toggleList(recipe, $event)"
+                  >
+                    @if (list.has(recipe.slug)) {
+                      <mat-icon fontIcon="check" aria-hidden="true" /> On list
+                    } @else {
+                      <mat-icon fontIcon="add" aria-hidden="true" /> List
+                    }
+                  </button>
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
       }
-    </ul>
+    }
   }
 </div>

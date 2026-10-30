@@ -37,6 +37,9 @@ export class RecipeDetailComponent {
 
   protected readonly recipe = computed(() => this.recipes.bySlug(this.slug()));
 
+  /** 'loading' until the collection arrives; "not found" is only true after that. */
+  protected readonly status = this.recipes.status;
+
   /** What this recipe is still missing, if anything. */
   protected readonly gapNote = computed(() => {
     const r = this.recipe();

@@ -436,6 +436,55 @@
     }
 }
 
+// Placeholder cards for the first fetch. The shimmer is a gradient sweep over
+// the same tokens the real card uses; it is switched off for reduced motion.
+.card.skeleton {
+    animation: none;
+
+    &:hover {
+        border-color: var(--rule);
+        box-shadow: none;
+    }
+
+    .card-photo,
+    .skeleton-line {
+        background: linear-gradient(90deg, var(--surface) 25%, var(--paper) 50%, var(--surface) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.4s linear infinite;
+    }
+
+    .card-body {
+        gap: 10px;
+        padding-bottom: 28px;
+    }
+}
+
+.skeleton-line {
+    display: block;
+    height: 14px;
+    border-radius: var(--radius-card);
+
+    &.short {
+        width: 40%;
+    }
+}
+
+@keyframes shimmer {
+    from {
+        background-position: 200% 0;
+    }
+    to {
+        background-position: -200% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card.skeleton .card-photo,
+    .card.skeleton .skeleton-line {
+        animation: none;
+    }
+}
+
 .card-link {
     display: block;
     text-decoration: none;

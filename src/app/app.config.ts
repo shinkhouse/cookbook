@@ -7,7 +7,7 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideHttpCookbooks } from './core/cookbook-repository';
-import { provideLocalRecipes } from './core/recipe-repository';
+import { provideHttpRecipes } from './core/recipe-repository';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -27,10 +27,9 @@ export const appConfig: ApplicationConfig = {
     ),
     provideAnimationsAsync(),
     provideHttpClient(withFetch()),
-    // Recipes persist to localStorage for now; see the note on the provider.
-    provideLocalRecipes(),
-    // Cookbooks are a separate resource behind their own seam, so either
-    // collection can move to the API without the other. They are first.
+    // Recipes and cookbooks are separate resources, each behind its own seam, so
+    // either can be swapped (for a fake in tests) without the other.
+    provideHttpRecipes(),
     provideHttpCookbooks(),
   ],
 };

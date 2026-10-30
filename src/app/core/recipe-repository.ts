@@ -1,79 +1,99 @@
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, Provider, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 import { DEFAULT_COOKBOOK_ID } from './model/cookbooks.model';
 import { Recipe } from './model/recipes.model';
-import { Recipes } from './mock/recipes.mock';
-import { Storage } from './storage';
 
 /**
- * Where the recipe collection lives.
+ * Where the recipe collection lives: the MongoDB-backed api.samuelhinkhouse.com.
  *
- * This exists as a seam rather than having RecipeStore talk to `localStorage`
- * directly, because the collection is expected to move to the MongoDB-backed
- * api.samuelhinkhouse.com. When it does, only a second implementation of this
- * class is needed — the store, and every screen above it, stay as they are.
+ * A seam rather than RecipeStore calling HttpClient directly, so the store and
+ * every screen above it stay ignorant of transport, and tests can swap in an
+ * in-memory fake.
  *
- * The interface is deliberately async even though the local implementation
- * resolves immediately: a version that has to await the network cannot be
- * retrofitted into a synchronous contract without touching every caller.
+ * Per-record rather than whole-collection, because the API is. The failure
+ * contract is the same for every method: a 404 on `update` or `remove` is an
+ * ordinary answer ("that recipe is not there") and comes back as null/false;
+ * every other failure rejects, so a caller can never mistake an outage or a
+ * refused write for success.
  */
 export abstract class RecipeRepository {
-  /** The whole collection. */
-  abstract load(): Promise<Recipe[]>;
+  /** The whole collection. Rejects if the API cannot be reached. */
+  abstract list(): Promise<Recipe[]>;
 
-  /**
-   * Persists the whole collection. Coarse on purpose: the collection is
-   * fourteen recipes, so there is nothing to gain from per-recipe writes, and a
-   * single call is far easier to make transactional later.
-   */
-  abstract save(recipes: readonly Recipe[]): Promise<void>;
+  /** Adds a recipe and resolves to what the API stored. */
+  abstract create(recipe: Recipe): Promise<Recipe>;
 
-  /** True when a write here will outlive the tab. */
-  abstract readonly durable: boolean;
+  /** Replaces a recipe, matched on slug. Null when the slug is unknown (404). */
+  abstract update(recipe: Recipe): Promise<Recipe | null>;
+
+  /** Deletes a recipe. False when the slug is unknown (404). */
+  abstract remove(slug: string): Promise<boolean>;
+
+  /** True when this build is allowed to write; screens hide editing otherwise. */
+  abstract readonly writable: boolean;
 }
 
-const RECIPES_KEY = 'cookbook.recipes';
-
 /**
- * Keeps the collection in `localStorage`, seeded from the bundled data the
- * first time.
+ * Talks to `${environment.apiBase}/recipes`.
  *
- * The seed is applied only when nothing has been stored, using a null sentinel
- * rather than treating an empty array as unseeded — the same rule PrefsStore
- * uses for favourites, and for the same reason: deleting everything must not
- * silently undo itself on the next load.
+ * In development the dev server proxies `/api` to the API and attaches the
+ * write key, so no secret ever ships in the bundle; a production build can read
+ * but is not `writable`.
  */
 @Injectable({ providedIn: 'root' })
-export class LocalRecipeRepository extends RecipeRepository {
-  private readonly storage = inject(Storage);
+export class HttpRecipeRepository extends RecipeRepository {
+  private readonly http = inject(HttpClient);
+  private readonly url = `${environment.apiBase}/recipes`;
 
-  override readonly durable = true;
+  override readonly writable = !environment.production;
 
-  override async load(): Promise<Recipe[]> {
-    const stored = this.storage.read<Recipe[] | null>(RECIPES_KEY, null);
-    if (stored === null) return [...Recipes];
-    // A stored value that is not an array means the entry was corrupted by
-    // something other than this app; fall back rather than render nothing.
-    if (!Array.isArray(stored)) return [...Recipes];
-    return stored.filter(isRecipe).map(withCookbooks);
+  override async list(): Promise<Recipe[]> {
+    const all = await firstValueFrom(this.http.get<unknown[]>(this.url));
+    return all.filter(isRecipe).map(withCookbooks);
   }
 
-  override async save(recipes: readonly Recipe[]): Promise<void> {
-    this.storage.write(RECIPES_KEY, recipes);
+  override create(recipe: Recipe): Promise<Recipe> {
+    return firstValueFrom(this.http.post<Recipe>(this.url, recipe));
   }
+
+  override async update(recipe: Recipe): Promise<Recipe | null> {
+    try {
+      return await firstValueFrom(
+        this.http.put<Recipe>(`${this.url}/${encodeURIComponent(recipe.slug)}`, recipe),
+      );
+    } catch (error) {
+      if (isNotFound(error)) return null;
+      throw error;
+    }
+  }
+
+  override async remove(slug: string): Promise<boolean> {
+    try {
+      await firstValueFrom(this.http.delete<void>(`${this.url}/${encodeURIComponent(slug)}`));
+      return true;
+    } catch (error) {
+      if (isNotFound(error)) return false;
+      throw error;
+    }
+  }
+}
+
+function isNotFound(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && error.status === 404;
 }
 
 /**
  * Backfills `cookbooks` on records stored before cookbooks existed.
  *
- * Runs on every load rather than behind a version flag: it is idempotent, so a
- * downgrade-then-upgrade cycle self-heals, and there is no migration state to
- * get out of step with the data.
+ * Runs on every list rather than behind a version flag: it is idempotent, so
+ * there is no migration state to get out of step with the data.
  *
  * The test on `Array.isArray` is deliberate, and not a length or truthiness
  * check. An empty array is a decision — the recipe was taken out of its last
- * cookbook — and must survive the round trip, which it does because `save`
- * always writes the field. Treating `[]` as absent here would make unfiling a
- * recipe silently undo itself on the next load.
+ * cookbook — and must survive the round trip. Treating `[]` as absent here would
+ * make unfiling a recipe silently undo itself on the next load.
  */
 function withCookbooks(recipe: Recipe): Recipe {
   if (Array.isArray(recipe.cookbooks)) return recipe;
@@ -102,13 +122,10 @@ function isRecipe(value: unknown): value is Recipe {
 }
 
 /**
- * Binds the abstract seam to the local implementation.
- *
- * This one line is the swap point: pointing it at an Http-backed repository is
- * all that moving the collection to api.samuelhinkhouse.com requires of the
- * front end.
+ * Binds the abstract seam to the API implementation. This one line is the swap
+ * point between it and a fake in tests.
  */
-export const provideLocalRecipes = (): Provider => ({
+export const provideHttpRecipes = (): Provider => ({
   provide: RecipeRepository,
-  useExisting: LocalRecipeRepository,
+  useExisting: HttpRecipeRepository,
 });

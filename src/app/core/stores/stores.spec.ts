@@ -1,21 +1,65 @@
 import { TestBed } from '@angular/core/testing';
-import { FAV_SEED } from '../mock/recipes.mock';
+import { FAV_SEED, Recipes } from '../mock/recipes.mock';
 import { DEFAULT_COOKBOOK_ID } from '../model/cookbooks.model';
-import { RecipeTemplate } from '../model/recipes.model';
-import { provideLocalRecipes } from '../recipe-repository';
-import { FakeCookbookRepository, provideFakeCookbooks } from '../testing/fake-repositories';
+import { Recipe, RecipeTemplate } from '../model/recipes.model';
+import {
+  FakeCookbookRepository,
+  FakeRecipeRepository,
+  provideFakeCookbooks,
+  provideFakeRecipes,
+} from '../testing/fake-repositories';
 import { CookbookStore } from './cookbook.store';
 import { ListStore, boughtKey } from './list.store';
 import { PrefsStore } from './prefs.store';
 import { RecipeStore, tagLabel } from './recipe.store';
 
+/** A complete recipe; the fixtures below each take one thing away. */
+function fixture(slug: string, over: Partial<Recipe> = {}): Recipe {
+  return {
+    slug,
+    title: slug,
+    tags: ['dinner'],
+    time: '20 min',
+    servings: 2,
+    cooked: 0,
+    blurb: '',
+    desc: '',
+    ingredients: [{ qty: 1, unit: 'cup', name: 'water', aisle: 'pantry' }],
+    steps: ['Boil it.'],
+    notes: [],
+    cookbooks: [DEFAULT_COOKBOOK_ID],
+    photo: 'photo.jpg',
+    ...over,
+  };
+}
+
+/** One recipe per gap, so each assertion below has a known right answer. */
+const GAP_FIXTURES: Recipe[] = [
+  fixture('no-method', { steps: [] }),
+  fixture('thin-steps', {
+    steps: ['Mix.', 'Bake.'],
+    ingredients: Array.from({ length: 8 }, (_, i) => ({
+      qty: 1,
+      unit: 'cup',
+      name: `thing-${i}`,
+      aisle: 'pantry' as const,
+    })),
+  }),
+  fixture('no-photo', { photo: undefined }),
+];
+
+function conflict(): Error {
+  return Object.assign(new Error('conflict'), { status: 409 });
+}
+
 describe('RecipeStore', () => {
   let store: RecipeStore;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
     store = TestBed.inject(RecipeStore);
+    await store.whenLoaded();
   });
 
   afterEach(() => localStorage.clear());
@@ -122,14 +166,18 @@ describe('RecipeStore', () => {
     expect(store.facetCount(meal)).toBe(2);
   });
 
-  it('filters by a gap, which is derived rather than tagged', () => {
-    const gaps = store.facets().find((f) => f.id === 'gaps')!;
+  it('filters by a gap, which is derived rather than tagged', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideFakeRecipes(new FakeRecipeRepository(GAP_FIXTURES))],
+    });
+    const gapped = TestBed.inject(RecipeStore);
+    await gapped.whenLoaded();
+    const gaps = gapped.facets().find((f) => f.id === 'gaps')!;
     expect(gaps.kind).toBe('gap');
 
-    store.toggleOption(gaps, 'method');
-    const noMethod = store.results();
-    expect(noMethod.length).toBe(3);
-    for (const r of noMethod) expect(r.steps.length).toBe(0);
+    gapped.toggleOption(gaps, 'method');
+    expect(gapped.results().map((r) => r.slug)).toEqual(['no-method']);
   });
 
   it('widens within the gap facet, as the tag facets do', () => {
@@ -153,11 +201,15 @@ describe('RecipeStore', () => {
     }
   });
 
-  it('counts each gap for the option labels', () => {
-    const counts = store.gapCounts();
-    expect(counts['method']).toBe(3);
-    expect(counts['photo']).toBe(58);
-    expect(counts['steps']).toBeGreaterThan(0);
+  it('counts each gap for the option labels', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideFakeRecipes(new FakeRecipeRepository(GAP_FIXTURES))],
+    });
+    const gapped = TestBed.inject(RecipeStore);
+    await gapped.whenLoaded();
+    expect(gapped.gapCounts()).toEqual({ method: 1, steps: 1, photo: 1 });
+    expect(gapped.needsWorkCount()).toBe(3);
   });
 
   it('clears the gap facet without disturbing the tag facets', () => {
@@ -219,13 +271,147 @@ describe('RecipeStore', () => {
   });
 });
 
+describe('RecipeStore lifecycle and writes', () => {
+  function setup(fake = new FakeRecipeRepository()): RecipeStore {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes(fake)] });
+    return TestBed.inject(RecipeStore);
+  }
+
+  it('is loading until the repository answers, then ready', async () => {
+    const fresh = setup();
+    expect(fresh.status()).toBe('loading');
+    expect(fresh.recipes()).toEqual([]);
+    await fresh.whenLoaded();
+    expect(fresh.status()).toBe('ready');
+    expect(fresh.recipes().length).toBe(Recipes.length);
+  });
+
+  it('ends in error when the first load fails, and recovers on a retry', async () => {
+    const fake = new FakeRecipeRepository();
+    fake.failNext(new Error('down'));
+    const fresh = setup(fake);
+    await fresh.whenLoaded();
+    expect(fresh.status()).toBe('error');
+    expect(fresh.recipes()).toEqual([]);
+
+    await fresh.load();
+    expect(fresh.status()).toBe('ready');
+    expect(fresh.recipes().length).toBe(Recipes.length);
+  });
+
+  it('shares one load between callers while it is in flight', async () => {
+    const fake = new FakeRecipeRepository();
+    const list = spyOn(fake, 'list').and.callThrough();
+    const fresh = setup(fake);
+    // The constructor has already started the first load.
+    const a = fresh.load();
+    const b = fresh.load();
+    expect(b).toBe(a);
+    await a;
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  it('mirrors the repository writable flag', () => {
+    expect(setup().writable).toBe(true);
+  });
+
+  it('adds a recipe and keeps it', async () => {
+    const store = setup();
+    await store.whenLoaded();
+    const slug = await store.add(fixture('weeknight-dal', { title: 'Weeknight Dal' }));
+    expect(slug).toBe('weeknight-dal');
+    expect(store.bySlug('weeknight-dal')?.title).toBe('Weeknight Dal');
+    expect(store.recipes().length).toBe(Recipes.length + 1);
+  });
+
+  it('suffixes a slug that is already taken, and keeps both', async () => {
+    const store = setup();
+    await store.whenLoaded();
+    const slug = await store.add(fixture('grandmas-chili', { title: 'My Chili' }));
+    expect(slug).toBe('grandmas-chili-2');
+    expect(store.bySlug('grandmas-chili')?.title).toBe("Grandma's Chili");
+    expect(store.bySlug('grandmas-chili-2')?.title).toBe('My Chili');
+  });
+
+  it('rejects an add the server calls a conflict, leaving the list untouched', async () => {
+    const fake = new FakeRecipeRepository();
+    const store = setup(fake);
+    await store.whenLoaded();
+    const before = store.recipes();
+
+    const error = conflict();
+    fake.failNext(error);
+    await expectAsync(store.add(fixture('weeknight-dal'))).toBeRejectedWith(error);
+    // No retry under another suffix: the signal and the fake both stay as they were.
+    expect(store.recipes()).toBe(before);
+    expect(store.bySlug('weeknight-dal-2')).toBeUndefined();
+  });
+
+  it('removes a recipe', async () => {
+    const store = setup();
+    await store.whenLoaded();
+    expect(await store.remove('grandmas-chili')).toBe(true);
+    expect(store.bySlug('grandmas-chili')).toBeUndefined();
+  });
+
+  it('reports false when removing a slug that is not there', async () => {
+    const store = setup();
+    await store.whenLoaded();
+    expect(await store.remove('no-such-recipe')).toBe(false);
+  });
+
+  it('leaves the list untouched when a remove is rejected', async () => {
+    const fake = new FakeRecipeRepository();
+    const store = setup(fake);
+    await store.whenLoaded();
+    const before = store.recipes();
+    fake.failNext(new Error('x'));
+    await expectAsync(store.remove('grandmas-chili')).toBeRejected();
+    expect(store.recipes()).toBe(before);
+  });
+
+  it('updates a recipe in place', async () => {
+    const store = setup();
+    await store.whenLoaded();
+    const existing = store.bySlug('grandmas-chili')!;
+    expect(await store.update({ ...existing, cooked: 99 })).toBe(true);
+    expect(store.bySlug('grandmas-chili')?.cooked).toBe(99);
+    expect(await store.update({ ...existing, slug: 'ghost' })).toBe(false);
+  });
+
+  it('leaves the list untouched when an update is rejected', async () => {
+    const fake = new FakeRecipeRepository();
+    const store = setup(fake);
+    await store.whenLoaded();
+    const before = store.recipes();
+    const existing = store.bySlug('grandmas-chili')!;
+    fake.failNext(new Error('x'));
+    await expectAsync(store.update({ ...existing, cooked: 99 })).toBeRejected();
+    expect(store.recipes()).toBe(before);
+  });
+
+  it('keeps the derived facets in step with an added recipe', async () => {
+    const store = setup();
+    await store.whenLoaded();
+    await store.add(fixture('thai-curry', { title: 'Thai Curry', tags: ['thai', 'dinner'] }));
+    // Tags are derived, so a new tag has to reach the filter controls. It is
+    // not in any defined group, so it belongs to the catch-all.
+    expect(store.tags()).toContain('thai');
+    expect(store.facets().find((f) => f.id === 'other')?.options).toContain('thai');
+  });
+});
+
 describe('RecipeStore cookbook membership', () => {
   let store: RecipeStore;
+  let fake: FakeRecipeRepository;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    fake = new FakeRecipeRepository();
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes(fake)] });
     store = TestBed.inject(RecipeStore);
+    await store.whenLoaded();
   });
 
   afterEach(() => localStorage.clear());
@@ -241,59 +427,47 @@ describe('RecipeStore cookbook membership', () => {
     expect(RecipeTemplate.cookbooks).toEqual([]);
   });
 
-  it('files a recipe into an additional cookbook, keeping the one it had', () => {
-    expect(store.addToCookbook('grandmas-chili', 'grandmas')).toBe(true);
+  it('files a recipe into an additional cookbook, keeping the one it had', async () => {
+    expect(await store.addToCookbook('grandmas-chili', 'grandmas')).toBe(true);
     expect(store.bySlug('grandmas-chili')?.cookbooks).toEqual([DEFAULT_COOKBOOK_ID, 'grandmas']);
   });
 
-  it('files the same recipe into two cookbooks at once', () => {
-    store.addToCookbook('grandmas-chili', 'grandmas');
-    store.addToCookbook('grandmas-chili', 'bobs');
+  it('files the same recipe into two cookbooks at once', async () => {
+    await store.addToCookbook('grandmas-chili', 'grandmas');
+    await store.addToCookbook('grandmas-chili', 'bobs');
     expect(store.inCookbook('grandmas').map((r) => r.slug)).toContain('grandmas-chili');
     expect(store.inCookbook('bobs').map((r) => r.slug)).toContain('grandmas-chili');
   });
 
-  it('ignores a second filing into the same cookbook', () => {
-    store.addToCookbook('grandmas-chili', 'grandmas');
-    expect(store.addToCookbook('grandmas-chili', 'grandmas')).toBe(false);
+  it('ignores a second filing into the same cookbook', async () => {
+    await store.addToCookbook('grandmas-chili', 'grandmas');
+    expect(await store.addToCookbook('grandmas-chili', 'grandmas')).toBe(false);
     // Without the guard the id would appear twice, and every count derived from
     // membership would double for this recipe.
     expect(store.bySlug('grandmas-chili')?.cookbooks).toEqual([DEFAULT_COOKBOOK_ID, 'grandmas']);
   });
 
-  it('reports false when filing a slug that is not there', () => {
-    expect(store.addToCookbook('no-such-recipe', 'grandmas')).toBe(false);
+  it('reports false when filing a slug that is not there', async () => {
+    expect(await store.addToCookbook('no-such-recipe', 'grandmas')).toBe(false);
   });
 
-  it('unfiles a recipe without deleting it', () => {
-    expect(store.removeFromCookbook('grandmas-chili', DEFAULT_COOKBOOK_ID)).toBe(true);
+  it('leaves the recipe unchanged when filing it is rejected', async () => {
+    const before = store.bySlug('grandmas-chili');
+    fake.failNext(new Error('x'));
+    await expectAsync(store.addToCookbook('grandmas-chili', 'grandmas')).toBeRejected();
+    expect(store.bySlug('grandmas-chili')).toBe(before);
+    expect(store.bySlug('grandmas-chili')?.cookbooks).toEqual([DEFAULT_COOKBOOK_ID]);
+  });
+
+  it('unfiles a recipe without deleting it', async () => {
+    expect(await store.removeFromCookbook('grandmas-chili', DEFAULT_COOKBOOK_ID)).toBe(true);
     expect(store.bySlug('grandmas-chili')?.cookbooks).toEqual([]);
     // The point of allowing zero cookbooks: the recipe is still yours.
     expect(store.bySlug('grandmas-chili')).toBeDefined();
   });
 
-  it('reports false when unfiling from a cookbook it was never in', () => {
-    expect(store.removeFromCookbook('grandmas-chili', 'grandmas')).toBe(false);
-  });
-
-  it('strips a cookbook from every recipe that carried it', () => {
-    store.addToCookbook('grandmas-chili', 'grandmas');
-    store.addToCookbook('grandmas-spaghetti', 'grandmas');
-    store.stripCookbook('grandmas');
-    expect(store.inCookbook('grandmas')).toEqual([]);
-    // Only that membership goes; the recipes and their other cookbooks stay.
-    expect(store.recipes().length).toBe(72);
-    expect(store.bySlug('grandmas-chili')?.cookbooks).toEqual([DEFAULT_COOKBOOK_ID]);
-  });
-
-  it('keeps membership across a fresh injection', async () => {
-    store.addToCookbook('grandmas-chili', 'grandmas');
-
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
-    const fresh = TestBed.inject(RecipeStore);
-    await new Promise<void>((r) => setTimeout(r, 0));
-    expect(fresh.bySlug('grandmas-chili')?.cookbooks).toContain('grandmas');
+  it('reports false when unfiling from a cookbook it was never in', async () => {
+    expect(await store.removeFromCookbook('grandmas-chili', 'grandmas')).toBe(false);
   });
 });
 
@@ -304,11 +478,12 @@ describe('CookbookStore', () => {
   beforeEach(async () => {
     localStorage.clear();
     TestBed.configureTestingModule({
-      providers: [provideLocalRecipes(), provideFakeCookbooks()],
+      providers: [provideFakeRecipes(), provideFakeCookbooks()],
     });
     cookbooks = TestBed.inject(CookbookStore);
     recipes = TestBed.inject(RecipeStore);
     await cookbooks.whenLoaded();
+    await recipes.whenLoaded();
   });
 
   afterEach(() => localStorage.clear());
@@ -320,7 +495,7 @@ describe('CookbookStore', () => {
   it('is loading until the repository answers, then ready', async () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [provideLocalRecipes(), provideFakeCookbooks()],
+      providers: [provideFakeRecipes(), provideFakeCookbooks()],
     });
     const fresh = TestBed.inject(CookbookStore);
     expect(fresh.status()).toBe('loading');
@@ -334,7 +509,7 @@ describe('CookbookStore', () => {
     fake.failNext(new Error('down'));
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [provideLocalRecipes(), provideFakeCookbooks(fake)],
+      providers: [provideFakeRecipes(), provideFakeCookbooks(fake)],
     });
     const fresh = TestBed.inject(CookbookStore);
     await fresh.whenLoaded();
@@ -344,6 +519,22 @@ describe('CookbookStore', () => {
     await fresh.load();
     expect(fresh.status()).toBe('ready');
     expect(fresh.cookbooks().map((c) => c.id)).toEqual([DEFAULT_COOKBOOK_ID]);
+  });
+
+  it('shares one load between callers while it is in flight', async () => {
+    const fake = new FakeCookbookRepository();
+    const list = spyOn(fake, 'list').and.callThrough();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideFakeRecipes(), provideFakeCookbooks(fake)],
+    });
+    const fresh = TestBed.inject(CookbookStore);
+    // The constructor has already started the first load.
+    const a = fresh.load();
+    const b = fresh.load();
+    expect(b).toBe(a);
+    await a;
+    expect(list).toHaveBeenCalledTimes(1);
   });
 
   it('mirrors the repository writable flag', () => {
@@ -371,7 +562,7 @@ describe('CookbookStore', () => {
     const fake = new FakeCookbookRepository();
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [provideLocalRecipes(), provideFakeCookbooks(fake)],
+      providers: [provideFakeRecipes(), provideFakeCookbooks(fake)],
     });
     const store = TestBed.inject(CookbookStore);
     await store.whenLoaded();
@@ -395,13 +586,13 @@ describe('CookbookStore', () => {
 
   it('lists the recipes filed in a cookbook', async () => {
     await cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" });
-    recipes.addToCookbook('grandmas-chili', 'grandmas');
+    await recipes.addToCookbook('grandmas-chili', 'grandmas');
     expect(cookbooks.recipesIn('grandmas').map((r) => r.slug)).toEqual(['grandmas-chili']);
   });
 
   it('removes a cookbook without touching any recipe', async () => {
     await cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" });
-    recipes.addToCookbook('grandmas-chili', 'grandmas');
+    await recipes.addToCookbook('grandmas-chili', 'grandmas');
     const before = recipes.recipes().map((r) => [...r.cookbooks]);
 
     expect(await cookbooks.remove('grandmas')).toBe(true);
@@ -419,7 +610,7 @@ describe('CookbookStore', () => {
 describe('PrefsStore', () => {
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
   });
 
   afterEach(() => localStorage.clear());
@@ -441,7 +632,7 @@ describe('PrefsStore', () => {
   it('persists favourites across a fresh injection', () => {
     TestBed.inject(PrefsStore).toggleFav('grandmas-spaghetti');
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
     expect(TestBed.inject(PrefsStore).isFav('grandmas-spaghetti')).toBe(false);
   });
 
@@ -451,7 +642,7 @@ describe('PrefsStore', () => {
     expect(prefs.favCount()).toBe(0);
 
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
     // The bug this guards: treating "empty" as "unseeded" and handing back the
     // seed, so clearing favourites silently undid itself on reload.
     expect(TestBed.inject(PrefsStore).favCount()).toBe(0);
@@ -464,7 +655,7 @@ describe('PrefsStore', () => {
     expect(prefs.layout()).toBe('single-column');
 
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
     expect(TestBed.inject(PrefsStore).layout()).toBe('single-column');
   });
 });
@@ -473,11 +664,12 @@ describe('ListStore', () => {
   let list: ListStore;
   let recipes: RecipeStore;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
     list = TestBed.inject(ListStore);
     recipes = TestBed.inject(RecipeStore);
+    await recipes.whenLoaded();
   });
 
   afterEach(() => localStorage.clear());
@@ -572,11 +764,12 @@ describe('ListStore', () => {
     expect(list.has('grandmas-chili')).toBe(false);
   });
 
-  it('ignores a stored slug that no longer matches a recipe', () => {
+  it('ignores a stored slug that no longer matches a recipe', async () => {
     localStorage.setItem('cookbook.cart', JSON.stringify(['deleted-recipe']));
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
     const fresh = TestBed.inject(ListStore);
+    await TestBed.inject(RecipeStore).whenLoaded();
     expect(fresh.cart()).toEqual(['deleted-recipe']);
     expect(() => fresh.groups()).not.toThrow();
     expect(fresh.totalItems()).toBe(0);
@@ -587,7 +780,7 @@ describe('ListStore', () => {
     list.toggleBought('grandmas-chili', 1);
 
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
     const fresh = TestBed.inject(ListStore);
     expect(fresh.cart()).toEqual(['grandmas-chili']);
     expect(fresh.isBought('grandmas-chili', 1)).toBe(true);

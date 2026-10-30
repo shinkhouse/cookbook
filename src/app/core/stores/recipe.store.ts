@@ -1,6 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Recipe } from '../model/recipes.model';
-import { Recipes } from '../mock/recipes.mock';
 import { Facet, buildFacets, matchesSelection } from '../facets';
 import { gapKeys, gapsOf } from '../recipe-health';
 import { RecipeRepository } from '../recipe-repository';
@@ -9,9 +8,11 @@ import { PrefsStore } from './prefs.store';
 /**
  * The recipe collection plus the library's search and filter state.
  *
- * The collection persists through RecipeRepository. The search text and the tag
- * selection deliberately do not (§2.2), so a reload lands on the full library
- * rather than on whatever was last filtered.
+ * The collection lives behind RecipeRepository, i.e. in the API. Writes go there
+ * first and the signal changes only once it has answered, so a rejected write
+ * leaves what is on screen matching what is stored. The search text and the tag
+ * selection are not stored anywhere (§2.2), so a reload lands on the full
+ * library rather than on whatever was last filtered.
  */
 @Injectable({ providedIn: 'root' })
 export class RecipeStore {
@@ -20,19 +21,46 @@ export class RecipeStore {
   private readonly prefs = inject(PrefsStore);
   private readonly repo = inject(RecipeRepository);
 
-  /**
-   * Starts from the bundled data so the first paint has something to show, then
-   * the repository's answer replaces it. Without the synchronous seed the
-   * library would flash empty on every load.
-   */
-  private readonly _recipes = signal<readonly Recipe[]>(Recipes);
+  /** Empty until the API answers; `status` says whether that has happened. */
+  private readonly _recipes = signal<readonly Recipe[]>([]);
+  private readonly _status = signal<'loading' | 'ready' | 'error'>('loading');
+  private inflight: Promise<void> | null = null;
 
   readonly recipes = computed(() => this._recipes());
+  readonly status = this._status.asReadonly();
+
+  /** Whether this build may write; screens omit add/edit/delete when not. */
+  readonly writable = this.repo.writable;
 
   constructor() {
-    void this.repo.load().then((loaded) => {
-      if (loaded.length > 0) this._recipes.set(loaded);
-    });
+    void this.load();
+  }
+
+  /**
+   * Fetches the collection and sets `status`. Never rejects — a failure is
+   * `status === 'error'`, and calling this again is how the UI retries. While a
+   * load is in flight, calling it again returns that same promise.
+   */
+  load(): Promise<void> {
+    // One load at a time: a second caller shares the first's promise, so an
+    // older, slower response can never land after a newer one and overwrite it.
+    if (this.inflight) return this.inflight;
+    this._status.set('loading');
+    const run = this.repo.list().then(
+      (loaded) => {
+        this._recipes.set(loaded);
+        this._status.set('ready');
+      },
+      () => this._status.set('error'),
+    );
+    this.inflight = run;
+    void run.then(() => (this.inflight = null));
+    return run;
+  }
+
+  /** Resolves once `status` has left 'loading'. */
+  async whenLoaded(): Promise<void> {
+    while (this._status() === 'loading' && this.inflight) await this.inflight;
   }
 
   readonly query = signal('');
@@ -90,38 +118,43 @@ export class RecipeStore {
   }
 
   /**
-   * Adds a recipe from the create flow and persists the collection.
+   * Adds a recipe from the create flow.
    *
-   * Returns the slug actually used, which may be suffixed to stay unique.
+   * Returns the slug actually used, which may be suffixed to stay unique. The
+   * suffix is chosen against what is loaded, so it avoids a clash we can see; a
+   * clash only the server can see (409) rejects as it is, with no retry under
+   * another suffix — silently filing the recipe somewhere the user did not ask
+   * for is worse than telling them. Throws if the API refuses, leaving the list
+   * as it was.
    */
-  add(recipe: Recipe): string {
+  async add(recipe: Recipe): Promise<string> {
     const slug = this.uniqueSlug(recipe.slug);
-    this._recipes.update((list) => [{ ...recipe, slug }, ...list]);
-    this.persist();
-    return slug;
+    const stored = await this.repo.create({ ...recipe, slug });
+    this._recipes.update((list) => [stored, ...list]);
+    return stored.slug;
   }
 
-  /** Removes a recipe and persists. Returns false if the slug was unknown. */
-  remove(slug: string): boolean {
-    const before = this._recipes().length;
+  /**
+   * Removes a recipe. Returns false if the server did not know the slug; the
+   * stale local entry is dropped either way, since the server has just said it
+   * is gone. Throws if the API refuses, leaving the list as it was.
+   */
+  async remove(slug: string): Promise<boolean> {
+    const removed = await this.repo.remove(slug);
     this._recipes.update((list) => list.filter((r) => r.slug !== slug));
-    if (this._recipes().length === before) return false;
-    this.persist();
-    return true;
+    return removed;
   }
 
-  /** Replaces an existing recipe, matched on slug. */
-  update(recipe: Recipe): boolean {
-    let found = false;
-    this._recipes.update((list) =>
-      list.map((r) => {
-        if (r.slug !== recipe.slug) return r;
-        found = true;
-        return recipe;
-      }),
-    );
-    if (found) this.persist();
-    return found;
+  /**
+   * Replaces an existing recipe, matched on slug. Returns false if the slug was
+   * unknown, here or on the server. Throws if the API refuses.
+   */
+  async update(recipe: Recipe): Promise<boolean> {
+    if (!this.bySlug(recipe.slug)) return false;
+    const stored = await this.repo.update(recipe);
+    if (!stored) return false;
+    this._recipes.update((list) => list.map((r) => (r.slug === stored.slug ? stored : r)));
+    return true;
   }
 
   /**
@@ -139,9 +172,10 @@ export class RecipeStore {
    *
    * Returns false when the slug is unknown or the recipe is already filed there,
    * so a repeat call is a no-op rather than a duplicate id — every count derived
-   * from membership would otherwise double for that recipe.
+   * from membership would otherwise double for that recipe. Throws if the API
+   * refuses, leaving the recipe's cookbooks as they were.
    */
-  addToCookbook(slug: string, cookbookId: string): boolean {
+  async addToCookbook(slug: string, cookbookId: string): Promise<boolean> {
     const recipe = this.bySlug(slug);
     if (!recipe || recipe.cookbooks.includes(cookbookId)) return false;
     return this.update({ ...recipe, cookbooks: [...recipe.cookbooks, cookbookId] });
@@ -151,48 +185,16 @@ export class RecipeStore {
    * Takes a recipe out of a cookbook, leaving the recipe alone. Removing its
    * last cookbook is allowed — an unfiled recipe is still yours.
    *
-   * Returns false when the slug is unknown or it was never filed there.
+   * Returns false when the slug is unknown or it was never filed there. Throws
+   * if the API refuses.
    */
-  removeFromCookbook(slug: string, cookbookId: string): boolean {
+  async removeFromCookbook(slug: string, cookbookId: string): Promise<boolean> {
     const recipe = this.bySlug(slug);
     if (!recipe || !recipe.cookbooks.includes(cookbookId)) return false;
     return this.update({
       ...recipe,
       cookbooks: recipe.cookbooks.filter((id) => id !== cookbookId),
     });
-  }
-
-  /**
-   * Drops a cookbook id from every recipe carrying it.
-   *
-   * Named for what it does rather than for its caller: this store knows nothing
-   * about cookbooks as entities, only that a recipe carries a list of ids, the
-   * same way it carries tags. CookbookStore.remove is what calls it, so that no
-   * recipe is left pointing at a cookbook that no longer exists.
-   */
-  stripCookbook(cookbookId: string): void {
-    let touched = false;
-    this._recipes.update((list) =>
-      list.map((r) => {
-        if (!r.cookbooks.includes(cookbookId)) return r;
-        touched = true;
-        return { ...r, cookbooks: r.cookbooks.filter((id) => id !== cookbookId) };
-      }),
-    );
-    if (touched) this.persist();
-  }
-
-  /** Throws away local changes and goes back to the bundled collection. */
-  resetToSeed(): void {
-    this._recipes.set([...Recipes]);
-    this.persist();
-  }
-
-  private persist(): void {
-    // Fire and forget: the in-memory signal is already the truth for this
-    // session, and a failed write must not take the interaction down with it.
-    // The Storage wrapper degrades to memory rather than throwing.
-    void this.repo.save(this._recipes());
   }
 
   private uniqueSlug(desired: string): string {

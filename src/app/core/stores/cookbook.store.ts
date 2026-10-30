@@ -44,9 +44,13 @@ export class CookbookStore {
 
   /**
    * Fetches the collection and sets `status`. Never rejects — a failure is
-   * `status === 'error'`, and calling this again is how the UI retries.
+   * `status === 'error'`, and calling this again is how the UI retries. While a
+   * load is in flight, calling it again returns that same promise.
    */
   load(): Promise<void> {
+    // One load at a time: a second caller shares the first's promise, so an
+    // older, slower response can never land after a newer one and overwrite it.
+    if (this.inflight) return this.inflight;
     this._status.set('loading');
     const run = this.repo.list().then(
       (loaded) => {
@@ -56,6 +60,7 @@ export class CookbookStore {
       () => this._status.set('error'),
     );
     this.inflight = run;
+    void run.then(() => (this.inflight = null));
     return run;
   }
 

@@ -132,7 +132,7 @@ export class CreateRecipeComponent {
       const { meta } = splitFrontMatter(text);
       const parsed = parseRecipeText(text);
       if (!parsed.title || parsed.ingredients.length === 0) continue;
-      this.recipes.add({
+      await this.recipes.add({
         slug: slugify(parsed.title),
         title: parsed.title,
         tags: meta.tags ?? [],
@@ -265,10 +265,10 @@ export class CreateRecipeComponent {
 
   // ---- Confirm -----------------------------------------------------------
 
-  protected save(): void {
+  protected async save(): Promise<void> {
     if (!this.canSave()) return;
     const recipe = this.draft();
-    const slug = this.recipes.add({
+    const slug = await this.recipes.add({
       ...recipe,
       // Drop the blank rows the manual editor leaves behind.
       steps: recipe.steps.map((s) => s.trim()).filter(Boolean),

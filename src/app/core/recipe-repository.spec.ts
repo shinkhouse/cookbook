@@ -1,11 +1,11 @@
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { DEFAULT_COOKBOOK_ID } from './model/cookbooks.model';
 import { Recipe } from './model/recipes.model';
-import { Recipes } from './mock/recipes.mock';
-import { LocalRecipeRepository, RecipeRepository, provideLocalRecipes } from './recipe-repository';
-import { RecipeStore } from './stores/recipe.store';
+import { HttpRecipeRepository, RecipeRepository, provideHttpRecipes } from './recipe-repository';
 
-const KEY = 'cookbook.recipes';
+const URL = '/api/recipes';
 
 function draft(slug: string, title = 'A Recipe'): Recipe {
   return {
@@ -24,174 +24,155 @@ function draft(slug: string, title = 'A Recipe'): Recipe {
   };
 }
 
-describe('LocalRecipeRepository', () => {
+describe('HttpRecipeRepository', () => {
   let repo: RecipeRepository;
+  let httpMock: HttpTestingController;
 
   beforeEach(() => {
-    localStorage.clear();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideHttpRecipes()],
+    });
     repo = TestBed.inject(RecipeRepository);
+    httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => localStorage.clear());
+  afterEach(() => httpMock.verify());
 
-  it('resolves to the concrete local implementation', () => {
-    expect(repo).toBeInstanceOf(LocalRecipeRepository);
-    expect(repo.durable).toBe(true);
+  it('resolves to the concrete Http implementation, writable in development', () => {
+    expect(repo).toBeInstanceOf(HttpRecipeRepository);
+    expect(repo.writable).toBe(true);
   });
 
-  it('hands back the bundled collection when nothing is stored', async () => {
-    const loaded = await repo.load();
-    expect(loaded.length).toBe(Recipes.length);
-  });
-
-  it('round-trips a saved collection', async () => {
-    await repo.save([draft('a'), draft('b')]);
-    const loaded = await repo.load();
-    expect(loaded.map((r) => r.slug)).toEqual(['a', 'b']);
-  });
-
-  it('respects a deliberately emptied collection rather than reseeding', async () => {
-    await repo.save([]);
-    // The same rule PrefsStore uses for favourites: an empty array is a
-    // decision, not an absence, so the seed must not come back.
-    expect(await repo.load()).toEqual([]);
-  });
-
-  it('falls back to the seed when the stored entry is not an array', async () => {
-    localStorage.setItem(KEY, JSON.stringify({ not: 'an array' }));
-    expect((await repo.load()).length).toBe(Recipes.length);
-  });
-
-  it('falls back to the seed when the stored entry is corrupt', async () => {
-    localStorage.setItem(KEY, '{ broken json');
-    expect((await repo.load()).length).toBe(Recipes.length);
-  });
-
-  it('files a recipe stored before cookbooks existed into the default cookbook', async () => {
-    const { cookbooks, ...legacy } = draft('pre-cookbooks');
-    localStorage.setItem(KEY, JSON.stringify([legacy]));
-    const loaded = await repo.load();
-    expect(loaded[0].cookbooks).toEqual([DEFAULT_COOKBOOK_ID]);
-  });
-
-  it('keeps a deliberately unfiled recipe unfiled', async () => {
-    // The counterpart to the test above, and the reason `save` must always write
-    // the field: if backfilling treated an empty array as "absent", taking a
-    // recipe out of its last cookbook would silently undo itself on reload.
-    await repo.save([{ ...draft('unfiled'), cookbooks: [] }]);
-    const loaded = await repo.load();
-    expect(loaded[0].cookbooks).toEqual([]);
-  });
-
-  it('keeps a recipe filed in several cookbooks in all of them', async () => {
-    await repo.save([{ ...draft('shared'), cookbooks: ['sams-cookbook', 'grandmas'] }]);
-    const loaded = await repo.load();
-    expect(loaded[0].cookbooks).toEqual(['sams-cookbook', 'grandmas']);
-  });
-
-  it('normalises a cookbooks value that is not an array', async () => {
-    localStorage.setItem(
-      KEY,
-      JSON.stringify([{ ...draft('corrupt'), cookbooks: 'sams-cookbook' }]),
-    );
-    const loaded = await repo.load();
-    // Normalised rather than dropped: the recipe itself is fine, and a string
-    // here would break every consumer that expects to iterate.
-    expect(loaded[0].cookbooks).toEqual([DEFAULT_COOKBOOK_ID]);
+  it('lists from GET /recipes', async () => {
+    const result = repo.list();
+    httpMock.expectOne({ method: 'GET', url: URL }).flush([draft('a'), draft('b')]);
+    expect((await result).map((r) => r.slug)).toEqual(['a', 'b']);
   });
 
   it('drops a malformed recipe rather than letting it reach a screen', async () => {
-    localStorage.setItem(
-      KEY,
-      JSON.stringify([draft('good'), { slug: 'bad', title: 'No arrays here' }]),
-    );
-    const loaded = await repo.load();
+    const result = repo.list();
+    httpMock
+      .expectOne(URL)
+      .flush([draft('good'), { slug: 'bad', title: 'No arrays here' }, { title: 'no slug' }]);
     // A recipe missing its ingredients array would throw on render.
-    expect(loaded.map((r) => r.slug)).toEqual(['good']);
-  });
-});
-
-describe('RecipeStore persistence', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
+    expect((await result).map((r) => r.slug)).toEqual(['good']);
   });
 
-  afterEach(() => localStorage.clear());
-
-  /** The store loads asynchronously, so give the microtask queue a turn. */
-  const settled = () => new Promise<void>((r) => setTimeout(r, 0));
-
-  it('adds a recipe and keeps it across a fresh injection', async () => {
-    const store = TestBed.inject(RecipeStore);
-    await settled();
-    const slug = store.add(draft('weeknight-dal', 'Weeknight Dal'));
-    expect(slug).toBe('weeknight-dal');
-
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
-    const fresh = TestBed.inject(RecipeStore);
-    await settled();
-    // The gap this closes: a saved recipe used to vanish on reload.
-    expect(fresh.bySlug('weeknight-dal')?.title).toBe('Weeknight Dal');
-    expect(fresh.recipes().length).toBe(Recipes.length + 1);
+  it('drops a record without ingredients', async () => {
+    const { ingredients, ...noIngredients } = draft('hollow');
+    const result = repo.list();
+    httpMock.expectOne(URL).flush([noIngredients]);
+    expect(await result).toEqual([]);
   });
 
-  it('suffixes a slug that is already taken, and keeps both', async () => {
-    const store = TestBed.inject(RecipeStore);
-    await settled();
-    const slug = store.add(draft('grandmas-chili', 'My Chili'));
-    expect(slug).toBe('grandmas-chili-2');
-    expect(store.bySlug('grandmas-chili')?.title).toBe("Grandma's Chili");
-    expect(store.bySlug('grandmas-chili-2')?.title).toBe('My Chili');
+  it('files a recipe without cookbooks into the default cookbook', async () => {
+    const { cookbooks, ...legacy } = draft('pre-cookbooks');
+    const result = repo.list();
+    httpMock.expectOne(URL).flush([legacy]);
+    expect((await result)[0].cookbooks).toEqual([DEFAULT_COOKBOOK_ID]);
   });
 
-  it('removes a recipe, and the removal survives too', async () => {
-    const store = TestBed.inject(RecipeStore);
-    await settled();
-    expect(store.remove('grandmas-chili')).toBe(true);
-
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideLocalRecipes()] });
-    const fresh = TestBed.inject(RecipeStore);
-    await settled();
-    expect(fresh.bySlug('grandmas-chili')).toBeUndefined();
+  it('keeps a deliberately unfiled recipe unfiled', async () => {
+    // An empty array is a decision, not an absence: treating it as missing would
+    // make unfiling a recipe silently undo itself on the next load.
+    const result = repo.list();
+    httpMock.expectOne(URL).flush([{ ...draft('unfiled'), cookbooks: [] }]);
+    expect((await result)[0].cookbooks).toEqual([]);
   });
 
-  it('reports false when removing a slug that is not there', async () => {
-    const store = TestBed.inject(RecipeStore);
-    await settled();
-    expect(store.remove('no-such-recipe')).toBe(false);
+  it('keeps a recipe filed in several cookbooks in all of them', async () => {
+    const result = repo.list();
+    httpMock
+      .expectOne(URL)
+      .flush([{ ...draft('shared'), cookbooks: ['sams-cookbook', 'grandmas'] }]);
+    expect((await result)[0].cookbooks).toEqual(['sams-cookbook', 'grandmas']);
   });
 
-  it('updates a recipe in place', async () => {
-    const store = TestBed.inject(RecipeStore);
-    await settled();
-    const existing = store.bySlug('grandmas-chili')!;
-    expect(store.update({ ...existing, cooked: 99 })).toBe(true);
-    expect(store.bySlug('grandmas-chili')?.cooked).toBe(99);
-    expect(store.update({ ...existing, slug: 'ghost' })).toBe(false);
+  it('normalises a cookbooks value that is not an array', async () => {
+    const result = repo.list();
+    httpMock.expectOne(URL).flush([{ ...draft('corrupt'), cookbooks: 'sams-cookbook' }]);
+    // Normalised rather than dropped: the recipe itself is fine, and a string
+    // here would break every consumer that expects to iterate.
+    expect((await result)[0].cookbooks).toEqual([DEFAULT_COOKBOOK_ID]);
   });
 
-  it('goes back to the bundled collection on request', async () => {
-    const store = TestBed.inject(RecipeStore);
-    await settled();
-    store.add(draft('extra'));
-    store.remove('grandmas-chili');
-    store.resetToSeed();
-    expect(store.recipes().length).toBe(Recipes.length);
-    expect(store.bySlug('extra')).toBeUndefined();
-    expect(store.bySlug('grandmas-chili')).toBeDefined();
+  it('rejects a list that fails', async () => {
+    const result = repo.list();
+    httpMock.expectOne(URL).flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    await expectAsync(result).toBeRejected();
   });
 
-  it('keeps the derived facets in step with an added recipe', async () => {
-    const store = TestBed.inject(RecipeStore);
-    await settled();
-    store.add({ ...draft('thai-curry', 'Thai Curry'), tags: ['thai', 'dinner'] });
-    // Tags are derived, so a new tag has to reach the filter controls. It is
-    // not in any defined group, so it belongs to the catch-all.
-    expect(store.tags()).toContain('thai');
-    expect(store.facets().find((f) => f.id === 'other')?.options).toContain('thai');
+  it('creates with POST /recipes and resolves to the response', async () => {
+    const r = draft('weeknight-dal');
+    const result = repo.create(r);
+    const req = httpMock.expectOne({ method: 'POST', url: URL });
+    expect(req.request.body).toEqual(r);
+    req.flush({ ...r }, { status: 201, statusText: 'Created' });
+    expect(await result).toEqual(r);
+  });
+
+  it('rejects a create that conflicts, carrying the status', async () => {
+    const result = repo.create(draft('weeknight-dal'));
+    httpMock.expectOne(URL).flush({ message: 'exists' }, { status: 409, statusText: 'Conflict' });
+    const error = await result.catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(HttpErrorResponse);
+    expect((error as HttpErrorResponse).status).toBe(409);
+  });
+
+  it('updates with PUT /recipes/:slug', async () => {
+    const r = draft('weeknight-dal', 'Renamed');
+    const result = repo.update(r);
+    const req = httpMock.expectOne({ method: 'PUT', url: `${URL}/weeknight-dal` });
+    expect(req.request.body).toEqual(r);
+    req.flush(r);
+    expect(await result).toEqual(r);
+  });
+
+  it('resolves an update of a missing recipe to null', async () => {
+    const result = repo.update(draft('nope'));
+    httpMock
+      .expectOne(`${URL}/nope`)
+      .flush({ message: 'not found' }, { status: 404, statusText: 'Not Found' });
+    expect(await result).toBeNull();
+  });
+
+  it('rejects an update that is forbidden', async () => {
+    const result = repo.update(draft('a'));
+    httpMock
+      .expectOne(`${URL}/a`)
+      .flush({ message: 'no' }, { status: 403, statusText: 'Forbidden' });
+    await expectAsync(result).toBeRejected();
+  });
+
+  it('removes with DELETE /recipes/:slug, true on 204', async () => {
+    const result = repo.remove('weeknight-dal');
+    httpMock
+      .expectOne({ method: 'DELETE', url: `${URL}/weeknight-dal` })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    expect(await result).toBe(true);
+  });
+
+  it('resolves a remove of a missing recipe to false', async () => {
+    const result = repo.remove('nope');
+    httpMock
+      .expectOne(`${URL}/nope`)
+      .flush({ message: 'not found' }, { status: 404, statusText: 'Not Found' });
+    expect(await result).toBe(false);
+  });
+
+  it('rejects a remove that is forbidden', async () => {
+    const result = repo.remove('a');
+    httpMock
+      .expectOne(`${URL}/a`)
+      .flush({ message: 'no' }, { status: 403, statusText: 'Forbidden' });
+    await expectAsync(result).toBeRejected();
+  });
+
+  it('URL-encodes the slug', async () => {
+    const result = repo.remove('vanilla-crème brûlée');
+    httpMock
+      .expectOne({ method: 'DELETE', url: `${URL}/${encodeURIComponent('vanilla-crème brûlée')}` })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    expect(await result).toBe(true);
   });
 });

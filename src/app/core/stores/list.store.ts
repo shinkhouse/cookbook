@@ -41,7 +41,14 @@ export class ListStore {
   );
 
   readonly cart = computed(() => this._cart());
-  readonly recipeCount = computed(() => this._cart().length);
+  /**
+   * Recipes on the list that still resolve. A cart entry for an archived recipe
+   * is kept (un-archiving brings it back) but does not count, so it cannot
+   * inflate the nav badge or hide the empty state.
+   */
+  readonly recipeCount = computed(
+    () => this._cart().filter((slug) => this.recipes.bySlug(slug)).length,
+  );
 
   /**
    * Every item from every recipe on the list, grouped by aisle in the display

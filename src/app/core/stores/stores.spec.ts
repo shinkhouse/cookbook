@@ -731,6 +731,15 @@ describe('ListStore', () => {
     expect(list.totalItems()).toBe(0);
   });
 
+  it('stops counting an archived recipe but keeps its cart entry', async () => {
+    list.addRecipe('grandmas-chili');
+    expect(list.recipeCount()).toBe(1);
+    await recipes.archive('grandmas-chili');
+    expect(list.recipeCount()).toBe(0);
+    expect(list.totalItems()).toBe(0);
+    expect(list.cart()).toEqual(['grandmas-chili']);
+  });
+
   it('adds a recipe and aggregates its ingredients', () => {
     list.addRecipe('grandmas-spaghetti');
     const expected = recipes.bySlug('grandmas-spaghetti')!.ingredients.length;

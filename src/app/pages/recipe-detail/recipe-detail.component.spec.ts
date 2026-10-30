@@ -61,6 +61,15 @@ describe('RecipeDetailComponent archive', () => {
     expect(TestBed.inject(RecipeStore).bySlug(SLUG)).toBeUndefined();
   });
 
+  it('goes back to the library when the recipe is already gone', async () => {
+    await setup();
+    await openConfirm();
+    spyOn(TestBed.inject(RecipeStore), 'archive').and.resolveTo(false);
+    byText('Archive')!.click();
+    await fixture.whenStable();
+    expect(navigate).toHaveBeenCalledWith(['/']);
+  });
+
   it('disables both buttons and says "Archiving…" while pending', async () => {
     await setup();
     let finish!: () => void;

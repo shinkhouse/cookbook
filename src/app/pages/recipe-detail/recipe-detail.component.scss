@@ -241,13 +241,13 @@ h1 {
 }
 
 .btn-quiet {
-    border-color: transparent;
-    font-weight: 500;
+    color: var(--ink-4);
 }
 
 .archive-confirm {
-    margin-bottom: calc(var(--pad-section) * 0.6);
-    padding: 14px 16px;
+    // A full-width row inside .actions, so it sits one flex gap below the buttons.
+    flex: 1 0 100%;
+    padding: 16px;
     border: 1px solid var(--rule-strong);
     border-radius: var(--radius-card);
     background: var(--surface);
@@ -260,8 +260,8 @@ h1 {
 
     .archive-error {
         margin: 10px 0 0;
-        color: var(--ink-3);
-        font-size: 13px;
+        color: var(--mat-sys-error);
+        font-size: 13.5px;
     }
 }
 

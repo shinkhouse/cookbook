@@ -151,8 +151,10 @@ export class RecipeStore {
   }
 
   /**
-   * Replaces an existing recipe, matched on slug. Returns false if the slug was
-   * unknown, here or on the server. Throws if the API refuses.
+   * Replaces an existing recipe, matched on slug. Archived records are found
+   * too, so `archive` can reach them and a record sent with `archived: false`
+   * would restore one. Returns false if the slug was unknown, here or on the
+   * server. Throws if the API refuses.
    */
   async update(recipe: Recipe): Promise<boolean> {
     if (!this._recipes().some((r) => r.slug === recipe.slug)) return false;

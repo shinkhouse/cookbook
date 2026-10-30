@@ -330,7 +330,14 @@
         </button>
       </div>
 
-      @if (!canSave()) {
+      @if (recipes.status() === 'loading') {
+        <p class="hint" data-state="loading" role="status">Loading the collection…</p>
+      } @else if (recipes.status() === 'error') {
+        <div class="hint" data-state="error" role="alert">
+          <p>Couldn't load the recipe collection, so saving is paused.</p>
+          <button type="button" class="btn-ghost" (click)="retry()">Try again</button>
+        </div>
+      } @else if (!canSave()) {
         <p class="hint">A title and at least one ingredient are needed to save.</p>
       } @else {
         <p class="hint">

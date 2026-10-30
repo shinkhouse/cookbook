@@ -2,12 +2,18 @@
  * Turns a failed write into a sentence for the person who pressed Save. Reads
  * `status` and `error.message` off the error rather than checking for
  * HttpErrorResponse, so the plain objects tests throw behave the same.
+ *
+ * In development the dev-server proxy answers a dead API with a 500, 502, 503
+ * or 504 and a non-JSON body, so those read as "unreachable" too. The API's own
+ * 500 always carries `{ message }`, which is how the two are told apart.
  */
 export function describeWriteError(err: unknown): string {
   const { status, error } = (err ?? {}) as { status?: unknown; error?: { message?: unknown } };
-  if (status === 0) return "Couldn't reach the recipe server. Is it running?";
+  const unreachable = status === 0 || status === 502 || status === 503 || status === 504;
+  const proxyFailure = status === 500 && typeof error?.message !== 'string';
+  if (unreachable || proxyFailure) return "Couldn't reach the recipe server. Is it running?";
   if (status === 403) {
-    return 'The recipe server refused the write. Is RECIPES_WRITE_KEY set where you ran ng serve?';
+    return "The recipe server refused the write. Check RECIPES_WRITE_KEY and that you're on localhost:4200.";
   }
   if (status === 409) return 'A recipe with that name already exists. Change the title and try again.';
   if (status === 400 && typeof error?.message === 'string' && error.message) {

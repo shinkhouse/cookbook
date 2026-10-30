@@ -129,6 +129,16 @@ export class CreateRecipeComponent {
     const [first, ...rest] = accepted;
     await this.loadFile(first);
 
+    // Saving before the collection has loaded would fail, or clash with names
+    // already there, so the rest wait for it and give up if it never comes.
+    if (rest.length > 0) {
+      await this.recipes.whenLoaded();
+      if (this.recipes.status() !== 'ready') {
+        this.notice.set("Couldn't load the recipe collection, so nothing was imported.");
+        return;
+      }
+    }
+
     let saved = 0;
     let failed = 0;
     let firstError: unknown;
@@ -304,6 +314,10 @@ export class CreateRecipeComponent {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  protected retry(): void {
+    void this.recipes.load();
   }
 
   protected async copyJson(): Promise<void> {

@@ -6,9 +6,27 @@ describe('describeWriteError', () => {
     expect(describeWriteError({ status: 0 })).toBe("Couldn't reach the recipe server. Is it running?");
   });
 
-  it('points at the write key for 403', () => {
+  it('says the server is unreachable when the dev proxy answers for a dead API', () => {
+    const sentence = "Couldn't reach the recipe server. Is it running?";
+    for (const status of [502, 503, 504]) {
+      expect(describeWriteError({ status })).toBe(sentence);
+    }
+    expect(describeWriteError({ status: 500 })).toBe(sentence);
+    expect(describeWriteError({ status: 500, error: '<html>Bad Gateway</html>' })).toBe(sentence);
+    expect(describeWriteError(new HttpErrorResponse({ status: 500, error: 'Internal Server Error' }))).toBe(
+      sentence,
+    );
+  });
+
+  it('keeps the generic sentence for the API\'s own 500', () => {
+    expect(describeWriteError({ status: 500, error: { message: 'db exploded' } })).toBe(
+      'Saving failed. Nothing was changed.',
+    );
+  });
+
+  it('points at the write key and the origin for 403', () => {
     expect(describeWriteError({ status: 403 })).toBe(
-      'The recipe server refused the write. Is RECIPES_WRITE_KEY set where you ran ng serve?',
+      "The recipe server refused the write. Check RECIPES_WRITE_KEY and that you're on localhost:4200.",
     );
   });
 
@@ -25,7 +43,7 @@ describe('describeWriteError', () => {
   });
 
   it('falls back for anything else', () => {
-    expect(describeWriteError({ status: 500 })).toBe('Saving failed. Nothing was changed.');
+    expect(describeWriteError({ status: 418 })).toBe('Saving failed. Nothing was changed.');
     expect(describeWriteError(new Error('boom'))).toBe('Saving failed. Nothing was changed.');
     expect(describeWriteError(null)).toBe('Saving failed. Nothing was changed.');
     expect(describeWriteError({ status: 400 })).toBe('Saving failed. Nothing was changed.');

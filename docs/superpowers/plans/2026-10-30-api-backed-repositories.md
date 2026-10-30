@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Branch `feat/api-backed-repositories`. Work stays unpushed and unmerged.
-- The write key never appears in any file under `src/`, `environment*.ts`, or any built artifact. It reaches the API only via the dev-server proxy reading `process.env.RECIPES_WRITE_KEY`.
+- The write key never appears in any file under `src/`, `environment*.ts`, or any built artifact. It reaches the API only via the dev-server proxy, which reads `process.env.RECIPES_WRITE_KEY`, falling back to a git-ignored repo-root `.env`.
 - `environment.apiBase` is `/api` in development and `https://api.samuelhinkhouse.com` in production.
 - `writable` is `!environment.production`.
 - `null` / `false` from a repository mean "no such record"; every other failure **throws**. Stores never swallow a failed write.

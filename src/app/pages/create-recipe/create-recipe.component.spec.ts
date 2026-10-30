@@ -17,6 +17,28 @@ class SlowListFake extends FakeRecipeRepository {
   }
 }
 
+/** A fake whose `list()` rejects until the test lets it through. */
+class FlakyListFake extends FakeRecipeRepository {
+  listCalls = 0;
+  down = true;
+  private release!: () => void;
+  private gate: Promise<void> | null = null;
+  override async list(): Promise<Recipe[]> {
+    this.listCalls++;
+    if (this.down) throw new Error('down');
+    if (this.gate) await this.gate;
+    return super.list();
+  }
+  /** The next list() stays pending until `release()`. */
+  hold(): void {
+    this.down = false;
+    this.gate = new Promise<void>((resolve) => (this.release = resolve));
+  }
+  letThrough(): void {
+    this.release();
+  }
+}
+
 // The draft signals are protected; the spec reaches them the way the template does.
 type Internals = {
   title: { set(v: string): void; (): string };
@@ -137,7 +159,55 @@ describe('CreateRecipeComponent', () => {
 
     expect(fake.create).toHaveBeenCalledTimes(2);
     expect(page.notice()).toBe(
-      'Saved 1 of 2. The rest failed: The recipe server refused the write. Is RECIPES_WRITE_KEY set where you ran ng serve?',
+      "Saved 1 of 2. The rest failed: The recipe server refused the write. Check RECIPES_WRITE_KEY and that you're on localhost:4200.",
     );
+  });
+
+  describe('while the collection is not ready', () => {
+    const text = (): string => fixture.nativeElement.textContent as string;
+    const tryAgain = (): HTMLButtonElement | undefined =>
+      Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>).find(
+        (b) => b.textContent?.trim() === 'Try again',
+      );
+
+    it('says the collection is loading, with Save disabled', async () => {
+      await setup(new SlowListFake([]));
+      const status = fixture.nativeElement.querySelector('[role="status"][data-state="loading"]');
+      expect(status?.textContent).toContain('Loading the collection…');
+      expect(button().disabled).toBeTrue();
+    });
+
+    it('says saving is paused after a failed load, and Try again reloads', async () => {
+      const flaky = new FlakyListFake([]);
+      await setup(flaky);
+      await TestBed.inject(RecipeStore).whenLoaded();
+      fixture.detectChanges();
+      const alert = fixture.nativeElement.querySelector('[role="alert"]');
+      expect(alert?.textContent).toContain("Couldn't load the recipe collection, so saving is paused.");
+      expect(button().disabled).toBeTrue();
+      expect(tryAgain()).toBeDefined();
+
+      flaky.hold();
+      tryAgain()!.click();
+      expect(flaky.listCalls).toBe(2);
+      flaky.letThrough();
+      await TestBed.inject(RecipeStore).whenLoaded();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+      expect(text()).not.toContain('saving is paused');
+      expect(button().disabled).toBeFalse();
+    });
+
+    it('imports nothing from a folder drop when the collection fails to load', async () => {
+      await setup(new FlakyListFake([]));
+      const recipe = (n: string): [string, string] => [
+        `${n}.md`,
+        `# ${n}\n\n## Ingredients\n\n- 1 cup flour\n\n## Method\n\n1. Mix.\n`,
+      ];
+      const create = spyOn(fake, 'create').and.callThrough();
+      await page.onFiles(filesOf(recipe('Alpha'), recipe('Beta')));
+      expect(create).not.toHaveBeenCalled();
+      expect(page.notice()).toBe("Couldn't load the recipe collection, so nothing was imported.");
+    });
   });
 });

@@ -1,57 +1,86 @@
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, Provider, inject } from '@angular/core';
-import { Cookbook, CookbookSeed } from './model/cookbooks.model';
-import { Storage } from './storage';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { Cookbook } from './model/cookbooks.model';
 
 /**
  * Where the cookbook collection lives.
  *
  * Deliberately a parallel seam to RecipeRepository rather than a second method
- * on it: the two collections move to api.samuelhinkhouse.com as separate
- * resources, and keeping them apart means either can be swapped for an
- * Http-backed version on its own.
+ * on it: the two collections are separate resources on api.samuelhinkhouse.com,
+ * and keeping them apart means either can be swapped on its own.
  *
- * Async for the same reason as the recipe seam — a networked implementation
- * cannot be retrofitted into a synchronous contract without touching every
- * caller.
+ * Per-record rather than whole-collection, because the API is. The failure
+ * contract is the same for every method: a 404 on `update` or `remove` is an
+ * ordinary answer ("that cookbook is not there") and comes back as null/false;
+ * every other failure rejects, so a caller can never mistake an outage or a
+ * refused write for success.
  */
 export abstract class CookbookRepository {
-  /** The whole collection. */
-  abstract load(): Promise<Cookbook[]>;
+  /** The whole collection. Rejects if the API cannot be reached. */
+  abstract list(): Promise<Cookbook[]>;
 
-  /** Persists the whole collection. Coarse on purpose, as with recipes. */
-  abstract save(cookbooks: readonly Cookbook[]): Promise<void>;
+  /** Adds a cookbook and resolves to what the API stored. */
+  abstract create(cookbook: Cookbook): Promise<Cookbook>;
 
-  /** True when a write here will outlive the tab. */
-  abstract readonly durable: boolean;
+  /** Replaces a cookbook. Null when the id is unknown (404). */
+  abstract update(cookbook: Cookbook): Promise<Cookbook | null>;
+
+  /** Deletes a cookbook. False when the id is unknown (404). */
+  abstract remove(id: string): Promise<boolean>;
+
+  /** True when this build is allowed to write; screens hide editing otherwise. */
+  abstract readonly writable: boolean;
 }
 
-const COOKBOOKS_KEY = 'cookbook.cookbooks';
-
 /**
- * Keeps the collection in `localStorage`, seeded the first time.
+ * Talks to `${environment.apiBase}/cookbooks`.
  *
- * Uses the same null sentinel as recipes and favourites: the seed applies only
- * when nothing has been stored, so deleting every cookbook does not silently
- * undo itself on the next load.
+ * In development the dev server proxies `/api` to the API and attaches the
+ * write key, so no secret ever ships in the bundle; a production build can read
+ * but is not `writable`.
  */
 @Injectable({ providedIn: 'root' })
-export class LocalCookbookRepository extends CookbookRepository {
-  private readonly storage = inject(Storage);
+export class HttpCookbookRepository extends CookbookRepository {
+  private readonly http = inject(HttpClient);
+  private readonly url = `${environment.apiBase}/cookbooks`;
 
-  override readonly durable = true;
+  override readonly writable = !environment.production;
 
-  override async load(): Promise<Cookbook[]> {
-    const stored = this.storage.read<Cookbook[] | null>(COOKBOOKS_KEY, null);
-    if (stored === null) return [...CookbookSeed];
-    // Corrupted by something other than this app; fall back rather than leave
-    // the recipes pointing at cookbooks that cannot be named.
-    if (!Array.isArray(stored)) return [...CookbookSeed];
-    return stored.filter(isCookbook);
+  override async list(): Promise<Cookbook[]> {
+    const all = await firstValueFrom(this.http.get<unknown[]>(this.url));
+    return all.filter(isCookbook);
   }
 
-  override async save(cookbooks: readonly Cookbook[]): Promise<void> {
-    this.storage.write(COOKBOOKS_KEY, cookbooks);
+  override create(cookbook: Cookbook): Promise<Cookbook> {
+    return firstValueFrom(this.http.post<Cookbook>(this.url, cookbook));
   }
+
+  override async update(cookbook: Cookbook): Promise<Cookbook | null> {
+    try {
+      return await firstValueFrom(
+        this.http.put<Cookbook>(`${this.url}/${encodeURIComponent(cookbook.id)}`, cookbook),
+      );
+    } catch (error) {
+      if (isNotFound(error)) return null;
+      throw error;
+    }
+  }
+
+  override async remove(id: string): Promise<boolean> {
+    try {
+      await firstValueFrom(this.http.delete<void>(`${this.url}/${encodeURIComponent(id)}`));
+      return true;
+    } catch (error) {
+      if (isNotFound(error)) return false;
+      throw error;
+    }
+  }
+}
+
+function isNotFound(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && error.status === 404;
 }
 
 /**
@@ -67,10 +96,10 @@ function isCookbook(value: unknown): value is Cookbook {
 }
 
 /**
- * Binds the abstract seam to the local implementation. This one line is the swap
- * point for moving cookbooks to api.samuelhinkhouse.com.
+ * Binds the abstract seam to the API implementation. This one line is the swap
+ * point between it and a fake in tests.
  */
-export const provideLocalCookbooks = (): Provider => ({
+export const provideHttpCookbooks = (): Provider => ({
   provide: CookbookRepository,
-  useExisting: LocalCookbookRepository,
+  useExisting: HttpCookbookRepository,
 });

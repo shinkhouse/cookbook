@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { CookbookRepository } from '../cookbook-repository';
-import { Cookbook, CookbookSeed } from '../model/cookbooks.model';
+import { Cookbook } from '../model/cookbooks.model';
 import { Recipe } from '../model/recipes.model';
 import { RecipeStore } from './recipe.store';
 
@@ -11,29 +11,57 @@ import { RecipeStore } from './recipe.store';
  * recipe as `Recipe.cookbooks` (design §2), so this store owns identity and
  * naming, and derives anything recipe-shaped from RecipeStore.
  *
- * The dependency runs this way — CookbookStore → RecipeStore, never the reverse
- * — because deleting a cookbook is the one operation that has to touch both
- * collections, so it belongs in the store that can see both. RecipeStore stays
- * ignorant of cookbooks, handling `cookbooks` as an opaque string list exactly
- * as it handles `tags`. ListStore depends on RecipeStore the same way.
+ * Deleting a cookbook does not touch recipes (spec §4). The id stays on any
+ * recipe that carried it and readers skip ids that resolve to nothing, so a
+ * delete is one API call rather than a cascade that could half-finish over the
+ * network. The dependency still runs CookbookStore → RecipeStore, never the
+ * reverse, because the derived views (`recipesIn`, `countIn`) need both.
+ * RecipeStore stays ignorant of cookbooks, handling `cookbooks` as an opaque
+ * string list exactly as it handles `tags`.
+ *
+ * Writes go to the API first and the signal changes only once it has answered,
+ * so a rejected write leaves what is on screen matching what is stored.
  */
 @Injectable({ providedIn: 'root' })
 export class CookbookStore {
   private readonly repo = inject(CookbookRepository);
   private readonly recipes = inject(RecipeStore);
 
-  /**
-   * Starts from the seed so the first paint has something to show, then the
-   * repository's answer replaces it — the same reasoning as RecipeStore.
-   */
-  private readonly _cookbooks = signal<readonly Cookbook[]>(CookbookSeed);
+  /** Empty until the API answers; `status` says whether that has happened. */
+  private readonly _cookbooks = signal<readonly Cookbook[]>([]);
+  private readonly _status = signal<'loading' | 'ready' | 'error'>('loading');
+  private inflight: Promise<void> | null = null;
 
   readonly cookbooks = computed(() => this._cookbooks());
+  readonly status = this._status.asReadonly();
+
+  /** Whether this build may write; screens omit create/rename/delete when not. */
+  readonly writable = this.repo.writable;
 
   constructor() {
-    void this.repo.load().then((loaded) => {
-      if (loaded.length > 0) this._cookbooks.set(loaded);
-    });
+    void this.load();
+  }
+
+  /**
+   * Fetches the collection and sets `status`. Never rejects — a failure is
+   * `status === 'error'`, and calling this again is how the UI retries.
+   */
+  load(): Promise<void> {
+    this._status.set('loading');
+    const run = this.repo.list().then(
+      (loaded) => {
+        this._cookbooks.set(loaded);
+        this._status.set('ready');
+      },
+      () => this._status.set('error'),
+    );
+    this.inflight = run;
+    return run;
+  }
+
+  /** Resolves once `status` has left 'loading'. */
+  async whenLoaded(): Promise<void> {
+    while (this._status() === 'loading' && this.inflight) await this.inflight;
   }
 
   byId(id: string): Cookbook | undefined {
@@ -54,52 +82,40 @@ export class CookbookStore {
    * Adds a cookbook. Returns the id actually used, which may be suffixed to stay
    * unique — the same rule RecipeStore.add uses for slugs, and for the same
    * reason: an id collision would silently merge two cookbooks' memberships.
+   * Throws if the API refuses, leaving the list as it was.
    */
-  add(cookbook: Cookbook): string {
+  async add(cookbook: Cookbook): Promise<string> {
     const id = this.uniqueId(cookbook.id);
-    this._cookbooks.update((list) => [...list, { ...cookbook, id }]);
-    this.persist();
+    const stored = await this.repo.create({ ...cookbook, id });
+    this._cookbooks.update((list) => [...list, stored]);
     return id;
   }
 
-  /** Renames a cookbook. Returns false if the id was unknown. */
-  rename(id: string, name: string): boolean {
-    let found = false;
-    this._cookbooks.update((list) =>
-      list.map((c) => {
-        if (c.id !== id) return c;
-        found = true;
-        return { ...c, name };
-      }),
-    );
-    if (found) this.persist();
-    return found;
-  }
-
   /**
-   * Deletes a cookbook and takes its id off every recipe that carried it. The
-   * recipes themselves survive — a recipe left in no cookbook is unfiled, not
-   * deleted.
-   *
-   * This cascade is the reason cookbook deletion must go through here rather
-   * than being done by editing the collection directly: any other path leaves
-   * recipes pointing at a cookbook that no longer exists.
-   *
-   * Returns false if the id was unknown.
+   * Renames a cookbook. Returns false if the id was unknown, here or on the
+   * server. Throws if the API refuses.
    */
-  remove(id: string): boolean {
-    const before = this._cookbooks().length;
-    this._cookbooks.update((list) => list.filter((c) => c.id !== id));
-    if (this._cookbooks().length === before) return false;
-    this.recipes.stripCookbook(id);
-    this.persist();
+  async rename(id: string, name: string): Promise<boolean> {
+    const current = this.byId(id);
+    if (!current) return false;
+    const stored = await this.repo.update({ ...current, name });
+    if (!stored) return false;
+    this._cookbooks.update((list) => list.map((c) => (c.id === id ? stored : c)));
     return true;
   }
 
-  private persist(): void {
-    // Fire and forget, as with recipes: the signal is already the truth for this
-    // session, and a failed write must not take the interaction down with it.
-    void this.repo.save(this._cookbooks());
+  /**
+   * Deletes a cookbook. Recipes are not edited: one left carrying the id is
+   * simply filed in a cookbook that no longer resolves, and readers skip it.
+   *
+   * Returns false if the server did not know the id; the stale local entry is
+   * dropped either way, since the server has just said it is gone. Throws if
+   * the API refuses, leaving the list as it was.
+   */
+  async remove(id: string): Promise<boolean> {
+    const removed = await this.repo.remove(id);
+    this._cookbooks.update((list) => list.filter((c) => c.id !== id));
+    return removed;
   }
 
   private uniqueId(desired: string): string {

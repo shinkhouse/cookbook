@@ -1,74 +1,123 @@
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import {
   CookbookRepository,
-  LocalCookbookRepository,
-  provideLocalCookbooks,
+  HttpCookbookRepository,
+  provideHttpCookbooks,
 } from './cookbook-repository';
-import { Cookbook, CookbookSeed, DEFAULT_COOKBOOK_ID } from './model/cookbooks.model';
+import { Cookbook } from './model/cookbooks.model';
 
-const KEY = 'cookbook.cookbooks';
+const URL = '/api/cookbooks';
 
 function draft(id: string, name = 'A Cookbook'): Cookbook {
   return { id, name };
 }
 
-describe('LocalCookbookRepository', () => {
+describe('HttpCookbookRepository', () => {
   let repo: CookbookRepository;
+  let httpMock: HttpTestingController;
 
   beforeEach(() => {
-    localStorage.clear();
-    TestBed.configureTestingModule({ providers: [provideLocalCookbooks()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideHttpCookbooks()],
+    });
     repo = TestBed.inject(CookbookRepository);
+    httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => localStorage.clear());
+  afterEach(() => httpMock.verify());
 
-  it('resolves to the concrete local implementation', () => {
-    expect(repo).toBeInstanceOf(LocalCookbookRepository);
-    expect(repo.durable).toBe(true);
+  it('resolves to the concrete Http implementation, writable in development', () => {
+    expect(repo).toBeInstanceOf(HttpCookbookRepository);
+    expect(repo.writable).toBe(true);
   });
 
-  it('hands back the seeded cookbook when nothing is stored', async () => {
-    const loaded = await repo.load();
-    expect(loaded.map((c) => c.id)).toEqual([DEFAULT_COOKBOOK_ID]);
-    expect(loaded.length).toBe(CookbookSeed.length);
+  it('lists from GET /cookbooks, dropping entries that cannot be used', async () => {
+    const result = repo.list();
+    httpMock
+      .expectOne({ method: 'GET', url: URL })
+      .flush([{ id: 'a', name: 'A' }, { id: '', name: 'x' }, { name: 'no id' }]);
+    expect(await result).toEqual([{ id: 'a', name: 'A' }]);
   });
 
-  it('round-trips a saved collection', async () => {
-    await repo.save([draft('sams-cookbook'), draft('grandmas', "Grandma's Cookbook")]);
-    const loaded = await repo.load();
-    expect(loaded.map((c) => c.name)).toEqual(['A Cookbook', "Grandma's Cookbook"]);
+  it('rejects a list that fails', async () => {
+    const result = repo.list();
+    httpMock.expectOne(URL).flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    await expectAsync(result).toBeRejected();
   });
 
-  it('respects a deliberately emptied collection rather than reseeding', async () => {
-    await repo.save([]);
-    // Same null-sentinel rule the recipe and favourites stores use: an empty
-    // array is a decision, not an absence.
-    expect(await repo.load()).toEqual([]);
+  it('creates with POST /cookbooks and resolves to the response', async () => {
+    const c = draft('grandmas');
+    const result = repo.create(c);
+    const req = httpMock.expectOne({ method: 'POST', url: URL });
+    expect(req.request.body).toEqual(c);
+    req.flush({ ...c }, { status: 201, statusText: 'Created' });
+    expect(await result).toEqual(c);
   });
 
-  it('falls back to the seed when the stored entry is not an array', async () => {
-    localStorage.setItem(KEY, JSON.stringify({ not: 'an array' }));
-    expect((await repo.load()).map((c) => c.id)).toEqual([DEFAULT_COOKBOOK_ID]);
+  it('rejects a create that conflicts, carrying the status', async () => {
+    const result = repo.create(draft('grandmas'));
+    httpMock.expectOne(URL).flush({ message: 'exists' }, { status: 409, statusText: 'Conflict' });
+    const error = await result.catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(HttpErrorResponse);
+    expect((error as HttpErrorResponse).status).toBe(409);
   });
 
-  it('falls back to the seed when the stored entry is corrupt', async () => {
-    localStorage.setItem(KEY, '{ broken json');
-    expect((await repo.load()).map((c) => c.id)).toEqual([DEFAULT_COOKBOOK_ID]);
+  it('updates with PUT /cookbooks/:id', async () => {
+    const c = draft('grandmas', 'Renamed');
+    const result = repo.update(c);
+    const req = httpMock.expectOne({ method: 'PUT', url: `${URL}/grandmas` });
+    expect(req.request.body).toEqual(c);
+    req.flush(c);
+    expect(await result).toEqual(c);
   });
 
-  it('drops a cookbook with no usable id or name', async () => {
-    localStorage.setItem(
-      KEY,
-      JSON.stringify([draft('good'), { id: '', name: 'No id' }, { id: 'no-name' }]),
-    );
-    // An id-less cookbook can never be referenced by a recipe, and a nameless
-    // one has nothing to render in a picker.
-    expect((await repo.load()).map((c) => c.id)).toEqual(['good']);
+  it('resolves an update of a missing cookbook to null', async () => {
+    const result = repo.update(draft('nope'));
+    httpMock
+      .expectOne(`${URL}/nope`)
+      .flush({ message: 'not found' }, { status: 404, statusText: 'Not Found' });
+    expect(await result).toBeNull();
   });
 
-  it('keeps an optional description when one is set', async () => {
-    await repo.save([{ ...draft('grandmas'), description: 'Everything she wrote down.' }]);
-    expect((await repo.load())[0].description).toBe('Everything she wrote down.');
+  it('rejects an update that is forbidden', async () => {
+    const result = repo.update(draft('a'));
+    httpMock
+      .expectOne(`${URL}/a`)
+      .flush({ message: 'no' }, { status: 403, statusText: 'Forbidden' });
+    await expectAsync(result).toBeRejected();
+  });
+
+  it('removes with DELETE /cookbooks/:id, true on 204', async () => {
+    const result = repo.remove('grandmas');
+    httpMock
+      .expectOne({ method: 'DELETE', url: `${URL}/grandmas` })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    expect(await result).toBe(true);
+  });
+
+  it('resolves a remove of a missing cookbook to false', async () => {
+    const result = repo.remove('nope');
+    httpMock
+      .expectOne(`${URL}/nope`)
+      .flush({ message: 'not found' }, { status: 404, statusText: 'Not Found' });
+    expect(await result).toBe(false);
+  });
+
+  it('rejects a remove that is forbidden', async () => {
+    const result = repo.remove('a');
+    httpMock
+      .expectOne(`${URL}/a`)
+      .flush({ message: 'no' }, { status: 403, statusText: 'Forbidden' });
+    await expectAsync(result).toBeRejected();
+  });
+
+  it('URL-encodes the id', async () => {
+    const result = repo.remove('a b');
+    httpMock
+      .expectOne({ method: 'DELETE', url: `${URL}/a%20b` })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    expect(await result).toBe(true);
   });
 });

@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { provideLocalCookbooks } from '../cookbook-repository';
 import { FAV_SEED } from '../mock/recipes.mock';
 import { DEFAULT_COOKBOOK_ID } from '../model/cookbooks.model';
 import { RecipeTemplate } from '../model/recipes.model';
 import { provideLocalRecipes } from '../recipe-repository';
+import { FakeCookbookRepository, provideFakeCookbooks } from '../testing/fake-repositories';
 import { CookbookStore } from './cookbook.store';
 import { ListStore, boughtKey } from './list.store';
 import { PrefsStore } from './prefs.store';
@@ -301,13 +301,14 @@ describe('CookbookStore', () => {
   let cookbooks: CookbookStore;
   let recipes: RecipeStore;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
     TestBed.configureTestingModule({
-      providers: [provideLocalRecipes(), provideLocalCookbooks()],
+      providers: [provideLocalRecipes(), provideFakeCookbooks()],
     });
     cookbooks = TestBed.inject(CookbookStore);
     recipes = TestBed.inject(RecipeStore);
+    await cookbooks.whenLoaded();
   });
 
   afterEach(() => localStorage.clear());
@@ -316,27 +317,75 @@ describe('CookbookStore', () => {
     expect(cookbooks.cookbooks().map((c) => c.id)).toEqual([DEFAULT_COOKBOOK_ID]);
   });
 
+  it('is loading until the repository answers, then ready', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideLocalRecipes(), provideFakeCookbooks()],
+    });
+    const fresh = TestBed.inject(CookbookStore);
+    expect(fresh.status()).toBe('loading');
+    expect(fresh.cookbooks()).toEqual([]);
+    await fresh.whenLoaded();
+    expect(fresh.status()).toBe('ready');
+  });
+
+  it('ends in error when the first load fails, and recovers on a retry', async () => {
+    const fake = new FakeCookbookRepository();
+    fake.failNext(new Error('down'));
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideLocalRecipes(), provideFakeCookbooks(fake)],
+    });
+    const fresh = TestBed.inject(CookbookStore);
+    await fresh.whenLoaded();
+    expect(fresh.status()).toBe('error');
+    expect(fresh.cookbooks()).toEqual([]);
+
+    await fresh.load();
+    expect(fresh.status()).toBe('ready');
+    expect(fresh.cookbooks().map((c) => c.id)).toEqual([DEFAULT_COOKBOOK_ID]);
+  });
+
+  it('mirrors the repository writable flag', () => {
+    expect(cookbooks.writable).toBe(true);
+  });
+
   it('finds a cookbook by id', () => {
     expect(cookbooks.byId(DEFAULT_COOKBOOK_ID)?.name).toBe("Sam's Cookbook");
     expect(cookbooks.byId('nope')).toBeUndefined();
   });
 
-  it('adds a cookbook', () => {
-    expect(cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" })).toBe('grandmas');
+  it('adds a cookbook', async () => {
+    expect(await cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" })).toBe('grandmas');
     expect(cookbooks.byId('grandmas')?.name).toBe("Grandma's Cookbook");
   });
 
-  it('suffixes an id that is already taken, and keeps both', () => {
-    const id = cookbooks.add({ id: DEFAULT_COOKBOOK_ID, name: 'A Clash' });
+  it('suffixes an id that is already taken, and keeps both', async () => {
+    const id = await cookbooks.add({ id: DEFAULT_COOKBOOK_ID, name: 'A Clash' });
     expect(id).toBe(`${DEFAULT_COOKBOOK_ID}-2`);
     expect(cookbooks.byId(DEFAULT_COOKBOOK_ID)?.name).toBe("Sam's Cookbook");
     expect(cookbooks.byId(`${DEFAULT_COOKBOOK_ID}-2`)?.name).toBe('A Clash');
   });
 
-  it('renames a cookbook', () => {
-    expect(cookbooks.rename(DEFAULT_COOKBOOK_ID, "Sam's Recipes")).toBe(true);
+  it('leaves the list untouched when an add is rejected', async () => {
+    const fake = new FakeCookbookRepository();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideLocalRecipes(), provideFakeCookbooks(fake)],
+    });
+    const store = TestBed.inject(CookbookStore);
+    await store.whenLoaded();
+    const before = store.cookbooks();
+
+    fake.failNext(new Error('x'));
+    await expectAsync(store.add({ id: 'grandmas', name: 'G' })).toBeRejected();
+    expect(store.cookbooks()).toBe(before);
+  });
+
+  it('renames a cookbook', async () => {
+    expect(await cookbooks.rename(DEFAULT_COOKBOOK_ID, "Sam's Recipes")).toBe(true);
     expect(cookbooks.byId(DEFAULT_COOKBOOK_ID)?.name).toBe("Sam's Recipes");
-    expect(cookbooks.rename('nope', 'Ghost')).toBe(false);
+    expect(await cookbooks.rename('nope', 'Ghost')).toBe(false);
   });
 
   it('counts the recipes filed in a cookbook', () => {
@@ -344,38 +393,26 @@ describe('CookbookStore', () => {
     expect(cookbooks.countIn('grandmas')).toBe(0);
   });
 
-  it('lists the recipes filed in a cookbook', () => {
-    cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" });
+  it('lists the recipes filed in a cookbook', async () => {
+    await cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" });
     recipes.addToCookbook('grandmas-chili', 'grandmas');
     expect(cookbooks.recipesIn('grandmas').map((r) => r.slug)).toEqual(['grandmas-chili']);
   });
 
-  it('removes a cookbook and strips it from every recipe, keeping the recipes', () => {
-    cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" });
+  it('removes a cookbook without touching any recipe', async () => {
+    await cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" });
     recipes.addToCookbook('grandmas-chili', 'grandmas');
+    const before = recipes.recipes().map((r) => [...r.cookbooks]);
 
-    expect(cookbooks.remove('grandmas')).toBe(true);
+    expect(await cookbooks.remove('grandmas')).toBe(true);
     expect(cookbooks.byId('grandmas')).toBeUndefined();
-    // The cascade: no recipe may be left pointing at a cookbook that is gone.
-    expect(recipes.recipes().some((r) => r.cookbooks.includes('grandmas'))).toBe(false);
-    expect(recipes.bySlug('grandmas-chili')).toBeDefined();
-    expect(recipes.recipes().length).toBe(72);
+    // Spec §4: readers skip dangling ids, so the recipes keep theirs.
+    expect(recipes.recipes().map((r) => [...r.cookbooks])).toEqual(before);
+    expect(recipes.bySlug('grandmas-chili')?.cookbooks).toContain('grandmas');
   });
 
-  it('reports false when removing an id that is not there', () => {
-    expect(cookbooks.remove('nope')).toBe(false);
-  });
-
-  it('keeps an added cookbook across a fresh injection', async () => {
-    cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" });
-
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({
-      providers: [provideLocalRecipes(), provideLocalCookbooks()],
-    });
-    const fresh = TestBed.inject(CookbookStore);
-    await new Promise<void>((r) => setTimeout(r, 0));
-    expect(fresh.byId('grandmas')?.name).toBe("Grandma's Cookbook");
+  it('reports false when removing an id that is not there', async () => {
+    expect(await cookbooks.remove('nope')).toBe(false);
   });
 });
 

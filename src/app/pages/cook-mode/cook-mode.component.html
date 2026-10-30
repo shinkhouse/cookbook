@@ -115,7 +115,12 @@
     <p class="sr-only" role="status" aria-live="polite">{{ announcement() }}</p>
   </div>
 } @else if (status() === 'loading') {
-  <p data-state="loading" aria-busy="true">Loading…</p>
+  <p data-state="loading" role="status" aria-busy="true">Loading…</p>
+} @else if (status() === 'error') {
+  <div class="cook not-found" data-state="error" role="alert">
+    <p>Couldn't load the recipe.</p>
+    <button type="button" class="btn-accent" (click)="retry()">Try again</button>
+  </div>
 } @else {
   <div class="cook not-found">
     <p>No recipe by that name.</p>

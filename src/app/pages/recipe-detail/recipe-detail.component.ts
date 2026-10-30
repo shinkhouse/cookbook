@@ -40,6 +40,11 @@ export class RecipeDetailComponent {
   /** 'loading' until the collection arrives; "not found" is only true after that. */
   protected readonly status = this.recipes.status;
 
+  /** Try again after a failed first load. */
+  protected retry(): void {
+    void this.recipes.load();
+  }
+
   /** What this recipe is still missing, if anything. */
   protected readonly gapNote = computed(() => {
     const r = this.recipe();

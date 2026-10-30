@@ -38,6 +38,11 @@ export class CookModeComponent {
   /** 'loading' until the collection arrives; "not found" is only true after that. */
   protected readonly status = this.recipes.status;
 
+  /** Try again after a failed first load. */
+  protected retry(): void {
+    void this.recipes.load();
+  }
+
   protected readonly stepIndex = signal(0);
   private readonly checked = signal<ReadonlySet<number>>(new Set());
   protected readonly timers = signal<readonly RunningTimer[]>([]);

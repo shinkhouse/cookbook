@@ -114,6 +114,30 @@ for (const [name, component] of [
       expect(el.textContent).toContain("Grandma's Spaghetti");
     });
 
+    it('says the server is down, not that the recipe is missing, and retries', async () => {
+      const repo = setup();
+      const fixture = TestBed.createComponent(component);
+      fixture.componentRef.setInput('slug', 'grandmas-spaghetti');
+      fixture.detectChanges();
+      repo.reject();
+      await settled();
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[data-state="error"]')).not.toBeNull();
+      expect(el.textContent).not.toContain('No recipe by that name');
+
+      const retry = Array.from(el.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'Try again',
+      ) as HTMLButtonElement;
+      retry.click();
+      expect(repo.listCalls).toBe(2);
+      repo.resolve();
+      await settled();
+      fixture.detectChanges();
+      expect(el.querySelector('[data-state="error"]')).toBeNull();
+      expect(el.textContent).toContain("Grandma's Spaghetti");
+    });
+
     it('shows not-found for an unknown slug once loaded', async () => {
       const repo = setup();
       const fixture = TestBed.createComponent(component);

@@ -184,7 +184,12 @@
     </div>
   </article>
 } @else if (status() === 'loading') {
-  <p data-state="loading" aria-busy="true">Loading…</p>
+  <p data-state="loading" role="status" aria-busy="true">Loading…</p>
+} @else if (status() === 'error') {
+  <div class="not-found" data-state="error" role="alert">
+    <p class="empty-line">Couldn't load the recipe.</p>
+    <button type="button" class="btn-outline" (click)="retry()">Try again</button>
+  </div>
 } @else {
   <div class="not-found">
     <p class="empty-line">No recipe by that name.</p>

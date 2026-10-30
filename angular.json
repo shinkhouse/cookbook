@@ -88,7 +88,8 @@
               "buildTarget": "recipes:build:production"
             },
             "development": {
-              "buildTarget": "recipes:build:development"
+              "buildTarget": "recipes:build:development",
+              "proxyConfig": "proxy.conf.js"
             }
           },
           "defaultConfiguration": "development"

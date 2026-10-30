@@ -3,6 +3,7 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
+import { provideHttpClient, withFetch } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideLocalCookbooks } from './core/cookbook-repository';
@@ -25,6 +26,7 @@ export const appConfig: ApplicationConfig = {
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' }),
     ),
     provideAnimationsAsync(),
+    provideHttpClient(withFetch()),
     // Recipes persist to localStorage for now; see the note on the provider.
     provideLocalRecipes(),
     // Cookbooks are a separate resource behind their own seam, so either

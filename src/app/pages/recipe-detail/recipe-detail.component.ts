@@ -8,6 +8,7 @@ import { formatQty, scaleFactor, scaleLabel } from '../../core/scale';
 import { ListStore } from '../../core/stores/list.store';
 import { PrefsStore } from '../../core/stores/prefs.store';
 import { RecipeStore, tagLabel } from '../../core/stores/recipe.store';
+import { Recipe } from '../../core/model/recipes.model';
 import { describeWriteError } from '../../core/write-error';
 
 /** One row of the ingredient card, with its amount already scaled. */
@@ -18,6 +19,17 @@ interface DetailIngredient {
   amount: string;
   checked: boolean;
   group?: string;
+}
+
+function groupRows(rows: DetailIngredient[]): { name: string | null; items: DetailIngredient[] }[] {
+  const groups: { name: string | null; items: DetailIngredient[] }[] = [];
+  for (const item of rows) {
+    const name = item.group ?? null;
+    const last = groups.at(-1);
+    if (last && last.name === name) last.items.push(item);
+    else groups.push({ name, items: [item] });
+  }
+  return groups;
 }
 
 @Component({
@@ -115,16 +127,7 @@ export class RecipeDetailComponent {
   protected readonly ingredients = computed<DetailIngredient[]>(() => {
     const recipe = this.recipe();
     if (!recipe) return [];
-    const factor = this.factor();
-    const checked = this.checked();
-    return recipe.ingredients.map((ingredient, index) => ({
-      index,
-      name: ingredient.name,
-      unit: ingredient.unit,
-      group: ingredient.group,
-      amount: ingredient.qty === null ? '' : formatQty(ingredient.qty * factor),
-      checked: checked.has(index),
-    }));
+    return this.rows(recipe.ingredients, 0);
   });
 
   /**
@@ -133,18 +136,48 @@ export class RecipeDetailComponent {
    * groups come back as one unnamed run, so the template has a single shape to
    * render either way.
    */
-  protected readonly ingredientGroups = computed(() => {
-    const groups: { name: string | null; items: DetailIngredient[] }[] = [];
-    for (const item of this.ingredients()) {
-      const name = item.group ?? null;
-      const last = groups.at(-1);
-      if (last && last.name === name) last.items.push(item);
-      else groups.push({ name, items: [item] });
-    }
-    return groups;
+  protected readonly ingredientGroups = computed(() => groupRows(this.ingredients()));
+
+  /**
+   * Each embedded recipe as its own titled section. Rows are numbered on from
+   * the parent's, so one check set and one scale factor cover the whole page.
+   * A component that no longer resolves is already left out by the store.
+   */
+  protected readonly componentSections = computed(() => {
+    const recipe = this.recipe();
+    if (!recipe) return [];
+    let offset = recipe.ingredients.length;
+    return this.recipes.componentsOf(recipe.slug).map((part) => {
+      const items = this.rows(part.recipe.ingredients, offset);
+      offset += items.length;
+      return { label: part.label, groups: groupRows(items), steps: part.recipe.steps };
+    });
   });
 
+  private readonly totalIngredients = computed(
+    () =>
+      this.ingredients().length +
+      this.componentSections().reduce(
+        (sum, s) => sum + s.groups.reduce((n, g) => n + g.items.length, 0),
+        0,
+      ),
+  );
+
+  private rows(list: Recipe['ingredients'], offset: number): DetailIngredient[] {
+    const factor = this.factor();
+    const checked = this.checked();
+    return list.map((ingredient, i) => ({
+      index: offset + i,
+      name: ingredient.name,
+      unit: ingredient.unit,
+      group: ingredient.group,
+      amount: ingredient.qty === null ? '' : formatQty(ingredient.qty * factor),
+      checked: checked.has(offset + i),
+    }));
+  }
+
   protected readonly checkedCount = computed(() => this.checked().size);
+  protected readonly ingredientTotal = this.totalIngredients;
 
   /** Some stored photo URLs are hotlink blocked; fall back to the placeholder. */
   private readonly photoBroken = signal(false);

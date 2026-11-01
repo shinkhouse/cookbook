@@ -498,3 +498,97 @@ describe('cook mode ingredients panel', () => {
     });
   });
 });
+
+describe('cook mode with embedded recipes', () => {
+  const SAUCE: Recipe = {
+    ...RECIPE,
+    slug: 'sauce',
+    title: 'Sauce Title',
+    component: true,
+    ingredients: [{ qty: 3, unit: 'tbsp', name: 'butter', aisle: 'dairy' }],
+    steps: ['Melt for 2 minutes.', 'Whisk.'],
+  };
+  const PARENT: Recipe = {
+    ...RECIPE,
+    slug: 'parent',
+    title: 'Parent',
+    ingredients: [{ qty: 1, unit: '', name: 'chicken', aisle: 'meat' }],
+    steps: ['Roast for 40 minutes.'],
+    components: [{ slug: 'sauce', label: 'For the sauce' }, { slug: 'gone' }],
+  };
+  let fixture: ComponentFixture<CookModeComponent>;
+  let el: HTMLElement;
+  const text = (node: Element | null | undefined) => (node?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const refresh = () => fixture.detectChanges();
+  const nextStep = () => {
+    Array.from(el.querySelectorAll<HTMLElement>('.stage-nav button'))
+      .find((b) => /Next step/.test(b.textContent ?? ''))!
+      .click();
+    refresh();
+  };
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        ...provideFakeRecipes(new FakeRecipeRepository([PARENT, SAUCE])),
+        ...provideFakeCookbooks(new FakeCookbookRepository([])),
+      ],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    jasmine.clock().install();
+    fixture = TestBed.createComponent(CookModeComponent);
+    fixture.componentRef.setInput('slug', 'parent');
+    fixture.detectChanges();
+    el = fixture.nativeElement;
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+    jasmine.clock().uninstall();
+  });
+
+  it('counts component steps and the parent steps as one sequence', () => {
+    expect(text(el.querySelector('.step-counter'))).toBe('Step 1 of 3');
+    expect(text(el.querySelector('.step-text'))).toBe('Melt for 2 minutes.');
+    nextStep();
+    nextStep();
+    expect(text(el.querySelector('.step-counter'))).toBe('Step 3 of 3');
+    expect(text(el.querySelector('.step-text'))).toBe('Roast for 40 minutes.');
+  });
+
+  it('labels a component step with the component label', () => {
+    expect(text(el.querySelector('.step-label'))).toBe('For the sauce');
+    nextStep();
+    nextStep();
+    expect(el.querySelector('.step-label')).toBeNull();
+  });
+
+  it('runs the progress bar across the whole sequence', () => {
+    nextStep();
+    expect(el.querySelector<HTMLElement>('.progress-fill')!.style.width).toBe('67%');
+  });
+
+  it('keys timers by the flat step index', () => {
+    (el.querySelector('.timer-start') as HTMLElement).click();
+    refresh();
+    nextStep();
+    nextStep();
+    (el.querySelector('.timer-start') as HTMLElement).click();
+    refresh();
+    (el.querySelector('.timer') as HTMLElement).click();
+    refresh();
+    const rows = Array.from(document.querySelectorAll('.timer-row-label')).map(text);
+    expect(rows).toEqual(['Step 1 · 2:00', 'Step 3 · 40:00']);
+  });
+
+  it('lists every step in the jump list, with component labels as headers', () => {
+    expect(el.querySelectorAll('.jump button').length).toBe(3);
+    expect(Array.from(el.querySelectorAll('.jump-group')).map(text)).toEqual(['For the sauce', 'Parent']);
+  });
+
+  it('groups the ingredients panel by component, skipping a missing one', () => {
+    expect(Array.from(el.querySelectorAll('.ing-name')).map(text)).toEqual(['chicken', 'butter']);
+    expect(Array.from(el.querySelectorAll('.ing-group')).map(text)).toEqual(['For the sauce']);
+  });
+});

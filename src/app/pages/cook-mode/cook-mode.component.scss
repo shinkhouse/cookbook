@@ -224,6 +224,13 @@
     color: var(--cook-accent) !important;
 }
 
+// The component a step belongs to, over the step itself.
+.step-label {
+    margin: 0 0 8px;
+    color: var(--cook-text) !important;
+    opacity: 0.7;
+}
+
 .step-text {
     margin: 0;
     font-family: var(--font);
@@ -550,6 +557,20 @@
             }
         }
     }
+}
+
+// A component's name over its run of steps; a divider, not a control.
+.jump-group {
+    margin: 12px 14px 2px;
+    color: var(--cook-accent) !important;
+    font-size: 11px;
+}
+
+// The sidebar's heading over a component's ingredients.
+.ing-group {
+    margin: 16px 0 0;
+    color: var(--cook-accent) !important;
+    font-size: 11px;
 }
 
 .jump-number {

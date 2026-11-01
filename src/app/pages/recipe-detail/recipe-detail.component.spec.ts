@@ -208,3 +208,61 @@ describe('RecipeDetailComponent source link', () => {
     expect(source(await render())).toBeUndefined();
   });
 });
+
+describe('RecipeDetailComponent embedded recipes', () => {
+  const base = Recipes.find((r) => r.slug === SLUG)!;
+  const SAUCE = {
+    ...base,
+    slug: 'chili-sauce',
+    title: 'Sauce Title',
+    component: true,
+    servings: 4,
+    ingredients: [{ qty: 2, unit: 'tbsp', name: 'butter', aisle: 'dairy' as const }],
+    steps: ['Melt the butter.'],
+    notes: [],
+  };
+  const PARENT = {
+    ...base,
+    servings: 4,
+    ingredients: [{ qty: 4, unit: 'cup', name: 'beans', aisle: 'pantry' as const }],
+    components: [{ slug: 'chili-sauce', label: 'For the sauce' }, { slug: 'gone' }],
+  };
+  let fixture: ComponentFixture<RecipeDetailComponent>;
+  const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+  const text = (n: Element | null | undefined) => (n?.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(new FakeRecipeRepository([PARENT, SAUCE]))],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+  });
+
+  it('shows a titled section per component, skipping a missing one', () => {
+    const sections = el().querySelectorAll('.component-section');
+    expect(sections.length).toBe(1);
+    expect(text(sections[0].querySelector('h3'))).toBe('For the sauce');
+    expect(text(sections[0])).toContain('Melt the butter.');
+    expect(text(sections[0])).toContain('butter');
+  });
+
+  it('scales component ingredients with the parent servings', () => {
+    const amount = () => text(el().querySelector('.component-section .ing-amount'));
+    expect(amount()).toBe('2 tbsp');
+    (el().querySelector('[aria-label="One more serving"]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(amount()).toBe('2½ tbsp');
+  });
+
+  it('checks component ingredients and counts them', () => {
+    const box = el().querySelector<HTMLInputElement>('.component-section input[type=checkbox]')!;
+    box.click();
+    fixture.detectChanges();
+    expect(text(el().querySelector('.checked-count'))).toBe('1 of 2 in hand');
+    expect(el().querySelectorAll('.is-checked').length).toBe(1);
+  });
+});

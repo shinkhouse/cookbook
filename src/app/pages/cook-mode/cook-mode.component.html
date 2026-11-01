@@ -64,6 +64,10 @@
         <section class="stage">
           <p class="step-counter label">Step {{ stepIndex() + 1 }} of {{ stepCount() }}</p>
 
+          @if (stepLabel(); as label) {
+            <p class="step-label label">{{ label }}</p>
+          }
+
           <p class="step-text">{{ currentStep() }}</p>
 
           @if (stepDuration() !== null) {
@@ -145,18 +149,23 @@
           <!-- Inert while closed, so focus and screen readers skip the hidden checkboxes. -->
           <div id="cook-ingredients" class="sidebar-body" [attr.inert]="ingredientsOpen() ? null : ''">
             <div class="sidebar-clip">
-              <ul class="ing-list">
-                @for (item of ingredients(); track item.index) {
-                  <li [class.is-checked]="item.checked">
-                    <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
-                      <span class="ing-row">
-                        <span class="ing-amount tnum">{{ item.amount }}</span>
-                        <span class="ing-name">{{ item.name }}</span>
-                      </span>
-                    </mat-checkbox>
-                  </li>
+              @for (section of ingredientSections(); track $index) {
+                @if (section.label) {
+                  <h3 class="ing-group label">{{ section.label }}</h3>
                 }
-              </ul>
+                <ul class="ing-list">
+                  @for (item of section.items; track item.index) {
+                    <li [class.is-checked]="item.checked">
+                      <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
+                        <span class="ing-row">
+                          <span class="ing-amount tnum">{{ item.amount }}</span>
+                          <span class="ing-name">{{ item.name }}</span>
+                        </span>
+                      </mat-checkbox>
+                    </li>
+                  }
+                </ul>
+              }
             </div>
           </div>
         </aside>
@@ -166,7 +175,12 @@
       <nav class="jump" aria-label="All steps">
         <h2 class="label">All steps</h2>
         <ol>
-          @for (step of steps(); track $index) {
+          @for (step of flatSteps(); track $index) {
+            @if ($index === 0 || step.label !== flatSteps()[$index - 1].label) {
+              @if (step.label) {
+                <li class="jump-group label" role="presentation">{{ step.label }}</li>
+              }
+            }
             <li>
               <button
                 type="button"
@@ -175,7 +189,7 @@
                 (click)="jumpTo($index)"
               >
                 <span class="jump-number label">{{ $index + 1 }}</span>
-                <span class="jump-text">{{ step }}</span>
+                <span class="jump-text">{{ step.text }}</span>
               </button>
             </li>
           }

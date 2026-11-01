@@ -17,6 +17,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
 import { formatQty } from '../../core/scale';
+import { Recipe } from '../../core/model/recipes.model';
 import { PrefsStore } from '../../core/stores/prefs.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
 import { formatCountdown, parseDuration } from '../../core/timer';
@@ -69,7 +70,35 @@ export class CookModeComponent {
   private readonly checked = signal<ReadonlySet<number>>(new Set());
   protected readonly timers = signal<readonly RunningTimer[]>([]);
 
-  protected readonly steps = computed(() => this.recipe()?.steps ?? []);
+  /** Embedded recipes in order; one that no longer resolves is already left out. */
+  private readonly parts = computed(() => {
+    const recipe = this.recipe();
+    return recipe ? this.recipes.componentsOf(recipe.slug) : [];
+  });
+
+  /**
+   * The one step sequence cook mode runs: each component's steps, labelled with
+   * the component, then the parent's own. The counter, progress bar, timers and
+   * jump list all index into this list.
+   */
+  protected readonly flatSteps = computed<{ text: string; label: string | null }[]>(() => {
+    const recipe = this.recipe();
+    if (!recipe) return [];
+    const parts = this.parts();
+    const own = recipe.steps.map((text) => ({ text, label: parts.length ? recipe.title : null }));
+    return [
+      ...parts.flatMap((p) => p.recipe.steps.map((text) => ({ text, label: p.label as string | null }))),
+      ...own,
+    ];
+  });
+
+  protected readonly steps = computed(() => this.flatSteps().map((s) => s.text));
+
+  /** The current step's component label, if it belongs to one. */
+  protected readonly stepLabel = computed(() => {
+    const step = this.flatSteps()[this.stepIndex()];
+    return step && step.label !== this.recipe()?.title ? step.label : null;
+  });
   protected readonly stepCount = computed(() => this.steps().length);
 
   protected readonly currentStep = computed(() => this.steps()[this.stepIndex()] ?? '');
@@ -84,20 +113,33 @@ export class CookModeComponent {
     return Math.round(((this.stepIndex() + 1) / total) * 100);
   });
 
-  /** §6.3 — the sidebar shares the detail page's amounts. */
-  protected readonly ingredients = computed(() => {
+  /**
+   * §6.3 — the sidebar shares the detail page's amounts. The parent's list
+   * comes first, then each component's under its label; rows are numbered on
+   * across all of them so one check set covers the lot.
+   */
+  protected readonly ingredientSections = computed(() => {
     const recipe = this.recipe();
     if (!recipe) return [];
     const checked = this.checked();
-    return recipe.ingredients.map((ingredient, index) => ({
-      index,
-      name: ingredient.name,
-      amount:
-        ingredient.qty === null
-          ? ''
-          : `${formatQty(ingredient.qty)}${ingredient.unit ? ' ' + ingredient.unit : ''}`,
-      checked: checked.has(index),
-    }));
+    let offset = 0;
+    const section = (label: string | null, list: Recipe['ingredients']) => {
+      const items = list.map((ingredient, i) => ({
+        index: offset + i,
+        name: ingredient.name,
+        amount:
+          ingredient.qty === null
+            ? ''
+            : `${formatQty(ingredient.qty)}${ingredient.unit ? ' ' + ingredient.unit : ''}`,
+        checked: checked.has(offset + i),
+      }));
+      offset += list.length;
+      return { label, items };
+    };
+    return [
+      section(null, recipe.ingredients),
+      ...this.parts().map((p) => section(p.label, p.recipe.ingredients)),
+    ];
   });
 
   /**

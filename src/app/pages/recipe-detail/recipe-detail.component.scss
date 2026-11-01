@@ -470,6 +470,20 @@ h1 {
     }
 }
 
+// An embedded recipe: a titled section below the main columns, laid out the
+// same way — its ingredients beside its steps.
+.component-section {
+    margin-top: 40px;
+
+    .section-title {
+        font-size: 24px;
+    }
+
+    .step-list {
+        flex: 2 1 420px;
+    }
+}
+
 // A quiet note, not a warning: the recipe still works, it is just incomplete.
 .gap-note {
     display: flex;

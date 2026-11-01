@@ -169,7 +169,7 @@
             }
   
             @if (checkedCount() > 0) {
-              <p class="checked-count label">{{ checkedCount() }} of {{ ingredients().length }} in hand</p>
+              <p class="checked-count label">{{ checkedCount() }} of {{ ingredientTotal() }} in hand</p>
             }
 
           </div>
@@ -208,6 +208,45 @@
           }
         </section>
       </div>
+
+      @for (part of componentSections(); track $index) {
+        <section class="component-section">
+          <div class="section-head">
+            <h3 class="section-title">{{ part.label }}</h3>
+          </div>
+          <div class="columns">
+            <div class="ingredients-card">
+              @for (group of part.groups; track $index) {
+                @if (group.name) {
+                  <h4 class="ing-group">{{ group.name }}</h4>
+                }
+                <ul class="ingredient-list">
+                  @for (item of group.items; track item.index) {
+                    <li [class.is-checked]="item.checked">
+                      <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
+                        <span class="ing-row">
+                          <span class="ing-amount tnum">{{ amountLabel(item.amount, item.unit) }}</span>
+                          <span class="ing-name">{{ item.name }}</span>
+                        </span>
+                      </mat-checkbox>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+            @if (part.steps.length > 0) {
+              <ol class="step-list">
+                @for (step of part.steps; track $index) {
+                  <li>
+                    <span class="step-number tnum">{{ $index + 1 }}</span>
+                    <p>{{ step }}</p>
+                  </li>
+                }
+              </ol>
+            }
+          </div>
+        </section>
+      }
     </div>
   </article>
 } @else if (status() === 'loading') {

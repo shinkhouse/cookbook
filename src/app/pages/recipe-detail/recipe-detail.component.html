@@ -108,6 +108,10 @@
         </button>
 
         @if (writable && !confirmingArchive()) {
+          <a class="btn-ghost btn-quiet" [routerLink]="['/recipes', r.slug, 'edit']">
+            <mat-icon fontIcon="edit" aria-hidden="true" />
+            Edit
+          </a>
           <button type="button" class="btn-ghost btn-quiet" (click)="askArchive()">
             <mat-icon fontIcon="archive" aria-hidden="true" />
             Archive

@@ -211,3 +211,88 @@ describe('CreateRecipeComponent', () => {
     });
   });
 });
+
+describe('CreateRecipeComponent edit mode', () => {
+  const stored: Recipe = {
+    slug: 'old-soup',
+    title: 'Old Soup',
+    tags: ['dinner'],
+    time: '30 min',
+    servings: 4,
+    cooked: 7,
+    blurb: 'b',
+    desc: 'd',
+    ingredients: [{ qty: 1, unit: '', name: 'leek', aisle: 'produce' }],
+    steps: ['Simmer.'],
+    notes: [],
+    cookbooks: ['cb1'],
+    photo: 'https://example.com/p.jpg',
+    sourceUrl: 'https://example.com/soup',
+    components: [{ slug: 'stock' }],
+  };
+  type Edit = {
+    title: { set(v: string): void; (): string };
+    save(): Promise<void>;
+    notice(): string;
+  };
+  let fake: FakeRecipeRepository;
+  let fixture: ComponentFixture<CreateRecipeComponent>;
+  let navigate: jasmine.Spy;
+  let page: Edit;
+
+  async function setup(slug = 'old-soup'): Promise<void> {
+    fake = new FakeRecipeRepository([stored]);
+    TestBed.configureTestingModule({
+      imports: [CreateRecipeComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake)],
+    });
+    navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fixture = TestBed.createComponent(CreateRecipeComponent);
+    fixture.componentRef.setInput('slug', slug);
+    page = fixture.componentInstance as unknown as Edit;
+    fixture.detectChanges();
+    await TestBed.inject(RecipeStore).whenLoaded();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+  const text = (): string => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+  it('loads the recipe into the form under an "Edit recipe" heading', async () => {
+    await setup();
+    expect(text()).toContain('Edit recipe');
+    expect(page.title()).toBe('Old Soup');
+    expect(text()).toContain('/old-soup');
+  });
+
+  it('saves with update, keeps the slug when the title changes, and preserves hidden fields', async () => {
+    await setup();
+    page.title.set('New Name');
+    const update = spyOn(fake, 'update').and.callThrough();
+    const create = spyOn(fake, 'create').and.callThrough();
+    await page.save();
+    expect(create).not.toHaveBeenCalled();
+    const sent = update.calls.mostRecent().args[0];
+    expect(sent.slug).toBe('old-soup');
+    expect(sent.title).toBe('New Name');
+    expect(sent.cooked).toBe(7);
+    expect(sent.photo).toBe(stored.photo);
+    expect(sent.sourceUrl).toBe(stored.sourceUrl);
+    expect(sent.components).toEqual([{ slug: 'stock' }]);
+    expect(sent.cookbooks).toEqual(['cb1']);
+    expect(navigate).toHaveBeenCalledWith(['/recipes', 'old-soup']);
+  });
+
+  it('stays open with the error when the update fails', async () => {
+    await setup();
+    fake.failNext(Object.assign(new Error('x'), { status: 0 }));
+    await page.save();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(page.notice()).toContain("Couldn't reach the recipe server");
+    expect(page.title()).toBe('Old Soup');
+  });
+
+  it('shows not-found for an unknown slug', async () => {
+    await setup('nope');
+    expect(text()).toContain('No recipe by that name.');
+  });
+});

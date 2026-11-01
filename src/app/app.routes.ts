@@ -44,6 +44,13 @@ export const routes: Routes = [
     title: 'Add a recipe',
   },
   {
+    path: 'recipes/:slug/edit',
+    canMatch: [() => inject(RecipeStore).writable || inject(Router).createUrlTree(['/'])],
+    loadComponent: () =>
+      import('./pages/create-recipe/create-recipe.component').then((m) => m.CreateRecipeComponent),
+    title: recipeTitle('edit'),
+  },
+  {
     path: 'recipes/:slug/cook',
     loadComponent: () => import('./pages/cook-mode/cook-mode.component').then((m) => m.CookModeComponent),
     title: recipeTitle('cooking'),

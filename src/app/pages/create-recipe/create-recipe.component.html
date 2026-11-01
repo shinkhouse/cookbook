@@ -4,12 +4,24 @@
       <mat-icon fontIcon="arrow_back" aria-hidden="true" />
       All recipes
     </a>
-    <h1>Add a recipe.</h1>
-    <p class="lede">
-      Paste it, drop a file, or type it out. Nothing is saved until you say so.
-    </p>
+    @if (editing()) {
+      <h1>Edit recipe</h1>
+      <p class="lede">Changes are saved to the shared collection when you press Save.</p>
+    } @else {
+      <h1>Add a recipe.</h1>
+      <p class="lede">
+        Paste it, drop a file, or type it out. Nothing is saved until you say so.
+      </p>
+    }
   </header>
 
+  @if (missing()) {
+    <div class="not-found">
+      <p class="hint">No recipe by that name.</p>
+      <a class="btn-outline" routerLink="/">Back to all recipes</a>
+    </div>
+  } @else {
+  @if (!editing()) {
   <div class="tabs" role="tablist" aria-label="How to add a recipe">
     @for (t of [
       { id: 'paste', label: 'Paste text' },
@@ -29,6 +41,7 @@
       </button>
     }
   </div>
+  }
 
   <div class="columns">
     <section class="panel">
@@ -96,6 +109,9 @@
 
         @case ('manual') {
           <div class="manual">
+            @if (editing()) {
+              <p class="hint">Address: <code class="edit-slug">/{{ slug() }}</code> (fixed; editing never renames)</p>
+            }
             <div class="field-row">
               <label class="field">
                 <span class="field-label">Title</span>
@@ -347,4 +363,5 @@
       }
     </aside>
   </div>
+  }
 </div>

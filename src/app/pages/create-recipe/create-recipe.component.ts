@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { AISLE_ORDER, Aisle } from '../../core/aisle';
@@ -21,6 +21,9 @@ type Status = 'waiting' | 'check' | 'clean';
   styleUrl: './create-recipe.component.scss',
 })
 export class CreateRecipeComponent {
+  /** Bound from the route on `recipes/:slug/edit`; absent when adding. */
+  readonly slug_ = input<string | undefined>(undefined, { alias: 'slug' });
+
   protected readonly recipes = inject(RecipeStore);
   private readonly router = inject(Router);
 
@@ -60,7 +63,14 @@ export class CreateRecipeComponent {
       .filter(Boolean),
   );
 
-  protected readonly slug = computed(() => slugify(this.title()));
+  /** The stored recipe being edited; null when adding, or until it has loaded. */
+  private readonly original = signal<Recipe | null>(null);
+  protected readonly editing = computed(() => this.slug_() !== undefined);
+  /** An edit whose slug matched nothing once the collection loaded. */
+  protected readonly missing = signal(false);
+
+  /** Editing never renames: the slug is the stored one, whatever the title says. */
+  protected readonly slug = computed(() => this.slug_() ?? slugify(this.title()));
 
   protected readonly status = computed<Status>(() => {
     if (!this.title() && this.ingredients().length === 0 && this.steps().length === 0) {
@@ -83,23 +93,57 @@ export class CreateRecipeComponent {
   );
 
   protected readonly draft = computed<Recipe>(() => ({
+    // Edit mode keeps what the form has no field for: cooked, photo, archived,
+    // sourceUrl, components, cookbooks.
+    ...this.original(),
     slug: this.slug(),
     title: this.title().trim(),
     ...(this.subtitle().trim() ? { subtitle: this.subtitle().trim() } : {}),
     tags: this.tags(),
     time: this.time().trim(),
     servings: this.servings(),
-    cooked: 0,
+    cooked: this.original()?.cooked ?? 0,
     blurb: this.blurb().trim(),
     desc: this.desc().trim(),
     ingredients: this.ingredients(),
     steps: this.steps(),
     notes: this.notes(),
     // Unfiled until this screen offers a cookbook to file into.
-    cookbooks: [],
+    cookbooks: this.original()?.cookbooks ?? [],
   }));
 
   protected readonly draftJson = computed(() => JSON.stringify(this.draft(), null, 2));
+
+  constructor() {
+    effect(() => {
+      const slug = this.slug_();
+      if (slug === undefined) return;
+      untracked(() => void this.loadForEdit(slug));
+    });
+  }
+
+  private async loadForEdit(slug: string): Promise<void> {
+    this.missing.set(false);
+    await this.recipes.whenLoaded();
+    if (this.slug_() !== slug) return;
+    const recipe = this.recipes.bySlug(slug);
+    if (!recipe) {
+      this.missing.set(true);
+      return;
+    }
+    this.original.set(recipe);
+    this.title.set(recipe.title);
+    this.subtitle.set(recipe.subtitle ?? '');
+    this.servings.set(recipe.servings);
+    this.time.set(recipe.time);
+    this.blurb.set(recipe.blurb);
+    this.desc.set(recipe.desc);
+    this.tagsText.set(recipe.tags.join(', '));
+    this.ingredients.set(recipe.ingredients.map((i) => ({ ...i })));
+    this.steps.set([...recipe.steps]);
+    this.notes.set([...recipe.notes]);
+    this.tab.set('manual');
+  }
 
   protected setTab(tab: Tab): void {
     this.tab.set(tab);
@@ -250,6 +294,7 @@ export class CreateRecipeComponent {
               name: parsed.name || raw,
               // Keep a hand-picked aisle rather than re-inferring over it.
               aisle: item.name ? item.aisle : parsed.aisle,
+              ...(item.group ? { group: item.group } : {}),
             }
           : item,
       ),
@@ -296,17 +341,27 @@ export class CreateRecipeComponent {
     // The button is disabled too, but a second call can arrive before the
     // first re-renders, so the guard lives here as well.
     if (!this.canSave() || this.saving()) return;
+    if (this.editing() && !this.original()) return;
     this.saving.set(true);
     this.notice.set('');
     const recipe = this.draft();
+    const cleaned = {
+      ...recipe,
+      // Drop the blank rows the manual editor leaves behind.
+      steps: recipe.steps.map((s) => s.trim()).filter(Boolean),
+      notes: recipe.notes.map((n) => n.trim()).filter(Boolean),
+      ingredients: recipe.ingredients.filter((i) => i.name.trim()),
+    };
     try {
-      const slug = await this.recipes.add({
-        ...recipe,
-        // Drop the blank rows the manual editor leaves behind.
-        steps: recipe.steps.map((s) => s.trim()).filter(Boolean),
-        notes: recipe.notes.map((n) => n.trim()).filter(Boolean),
-        ingredients: recipe.ingredients.filter((i) => i.name.trim()),
-      });
+      if (this.editing()) {
+        if (!(await this.recipes.update(cleaned))) {
+          this.notice.set('That recipe no longer exists, so nothing was saved.');
+          return;
+        }
+        void this.router.navigate(['/recipes', cleaned.slug]);
+        return;
+      }
+      const slug = await this.recipes.add(cleaned);
       void this.router.navigate(['/recipes', slug]);
     } catch (err) {
       // Stay here with the draft untouched so nothing typed is lost.

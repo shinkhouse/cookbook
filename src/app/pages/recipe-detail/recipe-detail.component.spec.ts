@@ -152,3 +152,29 @@ describe('RecipeDetailComponent list and layout controls', () => {
     expect(buttonTexts()).not.toContain('Side by side');
   });
 });
+
+describe('RecipeDetailComponent edit link', () => {
+  async function render(writable: boolean): Promise<HTMLElement> {
+    const fake = new FakeRecipeRepository();
+    fake.writable = writable;
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake)],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    const fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+  const edit = (el: HTMLElement): HTMLAnchorElement | undefined =>
+    Array.from(el.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Edit');
+
+  it('links to the editor when writable', async () => {
+    expect(edit(await render(true))?.getAttribute('href')).toBe(`/recipes/${SLUG}/edit`);
+  });
+
+  it('has no Edit link when not writable', async () => {
+    expect(edit(await render(false))).toBeUndefined();
+  });
+});

@@ -241,7 +241,7 @@ describe('RecipeStore', () => {
     const prefs = TestBed.inject(PrefsStore);
     store.toggleFavsOnly();
     expect(store.results().length).toBe(FAV_SEED.length);
-    // Unfavouriting is reflected immediately — the predicate reads a signal.
+    // Unfavoriting is reflected immediately — the predicate reads a signal.
     prefs.toggleFav(FAV_SEED[0]);
     expect(store.results().length).toBe(FAV_SEED.length - 1);
   });

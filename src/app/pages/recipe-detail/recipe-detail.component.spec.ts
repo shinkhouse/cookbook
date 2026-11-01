@@ -140,6 +140,8 @@ describe('RecipeDetailComponent list and layout controls', () => {
     // A plain field, so tell the view to look again.
     fixture.componentRef.changeDetectorRef.markForCheck();
     fixture.detectChanges();
+    // The page still rendered, so the absences below are not a blank render.
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Start cooking');
     expect(buttonTexts()).not.toContain('Add to list');
     expect(buttonTexts()).not.toContain('On the list');
   });

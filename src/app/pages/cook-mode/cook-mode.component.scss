@@ -13,15 +13,23 @@
     padding: 0 var(--pad-section) var(--pad-section);
 }
 
-// Three columns so the title sits on the page's centre line whatever the sides
-// hold. The side columns never touch it: a timer appearing only fills the right.
+// The title sits on the header's centre line by construction: both side columns
+// are the same fixed reserve (--side), sized to hold the exit link and the timer
+// chip, and the title fills the middle column on its own. Nothing in a side
+// column can move it, and a long title wraps to two lines, then truncates,
+// inside the room that is left. The container query (on :host) lets phones
+// shrink the reserve and the chip together.
+:host {
+    container-type: inline-size;
+    --side: 10rem;
+}
+
 .cook-head {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: var(--side) minmax(0, 1fr) var(--side);
     align-items: center;
-    gap: var(--gutter);
+    column-gap: var(--gutter);
     padding: 18px 0;
-    container-type: inline-size;
 }
 
 .exit {
@@ -49,18 +57,16 @@
 }
 
 .cook-title {
-    // Each side keeps 8rem for the exit link and the timer chip. A longer title
-    // truncates rather than pushing them.
-    min-width: 0;
-    max-width: max(6ch, calc(100cqw - 16rem));
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
     margin: 0;
     font-family: var(--font);
     font-size: 21px;
     text-align: center;
     opacity: 0.85;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .timers {
@@ -126,38 +132,11 @@
 }
 
 .timer-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    min-height: 44px;
-    padding: 0 8px 0 16px;
+    // mat-menu-item supplies the arrow-key focus and the 48px height.
     font-size: 14px;
 
     &.is-done {
         font-weight: 600;
-    }
-}
-
-.timer-dismiss {
-    display: grid;
-    place-items: center;
-    width: 36px;
-    height: 36px;
-    border: 0;
-    border-radius: var(--radius-pill);
-    background: none;
-    color: inherit;
-    cursor: pointer;
-
-    &:hover {
-        background: var(--cook-rule);
-    }
-
-    mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
     }
 }
 
@@ -437,5 +416,28 @@
         margin: 0;
         font-family: var(--font);
         font-size: clamp(22px, 3vw, 30px);
+    }
+}
+
+// After the base rules it overrides, so phones get the compact header.
+@container (max-width: 480px) {
+    .cook-head {
+        --side: 6.9rem;
+        column-gap: 6px;
+    }
+
+    .timer {
+        gap: 5px;
+        padding: 0 9px;
+        min-width: 12ch;
+        font-size: 13px;
+    }
+
+    .timer-time {
+        min-width: 4ch;
+    }
+
+    .cook-title {
+        font-size: 17px;
     }
 }

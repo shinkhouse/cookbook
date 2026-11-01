@@ -1,7 +1,7 @@
 @if (recipe(); as r) {
   <div class="cook">
     <header class="cook-head">
-      <a class="exit" [routerLink]="['/recipes', r.slug]" aria-label="Leave cook mode">
+      <a #exitLink class="exit" [routerLink]="['/recipes', r.slug]" aria-label="Leave cook mode">
         <mat-icon fontIcon="close" aria-hidden="true" />
       </a>
 
@@ -18,11 +18,7 @@
             class="timer"
             [class.is-done]="chip.remaining <= 0"
             [matMenuTriggerFor]="timerMenu"
-            [attr.aria-label]="
-              chip.remaining <= 0
-                ? 'Step ' + (chip.stepIndex + 1) + ' timer done, ' + timers().length + ' timers'
-                : 'Step ' + (chip.stepIndex + 1) + ' timer, ' + clock(chip.remaining) + ' left, ' + timers().length + ' timers'
-            "
+            [attr.aria-label]="chipLabel()"
           >
             <mat-icon [fontIcon]="chip.remaining <= 0 ? 'notifications_active' : 'timer'" aria-hidden="true" />
             <span class="timer-time tnum">{{ chip.remaining <= 0 ? 'Done' : clock(chip.remaining) }}</span>
@@ -33,19 +29,22 @@
         }
         <mat-menu #timerMenu="matMenu" class="timer-menu">
           @for (timer of urgentTimers(); track timer.id) {
-            <div class="timer-row" [class.is-done]="timer.remaining <= 0">
+            <button
+              type="button"
+              mat-menu-item
+              class="timer-row"
+              [class.is-done]="timer.remaining <= 0"
+              [attr.aria-label]="
+                'Dismiss step ' + (timer.stepIndex + 1) + ' timer, ' +
+                (timer.remaining <= 0 ? 'done' : clock(timer.remaining) + ' left')
+              "
+              (click)="dismissFromMenu(timer.id)"
+            >
               <span class="timer-row-label tnum">
                 Step {{ timer.stepIndex + 1 }} · {{ timer.remaining <= 0 ? 'Done' : clock(timer.remaining) }}
               </span>
-              <button
-                type="button"
-                class="timer-dismiss"
-                [attr.aria-label]="'Dismiss step ' + (timer.stepIndex + 1) + ' timer'"
-                (click)="dismissTimer(timer.id); $event.stopPropagation()"
-              >
-                <mat-icon fontIcon="close" aria-hidden="true" />
-              </button>
-            </div>
+              <mat-icon fontIcon="close" aria-hidden="true" />
+            </button>
           }
         </mat-menu>
       </div>

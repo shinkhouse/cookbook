@@ -1,10 +1,16 @@
 import {
   Component,
   DestroyRef,
+  ElementRef,
+  Injector,
+  afterNextRender,
   computed,
+  effect,
   inject,
   input,
   signal,
+  untracked,
+  viewChild,
 } from '@angular/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
@@ -37,6 +43,8 @@ export class CookModeComponent {
 
   private readonly recipes = inject(RecipeStore);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+  private readonly exitLink = viewChild<ElementRef<HTMLElement>>('exitLink');
 
   protected readonly recipe = computed(() => this.recipes.bySlug(this.slug()));
 
@@ -111,6 +119,15 @@ export class CookModeComponent {
   /** The header chip shows this one; the rest sit behind it in the menu. */
   protected readonly chipTimer = computed(() => this.urgentTimers()[0] ?? null);
 
+  /** The chip's accessible name: the most urgent timer, and how many there are. */
+  protected readonly chipLabel = computed(() => {
+    const chip = this.chipTimer();
+    if (!chip) return '';
+    const step = `Step ${chip.stepIndex + 1} timer`;
+    const state = chip.remaining <= 0 ? 'done' : `${formatCountdown(chip.remaining)} left`;
+    return `${step}, ${state}, ${this.timers().length} timers`;
+  });
+
   /** The button's label rounds to whole minutes; the timer keeps the seconds. */
   protected readonly stepDurationLabel = computed(() => {
     const seconds = this.stepDuration();
@@ -133,6 +150,17 @@ export class CookModeComponent {
 
   constructor() {
     this.requestWakeLock();
+
+    // A reused instance (the route param changing) must not carry one recipe's
+    // timers, position or ticks onto another recipe's steps.
+    effect(() => {
+      this.slug();
+      untracked(() => {
+        this.timers.set([]);
+        this.stepIndex.set(0);
+        this.checked.set(new Set());
+      });
+    });
 
     // One interval drives every running timer, rather than one each.
     const tick = setInterval(() => this.tickTimers(), 1000);
@@ -181,6 +209,17 @@ export class CookModeComponent {
 
   protected dismissTimer(id: number): void {
     this.timers.update((list) => list.filter((t) => t.id !== id));
+  }
+
+  /**
+   * Dismiss from the header menu. The chip is the menu's trigger and goes with
+   * the last timer, which would drop focus to the body, so it moves to the exit
+   * link once the view has settled.
+   */
+  protected dismissFromMenu(id: number): void {
+    this.dismissTimer(id);
+    if (this.timers().length > 0) return;
+    afterNextRender(() => this.exitLink()?.nativeElement.focus(), { injector: this.injector });
   }
 
   protected readonly clock = formatCountdown;

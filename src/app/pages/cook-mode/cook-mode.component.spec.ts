@@ -25,11 +25,13 @@ const RECIPE: Recipe = {
   cookbooks: [],
 };
 
+const OTHER: Recipe = { ...RECIPE, slug: 'other-stew', title: 'A Very Long Recipe Title That Cannot Fit', steps: ['Boil for 3 minutes.', 'Chill.'] };
+
 async function setup(): Promise<ComponentFixture<CookModeComponent>> {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
-      ...provideFakeRecipes(new FakeRecipeRepository([RECIPE])),
+      ...provideFakeRecipes(new FakeRecipeRepository([RECIPE, OTHER])),
       ...provideFakeCookbooks(new FakeCookbookRepository([])),
     ],
   });
@@ -147,7 +149,7 @@ describe('cook mode timers', () => {
 
     it('removes a timer when its row is dismissed', () => {
       click(el.querySelector('.timer'));
-      const dismiss = document.querySelector<HTMLElement>('[aria-label="Dismiss step 3 timer"]');
+      const dismiss = document.querySelector<HTMLElement>('[aria-label^="Dismiss step 3 timer"]');
       expect(dismiss).not.toBeNull();
       click(dismiss);
       expect(el.querySelector('.timer-badge') && text(el.querySelector('.timer-badge'))).toBe('+1');
@@ -156,6 +158,31 @@ describe('cook mode timers', () => {
         'Step 2 · 5:00',
         'Step 1 · 20:00',
       ]);
+    });
+
+    it('moves arrow-key focus onto the rows and Enter dismisses the focused one', () => {
+      click(el.querySelector('.timer'));
+      const menu = document.querySelector('.mat-mdc-menu-panel')!;
+      menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
+      refresh();
+      const first = document.querySelector<HTMLElement>('.timer-row')!;
+      expect(document.activeElement).toBe(first);
+      expect(first.getAttribute('aria-label')).toBe('Dismiss step 2 timer, 5:00 left');
+      first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+      first.click(); // a real Enter on a button fires click
+      refresh();
+      expect(text(el.querySelector('.timer-badge'))).toBe('+1');
+    });
+
+    it('moves focus to the exit link when the last timer is dismissed from the menu', async () => {
+      for (let i = 0; i < 3; i++) {
+        click(el.querySelector('.timer'));
+        click(document.querySelector('.timer-row'));
+      }
+      refresh();
+      expect(chips().length).toBe(0);
+      expect(document.querySelector('.cdk-overlay-pane')).toBeNull();
+      expect(document.activeElement).toBe(el.querySelector('.exit'));
     });
 
     it('moves a finished timer to the top and shows Done', () => {
@@ -170,5 +197,52 @@ describe('cook mode timers', () => {
         'Step 1 · 15:00',
       ]);
     });
+  });
+
+  it('forgets timers and position when the slug changes', () => {
+    click(startButton());
+    nextStep();
+    fixture.componentRef.setInput('slug', OTHER.slug);
+    refresh();
+    expect(chips().length).toBe(0);
+    expect(text(el.querySelector('.step-counter'))).toBe('Step 1 of 2');
+    expect(text(startButton())).toContain('Start 3 min timer');
+  });
+
+  describe('header layout', () => {
+    const centreOf = (n: Element) => {
+      const r = n.getBoundingClientRect();
+      return r.left + r.width / 2;
+    };
+    const head = () => el.querySelector('.cook-head')!;
+
+    for (const width of [390, 900]) {
+      it(`keeps the title centred at ${width}px in every timer state`, () => {
+        fixture.componentRef.setInput('slug', OTHER.slug);
+        refresh();
+        el.style.display = 'block';
+        el.style.width = `${width}px`;
+        refresh();
+        const title = el.querySelector('.cook-title')!;
+        const expectCentred = () => {
+          const h = head().getBoundingClientRect();
+          expect(Math.abs(centreOf(title) - (h.left + h.width / 2))).toBeLessThan(1);
+        };
+        expectCentred();
+        click(startButton());
+        expectCentred();
+        const chipWidth = el.querySelector('.timer')!.getBoundingClientRect().width;
+        tick(5);
+        expectCentred();
+        fixture.componentRef.setInput('slug', RECIPE.slug);
+        refresh();
+        click(startButton());
+        nextStep();
+        click(startButton());
+        expectCentred();
+        // Ticking and a second timer (the +N badge) leave the chip's width alone.
+        expect(el.querySelector('.timer')!.getBoundingClientRect().width).toBe(chipWidth);
+      });
+    }
   });
 });

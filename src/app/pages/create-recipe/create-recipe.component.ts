@@ -27,9 +27,18 @@ interface SectionDraft {
    * rather than creating it a second time. Null until then.
    */
   slug: string | null;
+  /**
+   * What the parent calls this part: the reference's label. For a new section
+   * it also becomes the component's own title; an existing component's title is
+   * never rewritten from here, since another recipe may embed it too.
+   */
   title: string;
   ingredients: Ingredient[];
   steps: string[];
+  /** The stored component's own title; null for a section not yet loaded from one. */
+  ownTitle: string | null;
+  /** Whether the stored reference carried a label, so an unchanged save keeps it as it was. */
+  hadLabel: boolean;
 }
 
 /** Which list an editor row belongs to: the recipe itself, or section n. */
@@ -203,11 +212,38 @@ export class CreateRecipeComponent {
         title: ref.label || part.title,
         ingredients: part.ingredients.map((i) => ({ ...i })),
         steps: [...part.steps],
+        ownTitle: part.title,
+        hadLabel: ref.label !== undefined,
       });
     }
     this.sections.set(sections);
     this.unresolved.set(unresolved);
     this.tab.set('manual');
+  }
+
+  /**
+   * Blanks every draft field before a paste, file or import fills it. Create
+   * mode only: the fill paths are not offered while editing, and an edit must
+   * never lose the stored recipe's fields.
+   */
+  private resetDraft(): void {
+    if (this.editing()) return;
+    this.title.set('');
+    this.subtitle.set('');
+    this.servings.set(4);
+    this.time.set('');
+    this.blurb.set('');
+    this.desc.set('');
+    this.tagsText.set('');
+    this.ingredients.set([]);
+    this.steps.set([]);
+    this.notes.set([]);
+    this.review.set([]);
+    this.sections.set([]);
+    this.photo.set('');
+    this.sourceUrl.set('');
+    this.unresolved.set([]);
+    this.parsedSomething.set(false);
   }
 
   protected setTab(tab: Tab): void {
@@ -341,6 +377,7 @@ export class CreateRecipeComponent {
   }
 
   private applyPreview(preview: ImportPreview): void {
+    this.resetDraft();
     const parse = (lines: readonly string[]) =>
       lines.map((line) => ({ line, result: parseIngredient(line) }));
     const toIngredients = (parsed: ReturnType<typeof parse>): Ingredient[] =>
@@ -374,6 +411,8 @@ export class CreateRecipeComponent {
         title: g.name,
         ingredients: toIngredients(g.parsed),
         steps: [],
+        ownTitle: null,
+        hadLabel: true,
       })),
     );
     this.review.set(
@@ -476,7 +515,10 @@ export class CreateRecipeComponent {
   }
 
   protected addSection(): void {
-    this.sections.update((list) => [...list, { slug: null, title: '', ingredients: [], steps: [] }]);
+    this.sections.update((list) => [
+      ...list,
+      { slug: null, title: '', ingredients: [], steps: [], ownTitle: null, hadLabel: true },
+    ]);
   }
 
   protected setSectionTitle(index: number, title: string): void {
@@ -559,11 +601,11 @@ export class CreateRecipeComponent {
       const section = sections[index];
       const title = section.title.trim();
       const body = {
-        title,
         ingredients: section.ingredients.filter((i) => i.name.trim()),
         steps: section.steps.map((s) => s.trim()).filter(Boolean),
       };
       if (section.slug !== null) {
+        // The component keeps its own title; the section title is only the label.
         const stored = this.recipes.bySlug(section.slug);
         const ok =
           stored !== undefined && (await this.recipes.update({ ...stored, ...body }));
@@ -571,11 +613,14 @@ export class CreateRecipeComponent {
           this.notice.set(`The section “${title}” no longer exists, so nothing more was saved.`);
           return null;
         }
-        refs.push({ slug: section.slug, label: title });
+        // An unlabelled reference stays unlabelled until the label is changed.
+        const unlabelled = !section.hadLabel && title === section.ownTitle;
+        refs.push(unlabelled ? { slug: section.slug } : { slug: section.slug, label: title });
         continue;
       }
       const slug = await this.recipes.add({
         slug: `${parent.slug}-${slugify(title) || 'section'}`,
+        title,
         ...body,
         tags: [],
         time: '',
@@ -592,7 +637,14 @@ export class CreateRecipeComponent {
       this.editSection(index, (s) => ({ ...s, slug }));
       refs.push({ slug, label: title });
     }
-    return [...refs, ...this.unresolved()];
+    // A dangling reference's slug is free, so a new section may have taken it;
+    // listing it twice would make the API refuse the parent on every retry.
+    const seen = new Set<string>();
+    return [...refs, ...this.unresolved()].filter((ref) => {
+      if (seen.has(ref.slug)) return false;
+      seen.add(ref.slug);
+      return true;
+    });
   }
 
   protected retry(): void {
@@ -617,8 +669,13 @@ export class CreateRecipeComponent {
     return ingredient.unit ? `${amount} ${ingredient.unit}` : amount;
   }
 
-  /** Fills the shared draft from a parse, leaving hand-entered copy alone. */
+  /**
+   * Fills the shared draft from a parse. Everything the parse does not set is
+   * cleared first, so nothing from an earlier import or paste (its source,
+   * photo or sections above all) is saved onto a different recipe.
+   */
   private applyDraft(parsed: ReturnType<typeof parseRecipeText>): void {
+    this.resetDraft();
     this.title.set(parsed.title);
     this.ingredients.set(parsed.ingredients);
     this.steps.set(parsed.steps);

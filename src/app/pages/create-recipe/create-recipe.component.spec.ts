@@ -408,6 +408,10 @@ type Full = {
   updateStep(i: number, text: string, section?: number): void;
   addStep(section?: number): void;
   addIngredient(section?: number): void;
+  subtitle: { set(v: string): void; (): string };
+  blurb: { set(v: string): void; (): string };
+  notes: { set(v: string[]): void; (): string[] };
+  onPaste(text: string): void;
 };
 
 const PREVIEW: ImportPreview = {
@@ -650,12 +654,12 @@ describe('CreateRecipeComponent import and sections', () => {
   it('loads the existing sections in edit mode and updates them before the parent', async () => {
     await setup('old-soup', [PARENT, STOCK]);
     expect(page.sections()).toEqual([
-      {
+      jasmine.objectContaining({
         slug: 'old-soup-stock',
         title: 'The stock',
         ingredients: STOCK.ingredients,
         steps: STOCK.steps,
-      },
+      }),
     ]);
     expect(el().querySelectorAll('.section-block').length).toBe(1);
 
@@ -687,6 +691,80 @@ describe('CreateRecipeComponent import and sections', () => {
       { slug: 'old-soup-stock', label: 'The stock' },
       { slug: 'old-soup-garnish', label: 'Garnish' },
     ]);
+  });
+
+  it('keeps the component title and the parent label apart on an unchanged edit save', async () => {
+    await setup('old-soup', [PARENT, STOCK]);
+    await page.save();
+    const store = TestBed.inject(RecipeStore);
+    expect(store.bySlug('old-soup-stock')?.title).toBe('Stock');
+    expect(store.bySlug('old-soup')?.components).toEqual([
+      { slug: 'old-soup-stock', label: 'The stock' },
+    ]);
+  });
+
+  it('edits only the label when a loaded section is renamed', async () => {
+    await setup('old-soup', [PARENT, STOCK]);
+    page.setSectionTitle(0, 'Broth');
+    await page.save();
+    const store = TestBed.inject(RecipeStore);
+    expect(store.bySlug('old-soup-stock')?.title).toBe('Stock');
+    expect(store.bySlug('old-soup')?.components).toEqual([{ slug: 'old-soup-stock', label: 'Broth' }]);
+  });
+
+  it('leaves an unlabelled reference unlabelled on an unchanged save', async () => {
+    await setup('old-soup', [{ ...PARENT, components: [{ slug: 'old-soup-stock' }] }, STOCK]);
+    await page.save();
+    expect(TestBed.inject(RecipeStore).bySlug('old-soup')?.components).toEqual([
+      { slug: 'old-soup-stock' },
+    ]);
+  });
+
+  it('never lists a slug twice when a new section takes a dangling reference\'s slug', async () => {
+    // The parent still points at old-soup-garnish, whose record is gone, so the
+    // slug is free and the new "Garnish" section is created under it.
+    await setup('old-soup', [
+      { ...PARENT, components: [...PARENT.components!, { slug: 'old-soup-garnish', label: 'Gone' }] },
+      STOCK,
+    ]);
+    page.addSection();
+    page.setSectionTitle(1, 'Garnish');
+    const update = spyOn(fake, 'update').and.callThrough();
+    await page.save();
+    const parent = update.calls.mostRecent().args[0];
+    expect(parent.slug).toBe('old-soup');
+    expect(parent.components).toEqual([
+      { slug: 'old-soup-stock', label: 'The stock' },
+      { slug: 'old-soup-garnish', label: 'Garnish' },
+    ]);
+    expect(navigate).toHaveBeenCalledWith(['/recipes', 'old-soup']);
+  });
+
+  it('clears what an import set when a different recipe is pasted', async () => {
+    await setup();
+    await importIt();
+    page.onPaste('Toast\n\nIngredients\n1 slice bread\n\nSteps\nToast it.');
+    const draft = page.draft();
+    expect(page.title()).toBe('Toast');
+    expect(draft.sourceUrl).toBeUndefined();
+    expect(draft.photo).toBeUndefined();
+    expect(page.sections()).toEqual([]);
+    expect(page.desc()).toBe('');
+    expect(page.time()).toBe('');
+    expect(page.tagsText()).toBe('');
+  });
+
+  it('clears what an earlier draft held when a recipe is imported', async () => {
+    await setup();
+    page.onPaste('Toast\n\nIngredients\n1 slice bread\n\nSteps\nToast it.');
+    page.subtitle.set('From Mum');
+    page.blurb.set('Crunchy.');
+    page.notes.set(['Use stale bread.']);
+    await importIt();
+    expect(page.subtitle()).toBe('');
+    expect(page.blurb()).toBe('');
+    expect(page.notes()).toEqual([]);
+    expect('subtitle' in page.draft()).toBeFalse();
   });
 
   it('sends no components when a recipe has no sections', async () => {

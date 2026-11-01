@@ -982,3 +982,62 @@ describe('ListStore with embedded components', () => {
     expect(list.boughtCount()).toBe(0);
   });
 });
+
+describe('ListStore with a component shared by two parents', () => {
+  let list: ListStore;
+  let recipes: RecipeStore;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    const sauce = fixture('red-sauce', {
+      component: true,
+      ingredients: [{ qty: 2, unit: 'cup', name: 'tomatoes', aisle: 'produce' }],
+    });
+    const a = fixture('lasagna', { components: [{ slug: 'red-sauce' }] });
+    const b = fixture('pizza', { components: [{ slug: 'red-sauce' }] });
+    TestBed.configureTestingModule({
+      providers: [provideFakeRecipes(new FakeRecipeRepository([a, b, sauce]))],
+    });
+    list = TestBed.inject(ListStore);
+    recipes = TestBed.inject(RecipeStore);
+    await recipes.whenLoaded();
+    list.addRecipe('lasagna');
+    list.addRecipe('pizza');
+  });
+
+  afterEach(() => localStorage.clear());
+
+  const tomatoes = () =>
+    list.groups().find((g) => g.aisle === 'produce')!.rows;
+
+  it('gives each parent its own rows with distinct keys', () => {
+    const rows = tomatoes();
+    expect(rows.length).toBe(2);
+    expect(new Set(rows.map((r) => r.key)).size).toBe(2);
+  });
+
+  it('checks one copy without the other', () => {
+    const [first] = tomatoes();
+    list.toggleBought(first.recipeSlug, first.index);
+    expect(tomatoes().map((r) => r.bought)).toEqual([true, false]);
+    expect(list.boughtCount()).toBe(1);
+  });
+
+  it('removing one parent keeps the other\'s marks', () => {
+    for (const r of tomatoes()) list.toggleBought(r.recipeSlug, r.index);
+    list.removeRecipe('lasagna');
+    expect(tomatoes().length).toBe(1);
+    expect(tomatoes()[0].bought).toBe(true);
+  });
+
+  it('removing an archived parent still clears its component marks', async () => {
+    const [first] = tomatoes();
+    list.toggleBought(first.recipeSlug, first.index);
+    await recipes.archive('lasagna');
+    list.removeRecipe('lasagna');
+    await recipes.update({ ...recipes.bySlug('pizza')! });
+    expect(list.boughtCount()).toBe(0);
+    expect(list.isBought(first.recipeSlug, first.index)).toBe(false);
+  });
+});
+

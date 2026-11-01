@@ -65,12 +65,13 @@ export class ListStore {
       const recipe = this.recipes.bySlug(slug);
       if (!recipe) continue; // a stored slug that no longer exists
       // The parent's own ingredients, then each component's. A component row is
-      // keyed on the component's slug so its checks never collide with the parent's.
+      // keyed `parent>component`, so a component shared by two parents gets
+      // separate rows and separate checks under each ('>' cannot occur in a slug).
       const sources = [
         { owner: slug, ingredients: recipe.ingredients },
         ...this.recipes
           .componentsOf(slug)
-          .map((c) => ({ owner: c.recipe.slug, ingredients: c.recipe.ingredients })),
+          .map((c) => ({ owner: `${slug}>${c.recipe.slug}`, ingredients: c.recipe.ingredients })),
       ];
       for (const { owner, ingredients } of sources) {
         ingredients.forEach((ingredient, index) => {
@@ -116,10 +117,9 @@ export class ListStore {
 
   /** Removing a recipe drops its bought marks too, per §6.5. */
   removeRecipe(slug: string): void {
-    // Component rows are keyed on the component's slug, so their marks go too.
-    const prefixes = [slug, ...this.recipes.componentsOf(slug).map((c) => c.recipe.slug)].map(
-      (s) => `${s}:`,
-    );
+    // The parent's own marks (`slug:`) and its components' (`slug>`), by prefix
+    // so it works even when the parent has since been archived.
+    const prefixes = [`${slug}:`, `${slug}>`];
     this.setCart(this._cart().filter((s) => s !== slug));
     const next = new Set(
       [...this._bought()].filter((k) => !prefixes.some((p) => k.startsWith(p))),

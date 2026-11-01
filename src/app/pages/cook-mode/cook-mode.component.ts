@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
 import { formatQty } from '../../core/scale';
 import { RecipeStore } from '../../core/stores/recipe.store';
@@ -15,15 +16,19 @@ import { formatCountdown, parseDuration } from '../../core/timer';
 
 interface RunningTimer {
   id: number;
+  /** The step this timer belongs to; a step holds at most one. */
+  stepIndex: number;
   label: string;
   /** Seconds left. Counted down by the single shared interval. */
   remaining: number;
   total: number;
+  /** Order of finishing, so the earliest-finished sorts first. Unset while running. */
+  finishedAt?: number;
 }
 
 @Component({
   selector: 'app-cook-mode',
-  imports: [RouterLink, MatIconModule, MatCheckboxModule],
+  imports: [RouterLink, MatIconModule, MatCheckboxModule, MatMenuModule],
   templateUrl: './cook-mode.component.html',
   styleUrl: './cook-mode.component.scss',
 })
@@ -84,6 +89,28 @@ export class CookModeComponent {
    */
   protected readonly stepDuration = computed(() => parseDuration(this.currentStep()));
 
+  /** The current step's timer, running or finished but not yet dismissed. */
+  protected readonly stepTimer = computed(
+    () => this.timers().find((t) => t.stepIndex === this.stepIndex()) ?? null,
+  );
+
+  /**
+   * Every timer, most urgent first: finished ones (earliest-finished first),
+   * then running ones by least time remaining.
+   */
+  protected readonly urgentTimers = computed(() =>
+    [...this.timers()].sort((a, b) => {
+      const aDone = a.remaining <= 0;
+      const bDone = b.remaining <= 0;
+      if (aDone !== bDone) return aDone ? -1 : 1;
+      if (aDone) return (a.finishedAt ?? 0) - (b.finishedAt ?? 0);
+      return a.remaining - b.remaining || a.id - b.id;
+    }),
+  );
+
+  /** The header chip shows this one; the rest sit behind it in the menu. */
+  protected readonly chipTimer = computed(() => this.urgentTimers()[0] ?? null);
+
   /** The button's label rounds to whole minutes; the timer keeps the seconds. */
   protected readonly stepDurationLabel = computed(() => {
     const seconds = this.stepDuration();
@@ -102,6 +129,7 @@ export class CookModeComponent {
 
   private wakeLock: WakeLockSentinel | null = null;
   private nextTimerId = 1;
+  private nextFinishOrder = 1;
 
   constructor() {
     this.requestWakeLock();
@@ -138,11 +166,16 @@ export class CookModeComponent {
     this.checked.set(next);
   }
 
-  /** Multiple concurrent timers are allowed (§6.3). */
+  /**
+   * Multiple concurrent timers are allowed (§6.3), at most one per step: a step
+   * that already has one, running or finished but not dismissed, ignores this.
+   */
   protected startTimer(seconds: number, label: string): void {
+    const stepIndex = this.stepIndex();
+    if (this.timers().some((t) => t.stepIndex === stepIndex)) return;
     this.timers.update((list) => [
       ...list,
-      { id: this.nextTimerId++, label, remaining: seconds, total: seconds },
+      { id: this.nextTimerId++, stepIndex, label, remaining: seconds, total: seconds },
     ]);
   }
 
@@ -160,8 +193,10 @@ export class CookModeComponent {
     const next = current.map((t) => {
       if (t.remaining <= 0) return t;
       const remaining = t.remaining - 1;
-      if (remaining === 0) finished.push(t);
-      return { ...t, remaining };
+      if (remaining > 0) return { ...t, remaining };
+      const done = { ...t, remaining, finishedAt: this.nextFinishOrder++ };
+      finished.push(done);
+      return done;
     });
 
     this.timers.set(next);

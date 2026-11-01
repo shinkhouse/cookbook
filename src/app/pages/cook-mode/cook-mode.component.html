@@ -1,30 +1,53 @@
 @if (recipe(); as r) {
   <div class="cook">
     <header class="cook-head">
-      <a class="exit" [routerLink]="['/recipes', r.slug]">
+      <a class="exit" [routerLink]="['/recipes', r.slug]" aria-label="Leave cook mode">
         <mat-icon fontIcon="close" aria-hidden="true" />
       </a>
 
       <p class="cook-title">{{ r.title }}</p>
 
-      <!-- §6.3 — running timers count down in the header, m:ss. -->
+      <!--
+        §6.3 — one chip for the most urgent timer, m:ss. The rest are behind it in
+        a menu, so any number of timers leaves the header as it was.
+      -->
       <div class="timers">
-        @for (timer of timers(); track timer.id) {
+        @if (chipTimer(); as chip) {
           <button
             type="button"
             class="timer"
-            [class.is-done]="timer.remaining <= 0"
-            (click)="dismissTimer(timer.id)"
+            [class.is-done]="chip.remaining <= 0"
+            [matMenuTriggerFor]="timerMenu"
             [attr.aria-label]="
-              timer.remaining <= 0
-                ? timer.label + ' timer finished, dismiss'
-                : timer.label + ' timer, ' + clock(timer.remaining) + ' left, dismiss'
+              chip.remaining <= 0
+                ? 'Step ' + (chip.stepIndex + 1) + ' timer done, ' + timers().length + ' timers'
+                : 'Step ' + (chip.stepIndex + 1) + ' timer, ' + clock(chip.remaining) + ' left, ' + timers().length + ' timers'
             "
           >
-            <mat-icon [fontIcon]="timer.remaining <= 0 ? 'notifications_active' : 'timer'" />
-            <span>{{ timer.remaining <= 0 ? 'Done' : clock(timer.remaining) }}</span>
+            <mat-icon [fontIcon]="chip.remaining <= 0 ? 'notifications_active' : 'timer'" aria-hidden="true" />
+            <span class="timer-time tnum">{{ chip.remaining <= 0 ? 'Done' : clock(chip.remaining) }}</span>
+            @if (timers().length > 1) {
+              <span class="timer-badge">+{{ timers().length - 1 }}</span>
+            }
           </button>
         }
+        <mat-menu #timerMenu="matMenu" class="timer-menu">
+          @for (timer of urgentTimers(); track timer.id) {
+            <div class="timer-row" [class.is-done]="timer.remaining <= 0">
+              <span class="timer-row-label tnum">
+                Step {{ timer.stepIndex + 1 }} · {{ timer.remaining <= 0 ? 'Done' : clock(timer.remaining) }}
+              </span>
+              <button
+                type="button"
+                class="timer-dismiss"
+                [attr.aria-label]="'Dismiss step ' + (timer.stepIndex + 1) + ' timer'"
+                (click)="dismissTimer(timer.id); $event.stopPropagation()"
+              >
+                <mat-icon fontIcon="close" aria-hidden="true" />
+              </button>
+            </div>
+          }
+        </mat-menu>
       </div>
     </header>
 
@@ -45,14 +68,37 @@
           <p class="step-text">{{ currentStep() }}</p>
 
           @if (stepDuration() !== null) {
-            <button
-              type="button"
-              class="btn-accent timer-start"
-              (click)="startTimer(stepDuration()!, stepDurationLabel())"
-            >
-              <mat-icon fontIcon="timer" aria-hidden="true" />
-              Start {{ stepDurationLabel() }} timer
-            </button>
+            @if (stepTimer(); as timer) {
+              @if (timer.remaining <= 0) {
+                <button
+                  type="button"
+                  class="btn-accent timer-start is-done"
+                  (click)="dismissTimer(timer.id)"
+                >
+                  <mat-icon fontIcon="notifications_active" aria-hidden="true" />
+                  Timer done
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="btn-accent timer-start is-running"
+                  disabled
+                  [attr.aria-label]="timer.label + ' timer running, ' + clock(timer.remaining) + ' left'"
+                >
+                  <mat-icon fontIcon="timer" aria-hidden="true" />
+                  <span class="tnum">{{ clock(timer.remaining) }} left</span>
+                </button>
+              }
+            } @else {
+              <button
+                type="button"
+                class="btn-accent timer-start"
+                (click)="startTimer(stepDuration()!, stepDurationLabel())"
+              >
+                <mat-icon fontIcon="timer" aria-hidden="true" />
+                Start {{ stepDurationLabel() }} timer
+              </button>
+            }
           }
 
           <div class="stage-nav">

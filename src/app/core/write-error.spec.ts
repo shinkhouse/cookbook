@@ -42,6 +42,28 @@ describe('describeWriteError', () => {
     );
   });
 
+  it('relays the import messages for 422, 502 and 504', () => {
+    expect(describeWriteError({ status: 422, error: { message: 'No recipe found on that page.' } })).toBe(
+      'No recipe found on that page.',
+    );
+    expect(describeWriteError({ status: 422 })).toBe('No recipe found on that page.');
+    expect(
+      describeWriteError({
+        status: 502,
+        error: { message: "The site didn't return the page. Paste the page source instead." },
+      }),
+    ).toBe("The site didn't return the page. Paste the page source instead.");
+    expect(
+      describeWriteError({ status: 504, error: { message: 'The site took too long to respond.' } }),
+    ).toBe('The site took too long to respond.');
+  });
+
+  it('still reads a bare 502 or 504 as the dev proxy answering for a dead API', () => {
+    const sentence = "Couldn't reach the recipe server. Is it running?";
+    expect(describeWriteError({ status: 502, error: '<html>Bad Gateway</html>' })).toBe(sentence);
+    expect(describeWriteError({ status: 504, error: { message: '' } })).toBe(sentence);
+  });
+
   it('falls back for anything else', () => {
     expect(describeWriteError({ status: 418 })).toBe('Saving failed. Nothing was changed.');
     expect(describeWriteError(new Error('boom'))).toBe('Saving failed. Nothing was changed.');

@@ -104,6 +104,7 @@
 
 textarea,
 input[type="text"],
+input[type="url"],
 input[type="number"],
 select {
     width: 100%;
@@ -230,6 +231,36 @@ textarea {
         flex: 0 0 110px;
         font-size: 13px;
     }
+}
+
+.import-row {
+    align-items: center;
+    margin-bottom: 20px;
+
+    .import-button {
+        flex: none;
+        margin-top: 8px;
+    }
+}
+
+.section-block {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+
+    > .editor-row {
+        align-items: flex-end;
+        margin-bottom: 10px;
+    }
+
+    > .editor-head {
+        margin-top: 10px;
+    }
+}
+
+.preview-source {
+    margin-top: 14px;
+    overflow-wrap: anywhere;
 }
 
 .icon-button {

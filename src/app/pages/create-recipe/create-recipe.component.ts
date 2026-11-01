@@ -1,8 +1,10 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { AISLE_ORDER, Aisle } from '../../core/aisle';
 import { Ingredient, Recipe } from '../../core/model/recipes.model';
+import { ImportClient, ImportPreview } from '../../core/import-client';
 import { parseIngredient } from '../../core/ingredient-parser';
 import { parseJsonLd, parseRecipeText, slugify, splitFrontMatter } from '../../core/recipe-text';
 import { formatQty } from '../../core/scale';
@@ -14,9 +16,28 @@ type Tab = 'paste' | 'file' | 'url' | 'manual';
 /** The badge above the preview, per §6.4. */
 type Status = 'waiting' | 'check' | 'clean';
 
+/**
+ * A sub-recipe being edited inside its parent ("For the sauce"). It is saved as
+ * its own recipe with `component: true` and listed on the parent.
+ */
+interface SectionDraft {
+  /**
+   * The slug it is stored under: set when loaded for editing, and set as soon
+   * as a new section is created, so a retry after a failed save updates it
+   * rather than creating it a second time. Null until then.
+   */
+  slug: string | null;
+  title: string;
+  ingredients: Ingredient[];
+  steps: string[];
+}
+
+/** Which list an editor row belongs to: the recipe itself, or section n. */
+type Owner = number | undefined;
+
 @Component({
   selector: 'app-create-recipe',
-  imports: [RouterLink, MatIconModule],
+  imports: [RouterLink, MatIconModule, NgTemplateOutlet],
   templateUrl: './create-recipe.component.html',
   styleUrl: './create-recipe.component.scss',
 })
@@ -26,6 +47,7 @@ export class CreateRecipeComponent {
 
   protected readonly recipes = inject(RecipeStore);
   private readonly router = inject(Router);
+  private readonly importer = inject(ImportClient);
 
   protected readonly aisles = AISLE_ORDER;
   protected readonly formatQty = formatQty;
@@ -33,6 +55,9 @@ export class CreateRecipeComponent {
   protected readonly tab = signal<Tab>('paste');
   protected readonly pasted = signal('');
   protected readonly urlText = signal('');
+  protected readonly importUrl = signal('');
+  /** True from pressing Import until the API answers. */
+  protected readonly importing = signal(false);
   protected readonly dropActive = signal(false);
   protected readonly notice = signal('');
   /** True from pressing Save until the API answers; the button and `save()` both honour it. */
@@ -53,6 +78,15 @@ export class CreateRecipeComponent {
   protected readonly ingredients = signal<Ingredient[]>([]);
   protected readonly steps = signal<string[]>([]);
   protected readonly notes = signal<string[]>([]);
+  protected readonly sections = signal<SectionDraft[]>([]);
+  /** No form field: set by an import or carried from the recipe being edited. */
+  private readonly photo = signal('');
+  private readonly sourceUrl = signal('');
+  /**
+   * References on the stored recipe whose component no longer resolves. They
+   * have no section to edit, but saving must not quietly drop them.
+   */
+  private readonly unresolved = signal<{ slug: string; label?: string }[]>([]);
   protected readonly review = signal<readonly string[]>([]);
   private readonly parsedSomething = signal(false);
 
@@ -89,31 +123,38 @@ export class CreateRecipeComponent {
   );
 
   protected readonly canSave = computed(
-    () => this.title().trim().length > 0 && this.ingredients().length > 0,
+    () =>
+      this.title().trim().length > 0 &&
+      this.ingredients().length > 0 &&
+      this.sections().every((s) => s.title.trim().length > 0),
   );
 
   protected readonly draft = computed<Recipe>(() => {
     const draft: Recipe = {
-    // Edit mode keeps what the form has no field for: cooked, photo, archived,
-    // sourceUrl, components, cookbooks.
-    ...this.original(),
-    slug: this.slug(),
-    title: this.title().trim(),
-    ...(this.subtitle().trim() ? { subtitle: this.subtitle().trim() } : {}),
-    tags: this.tags(),
-    time: this.time().trim(),
-    servings: this.servings(),
-    cooked: this.original()?.cooked ?? 0,
-    blurb: this.blurb().trim(),
-    desc: this.desc().trim(),
-    ingredients: this.ingredients(),
-    steps: this.steps(),
-    notes: this.notes(),
-    // Unfiled until this screen offers a cookbook to file into.
-    cookbooks: this.original()?.cookbooks ?? [],
+      // Edit mode keeps what the form has no field for: cooked, archived,
+      // components, cookbooks. Components are rebuilt from the sections on save.
+      ...this.original(),
+      slug: this.slug(),
+      title: this.title().trim(),
+      ...(this.subtitle().trim() ? { subtitle: this.subtitle().trim() } : {}),
+      tags: this.tags(),
+      time: this.time().trim(),
+      servings: this.servings(),
+      cooked: this.original()?.cooked ?? 0,
+      blurb: this.blurb().trim(),
+      desc: this.desc().trim(),
+      ingredients: this.ingredients(),
+      steps: this.steps(),
+      notes: this.notes(),
+      ...(this.photo() ? { photo: this.photo() } : {}),
+      ...(this.sourceUrl() ? { sourceUrl: this.sourceUrl() } : {}),
+      // Unfiled until this screen offers a cookbook to file into.
+      cookbooks: this.original()?.cookbooks ?? [],
     };
-    // The spread above would otherwise keep a stored subtitle the form cleared.
+    // The spread above would otherwise keep a stored value the form cleared.
     if (!this.subtitle().trim()) delete draft.subtitle;
+    if (!this.photo()) delete draft.photo;
+    if (!this.sourceUrl()) delete draft.sourceUrl;
     return draft;
   });
 
@@ -147,6 +188,25 @@ export class CreateRecipeComponent {
     this.ingredients.set(recipe.ingredients.map((i) => ({ ...i })));
     this.steps.set([...recipe.steps]);
     this.notes.set([...recipe.notes]);
+    this.photo.set(recipe.photo ?? '');
+    this.sourceUrl.set(recipe.sourceUrl ?? '');
+    const sections: SectionDraft[] = [];
+    const unresolved: { slug: string; label?: string }[] = [];
+    for (const ref of recipe.components ?? []) {
+      const part = this.recipes.bySlug(ref.slug);
+      if (!part) {
+        unresolved.push({ ...ref });
+        continue;
+      }
+      sections.push({
+        slug: part.slug,
+        title: ref.label || part.title,
+        ingredients: part.ingredients.map((i) => ({ ...i })),
+        steps: [...part.steps],
+      });
+    }
+    this.sections.set(sections);
+    this.unresolved.set(unresolved);
     this.tab.set('manual');
   }
 
@@ -259,6 +319,72 @@ export class CreateRecipeComponent {
 
   // ---- From a URL tab ----------------------------------------------------
 
+  /**
+   * Fills the form from the API's reading of a page. Saves nothing: the result
+   * is a draft like any other, and only Save writes.
+   */
+  protected async importFromUrl(): Promise<void> {
+    const url = this.importUrl().trim();
+    if (!url || this.importing()) return;
+    this.importing.set(true);
+    this.notice.set('');
+    try {
+      const preview = await this.importer.previewRecipe(url);
+      this.applyPreview(preview);
+      this.notice.set('Imported. Check it over, fill in the sections\' steps, then Save.');
+      this.tab.set('manual');
+    } catch (err) {
+      this.notice.set(describeWriteError(err));
+    } finally {
+      this.importing.set(false);
+    }
+  }
+
+  private applyPreview(preview: ImportPreview): void {
+    const parse = (lines: readonly string[]) =>
+      lines.map((line) => ({ line, result: parseIngredient(line) }));
+    const toIngredients = (parsed: ReturnType<typeof parse>): Ingredient[] =>
+      parsed.map(({ line, result }) => ({
+        qty: result.qty,
+        unit: result.unit,
+        name: result.name || line,
+        aisle: result.aisle,
+      }));
+
+    const groups = preview.ingredientGroups ?? [];
+    const own = parse(groups.filter((g) => !g.name).flatMap((g) => g.lines));
+    const named = groups
+      .filter((g): g is { name: string; lines: string[] } => !!g.name)
+      .map((g) => ({ name: g.name, parsed: parse(g.lines) }));
+
+    this.title.set(preview.title ?? '');
+    this.desc.set(preview.description ?? '');
+    if (typeof preview.servings === 'number' && preview.servings > 0) {
+      this.servings.set(Math.round(preview.servings));
+    }
+    this.time.set(preview.time ?? '');
+    this.tagsText.set((preview.tags ?? []).map((t) => t.toLowerCase()).join(', '));
+    this.photo.set(preview.image ?? '');
+    this.sourceUrl.set(preview.sourceUrl ?? '');
+    this.ingredients.set(toIngredients(own));
+    this.steps.set([...(preview.steps ?? [])]);
+    this.sections.set(
+      named.map((g) => ({
+        slug: null,
+        title: g.name,
+        ingredients: toIngredients(g.parsed),
+        steps: [],
+      })),
+    );
+    this.review.set(
+      [own, ...named.map((g) => g.parsed)]
+        .flat()
+        .filter(({ result }) => result.needsReview)
+        .map(({ line }) => line),
+    );
+    this.parsedSomething.set(true);
+  }
+
   protected onUrlText(text: string): void {
     this.urlText.set(text);
     if (!text.trim()) {
@@ -280,17 +406,38 @@ export class CreateRecipeComponent {
 
   // ---- Manual tab --------------------------------------------------------
 
-  protected addIngredient(): void {
-    this.ingredients.update((list) => [
+  /** Edits the ingredient list of the recipe itself, or of section `owner`. */
+  private editIngredients(owner: Owner, change: (list: Ingredient[]) => Ingredient[]): void {
+    if (owner === undefined) {
+      this.ingredients.update(change);
+      return;
+    }
+    this.editSection(owner, (s) => ({ ...s, ingredients: change(s.ingredients) }));
+  }
+
+  private editSteps(owner: Owner, change: (list: string[]) => string[]): void {
+    if (owner === undefined) {
+      this.steps.update(change);
+      return;
+    }
+    this.editSection(owner, (s) => ({ ...s, steps: change(s.steps) }));
+  }
+
+  private editSection(index: number, change: (s: SectionDraft) => SectionDraft): void {
+    this.sections.update((list) => list.map((s, i) => (i === index ? change(s) : s)));
+  }
+
+  protected addIngredient(owner?: Owner): void {
+    this.editIngredients(owner, (list) => [
       ...list,
       { qty: null, unit: '', name: '', aisle: 'pantry' as Aisle },
     ]);
   }
 
-  protected updateIngredientName(index: number, raw: string): void {
+  protected updateIngredientName(index: number, raw: string, owner?: Owner): void {
     // Typing a whole line here should behave like the paste tab does.
     const parsed = parseIngredient(raw);
-    this.ingredients.update((list) =>
+    this.editIngredients(owner, (list) =>
       list.map((item, i) =>
         i === index
           ? {
@@ -306,26 +453,42 @@ export class CreateRecipeComponent {
     );
   }
 
-  protected setAisle(index: number, aisle: string): void {
-    this.ingredients.update((list) =>
+  protected setAisle(index: number, aisle: string, owner?: Owner): void {
+    this.editIngredients(owner, (list) =>
       list.map((item, i) => (i === index ? { ...item, aisle: aisle as Aisle } : item)),
     );
   }
 
-  protected removeIngredient(index: number): void {
-    this.ingredients.update((list) => list.filter((_, i) => i !== index));
+  protected removeIngredient(index: number, owner?: Owner): void {
+    this.editIngredients(owner, (list) => list.filter((_, i) => i !== index));
   }
 
-  protected addStep(): void {
-    this.steps.update((list) => [...list, '']);
+  protected addStep(owner?: Owner): void {
+    this.editSteps(owner, (list) => [...list, '']);
   }
 
-  protected updateStep(index: number, text: string): void {
-    this.steps.update((list) => list.map((s, i) => (i === index ? text : s)));
+  protected updateStep(index: number, text: string, owner?: Owner): void {
+    this.editSteps(owner, (list) => list.map((s, i) => (i === index ? text : s)));
   }
 
-  protected removeStep(index: number): void {
-    this.steps.update((list) => list.filter((_, i) => i !== index));
+  protected removeStep(index: number, owner?: Owner): void {
+    this.editSteps(owner, (list) => list.filter((_, i) => i !== index));
+  }
+
+  protected addSection(): void {
+    this.sections.update((list) => [...list, { slug: null, title: '', ingredients: [], steps: [] }]);
+  }
+
+  protected setSectionTitle(index: number, title: string): void {
+    this.editSection(index, (s) => ({ ...s, title }));
+  }
+
+  /**
+   * Takes the section off this recipe. A section already saved stays stored as
+   * a hidden component; it just stops being listed here.
+   */
+  protected removeSection(index: number): void {
+    this.sections.update((list) => list.filter((_, i) => i !== index));
   }
 
   protected addNote(): void {
@@ -350,7 +513,7 @@ export class CreateRecipeComponent {
     this.saving.set(true);
     this.notice.set('');
     const recipe = this.draft();
-    const cleaned = {
+    const cleaned: Recipe = {
       ...recipe,
       // Drop the blank rows the manual editor leaves behind.
       steps: recipe.steps.map((s) => s.trim()).filter(Boolean),
@@ -358,6 +521,12 @@ export class CreateRecipeComponent {
       ingredients: recipe.ingredients.filter((i) => i.name.trim()),
     };
     try {
+      // Sections first, so the parent never lists a component that is not stored.
+      const refs = await this.saveSections(cleaned);
+      if (!refs) return;
+      if (refs.length > 0) cleaned.components = refs;
+      else delete cleaned.components;
+
       if (this.editing()) {
         if (!(await this.recipes.update(cleaned))) {
           this.notice.set('That recipe no longer exists, so nothing was saved.');
@@ -374,6 +543,56 @@ export class CreateRecipeComponent {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  /**
+   * Creates or updates each section as a component recipe, in order, and
+   * returns the references for the parent. Stops at the first failure by
+   * throwing, before the parent is written; sections saved before it stay
+   * stored, and their slugs are kept on the draft so the retry updates them.
+   * Returns null, having said why, when a section has vanished from the server.
+   */
+  private async saveSections(parent: Recipe): Promise<{ slug: string; label?: string }[] | null> {
+    const refs: { slug: string; label?: string }[] = [];
+    const sections = this.sections();
+    for (let index = 0; index < sections.length; index++) {
+      const section = sections[index];
+      const title = section.title.trim();
+      const body = {
+        title,
+        ingredients: section.ingredients.filter((i) => i.name.trim()),
+        steps: section.steps.map((s) => s.trim()).filter(Boolean),
+      };
+      if (section.slug !== null) {
+        const stored = this.recipes.bySlug(section.slug);
+        const ok =
+          stored !== undefined && (await this.recipes.update({ ...stored, ...body }));
+        if (!ok) {
+          this.notice.set(`The section “${title}” no longer exists, so nothing more was saved.`);
+          return null;
+        }
+        refs.push({ slug: section.slug, label: title });
+        continue;
+      }
+      const slug = await this.recipes.add({
+        slug: `${parent.slug}-${slugify(title) || 'section'}`,
+        ...body,
+        tags: [],
+        time: '',
+        servings: parent.servings,
+        cooked: 0,
+        blurb: '',
+        desc: '',
+        notes: [],
+        cookbooks: [],
+        component: true,
+      });
+      // Remembered at once: if a later section or the parent fails, the retry
+      // must update this one rather than create it again.
+      this.editSection(index, (s) => ({ ...s, slug }));
+      refs.push({ slug, label: title });
+    }
+    return [...refs, ...this.unresolved()];
   }
 
   protected retry(): void {

@@ -97,11 +97,36 @@
           }
 
           @case ('url') {
-            <label class="field-label" for="url-area">Paste the page source</label>
+            <label class="field-label" for="import-url">Import from a web address</label>
             <p class="hint">
-              This reads schema.org <code>Recipe</code> markup out of pasted HTML,
-              and falls back to plain text. It does not fetch the URL — that is
-              deliberately out of scope.
+              The recipe server reads the page and fills in the form. Nothing is
+              saved until you press Save.
+            </p>
+            <div class="editor-row import-row">
+              <input
+                id="import-url"
+                type="url"
+                class="grow"
+                [value]="importUrl()"
+                (input)="importUrl.set($any($event.target).value)"
+                (keydown.enter)="importFromUrl()"
+                placeholder="https://example.com/recipe"
+              />
+              <button
+                type="button"
+                class="btn-outline import-button"
+                (click)="importFromUrl()"
+                [disabled]="importing() || !importUrl().trim()"
+              >
+                {{ importing() ? 'Importing…' : 'Import' }}
+              </button>
+            </div>
+
+            <label class="field-label url-fallback" for="url-area">Or paste the page source</label>
+            <p class="hint">
+              If a site won't let the server in, paste its HTML here instead. This
+              reads schema.org <code>Recipe</code> markup, and falls back to plain
+              text.
             </p>
             <textarea
               id="url-area"
@@ -182,26 +207,21 @@
                 ></textarea>
               </label>
 
-              <div class="editor-block">
-                <div class="editor-head">
-                  <span class="field-label">Ingredients</span>
-                  <button type="button" class="btn-ghost btn-small" (click)="addIngredient()">
-                    <mat-icon fontIcon="add" aria-hidden="true" /> Add
-                  </button>
-                </div>
-                @for (ing of ingredients(); track $index) {
+              <!-- One set of row editors, shared by the recipe and each section. -->
+              <ng-template #ingredientRows let-list let-owner="owner">
+                @for (ing of list; track $index) {
                   <div class="editor-row">
                     <input
                       type="text"
                       class="grow"
                       [value]="amountLabel(ing) ? amountLabel(ing) + ' ' + ing.name : ing.name"
-                      (change)="updateIngredientName($index, $any($event.target).value)"
+                      (change)="updateIngredientName($index, $any($event.target).value, owner)"
                       placeholder="2 tbsp olive oil"
                     />
                     <!-- §6.4 — the aisle is inferred, with a manual override. -->
                     <select
                       [value]="ing.aisle"
-                      (change)="setAisle($index, $any($event.target).value)"
+                      (change)="setAisle($index, $any($event.target).value, owner)"
                       aria-label="Aisle"
                     >
                       @for (aisle of aisles; track aisle) {
@@ -211,7 +231,7 @@
                     <button
                       type="button"
                       class="icon-button"
-                      (click)="removeIngredient($index)"
+                      (click)="removeIngredient($index, owner)"
                       aria-label="Remove ingredient"
                     >
                       <mat-icon fontIcon="close" />
@@ -220,6 +240,42 @@
                 } @empty {
                   <p class="hint">Nothing yet.</p>
                 }
+              </ng-template>
+
+              <ng-template #stepRows let-list let-owner="owner">
+                @for (step of list; track $index) {
+                  <div class="editor-row">
+                    <textarea
+                      rows="2"
+                      class="grow"
+                      [value]="step"
+                      (input)="updateStep($index, $any($event.target).value, owner)"
+                    ></textarea>
+                    <button
+                      type="button"
+                      class="icon-button"
+                      (click)="removeStep($index, owner)"
+                      aria-label="Remove step"
+                    >
+                      <mat-icon fontIcon="close" />
+                    </button>
+                  </div>
+                } @empty {
+                  <p class="hint">Nothing yet.</p>
+                }
+              </ng-template>
+
+              <div class="editor-block">
+                <div class="editor-head">
+                  <span class="field-label">Ingredients</span>
+                  <button type="button" class="btn-ghost btn-small" (click)="addIngredient()">
+                    <mat-icon fontIcon="add" aria-hidden="true" /> Add
+                  </button>
+                </div>
+                <ng-container
+                  [ngTemplateOutlet]="ingredientRows"
+                  [ngTemplateOutletContext]="{ $implicit: ingredients(), owner: undefined }"
+                />
               </div>
 
               <div class="editor-block">
@@ -229,25 +285,68 @@
                     <mat-icon fontIcon="add" aria-hidden="true" /> Add
                   </button>
                 </div>
-                @for (step of steps(); track $index) {
-                  <div class="editor-row">
-                    <textarea
-                      rows="2"
-                      class="grow"
-                      [value]="step"
-                      (input)="updateStep($index, $any($event.target).value)"
-                    ></textarea>
-                    <button
-                      type="button"
-                      class="icon-button"
-                      (click)="removeStep($index)"
-                      aria-label="Remove step"
-                    >
-                      <mat-icon fontIcon="close" />
-                    </button>
+                <ng-container
+                  [ngTemplateOutlet]="stepRows"
+                  [ngTemplateOutletContext]="{ $implicit: steps(), owner: undefined }"
+                />
+              </div>
+
+              <div class="editor-block">
+                <div class="editor-head">
+                  <span class="field-label">Sections</span>
+                  <button type="button" class="btn-ghost btn-small" (click)="addSection()">
+                    <mat-icon fontIcon="add" aria-hidden="true" /> Add section
+                  </button>
+                </div>
+                <p class="hint">
+                  A part with its own ingredients and steps, such as “For the
+                  sauce”. Each is saved as a recipe of its own, shown only inside
+                  this one.
+                </p>
+                @for (section of sections(); track $index; let s = $index) {
+                  <div class="section-block">
+                    <div class="editor-row">
+                      <label class="field grow">
+                        <span class="field-label">Section title</span>
+                        <input
+                          type="text"
+                          [value]="section.title"
+                          (input)="setSectionTitle(s, $any($event.target).value)"
+                          placeholder="For the sauce"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        class="icon-button"
+                        (click)="removeSection(s)"
+                        [attr.aria-label]="'Remove section ' + (section.title || (s + 1))"
+                      >
+                        <mat-icon fontIcon="close" />
+                      </button>
+                    </div>
+
+                    <div class="editor-head">
+                      <span class="field-label">Ingredients</span>
+                      <button type="button" class="btn-ghost btn-small" (click)="addIngredient(s)">
+                        <mat-icon fontIcon="add" aria-hidden="true" /> Add
+                      </button>
+                    </div>
+                    <ng-container
+                      [ngTemplateOutlet]="ingredientRows"
+                      [ngTemplateOutletContext]="{ $implicit: section.ingredients, owner: s }"
+                    />
+
+                    <div class="editor-head">
+                      <span class="field-label">Steps</span>
+                      <button type="button" class="btn-ghost btn-small" (click)="addStep(s)">
+                        <mat-icon fontIcon="add" aria-hidden="true" /> Add
+                      </button>
+                    </div>
+                    <ng-container
+                      [ngTemplateOutlet]="stepRows"
+                      [ngTemplateOutletContext]="{ $implicit: section.steps, owner: s }"
+                    />
                   </div>
-                } @empty {
-                  <p class="hint">Nothing yet.</p>
                 }
               </div>
 
@@ -339,6 +438,18 @@
               <li>{{ step }}</li>
             }
           </ol>
+
+          @for (section of sections(); track $index) {
+            <h3 class="preview-sub label">
+              {{ section.title || 'Untitled section' }} · {{ section.ingredients.length }}
+              {{ section.ingredients.length === 1 ? 'ingredient' : 'ingredients' }},
+              {{ section.steps.length }} {{ section.steps.length === 1 ? 'step' : 'steps' }}
+            </h3>
+          }
+
+          @if (draft().sourceUrl; as source) {
+            <p class="preview-source hint">From {{ source }}</p>
+          }
         }
 
         <div class="preview-actions">
@@ -358,6 +469,8 @@
             <p>Couldn't load the recipe collection, so saving is paused.</p>
             <button type="button" class="btn-ghost" (click)="retry()">Try again</button>
           </div>
+        } @else if (!canSave() && title().trim() && ingredients().length > 0) {
+          <p class="hint">Each section needs a title before it can be saved.</p>
         } @else if (!canSave()) {
           <p class="hint">A title and at least one ingredient are needed to save.</p>
         } @else {

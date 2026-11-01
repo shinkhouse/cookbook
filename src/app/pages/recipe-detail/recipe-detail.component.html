@@ -20,6 +20,12 @@
         <p class="credit detail-credit">{{ r.subtitle }}</p>
       }
 
+      @if (r.sourceUrl) {
+        <p class="detail-source">
+          <a [href]="r.sourceUrl" target="_blank" rel="noopener">Source</a>
+        </p>
+      }
+
       @if (r.desc) {
         <p class="detail-desc">{{ r.desc }}</p>
       }

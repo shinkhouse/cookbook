@@ -62,6 +62,15 @@ h1 {
     font-size: 17px;
 }
 
+.detail-source {
+    margin: 8px 0 0;
+    font-size: 14px;
+
+    a {
+        color: var(--ink-3);
+    }
+}
+
 .detail-desc {
     max-width: 68ch;
     margin: 14px 0 0;

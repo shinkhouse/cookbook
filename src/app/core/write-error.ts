@@ -5,10 +5,14 @@
  *
  * In development the dev-server proxy answers a dead API with a 500, 502, 503
  * or 504 and a non-JSON body, so those read as "unreachable" too. The API's own
- * 500 always carries `{ message }`, which is how the two are told apart.
+ * 500 always carries `{ message }`, which is how the two are told apart. The
+ * same goes for the import preview's own 502 and 504, whose message is relayed.
  */
 export function describeWriteError(err: unknown): string {
   const { status, error } = (err ?? {}) as { status?: unknown; error?: { message?: unknown } };
+  const message = typeof error?.message === 'string' && error.message ? error.message : '';
+  if (status === 422) return message || 'No recipe found on that page.';
+  if ((status === 502 || status === 504) && message) return message;
   const unreachable = status === 0 || status === 502 || status === 503 || status === 504;
   const proxyFailure = status === 500 && typeof error?.message !== 'string';
   if (unreachable || proxyFailure) return "Couldn't reach the recipe server. Is it running?";

@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RecipeStore } from '../../core/stores/recipe.store';
 import { FakeRecipeRepository, provideFakeRecipes } from '../../core/testing/fake-repositories';
+import { Recipes } from '../../core/mock/recipes.mock';
 import { RecipeDetailComponent } from './recipe-detail.component';
 
 const SLUG = 'grandmas-chili';
@@ -176,5 +177,34 @@ describe('RecipeDetailComponent edit link', () => {
 
   it('has no Edit link when not writable', async () => {
     expect(edit(await render(false))).toBeUndefined();
+  });
+});
+
+describe('RecipeDetailComponent source link', () => {
+  async function render(sourceUrl?: string): Promise<HTMLElement> {
+    const base = Recipes.find((r) => r.slug === SLUG)!;
+    const fake = new FakeRecipeRepository([{ ...base, ...(sourceUrl ? { sourceUrl } : {}) }]);
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake)],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    const fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+  const source = (el: HTMLElement): HTMLAnchorElement | undefined =>
+    Array.from(el.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Source');
+
+  it('links to the source in a new tab when it is set', async () => {
+    const link = source(await render('https://example.com/chili'));
+    expect(link?.getAttribute('href')).toBe('https://example.com/chili');
+    expect(link?.getAttribute('target')).toBe('_blank');
+    expect(link?.getAttribute('rel')).toContain('noopener');
+  });
+
+  it('has no Source link when it is not set', async () => {
+    expect(source(await render())).toBeUndefined();
   });
 });

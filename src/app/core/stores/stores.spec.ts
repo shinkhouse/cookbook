@@ -698,6 +698,32 @@ describe('PrefsStore', () => {
     // seed, so clearing favorites silently undid itself on reload.
     expect(TestBed.inject(PrefsStore).favCount()).toBe(0);
   });
+
+  describe('the cook-mode ingredients panel', () => {
+    it('defaults to open', () => {
+      expect(TestBed.inject(PrefsStore).cookIngredientsOpen()).toBe(true);
+    });
+
+    it('persists a toggle across a fresh injection', () => {
+      TestBed.inject(PrefsStore).toggleCookIngredients();
+      expect(TestBed.inject(PrefsStore).cookIngredientsOpen()).toBe(false);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
+      expect(TestBed.inject(PrefsStore).cookIngredientsOpen()).toBe(false);
+    });
+
+    it('respects a stored false', () => {
+      localStorage.setItem('cookbook.cookIngredients', 'false');
+      expect(TestBed.inject(PrefsStore).cookIngredientsOpen()).toBe(false);
+    });
+
+    it('toggles back to open', () => {
+      const prefs = TestBed.inject(PrefsStore);
+      prefs.toggleCookIngredients();
+      prefs.toggleCookIngredients();
+      expect(prefs.cookIngredientsOpen()).toBe(true);
+    });
+  });
 });
 
 describe('ListStore', () => {

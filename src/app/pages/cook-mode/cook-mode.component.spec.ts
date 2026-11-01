@@ -19,7 +19,10 @@ const RECIPE: Recipe = {
   cooked: 0,
   blurb: '',
   desc: '',
-  ingredients: [],
+  ingredients: [
+    { qty: 2, unit: 'cup', name: 'stock', aisle: 'pantry' },
+    { qty: 1, unit: '', name: 'onion', aisle: 'produce' },
+  ],
   steps: ['Simmer for 20 minutes.', 'Bake for 5 minutes.', 'Rest for 10 minutes.'],
   notes: [],
   cookbooks: [],
@@ -244,5 +247,137 @@ describe('cook mode timers', () => {
         expect(el.querySelector('.timer')!.getBoundingClientRect().width).toBe(chipWidth);
       });
     }
+  });
+});
+
+describe('cook mode ingredients panel', () => {
+  let fixture: ComponentFixture<CookModeComponent>;
+  let el: HTMLElement;
+
+  const refresh = () => fixture.detectChanges();
+  const toggle = () => el.querySelector<HTMLButtonElement>('.sidebar-toggle')!;
+  const panel = () => el.querySelector<HTMLElement>('.sidebar')!;
+  const body = () => el.querySelector<HTMLElement>('.sidebar-body')!;
+  const click = () => {
+    toggle().click();
+    refresh();
+  };
+
+  async function create(): Promise<void> {
+    fixture = await setup();
+    el = fixture.nativeElement;
+  }
+
+  beforeEach(async () => {
+    localStorage.clear();
+    await create();
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+    jasmine.clock().uninstall();
+    localStorage.clear();
+  });
+
+  it('opens with a labelled toggle that controls the panel body', () => {
+    expect(toggle().getAttribute('aria-label')).toBe('Hide ingredients');
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+    expect(body().id).toBeTruthy();
+    expect(toggle().getAttribute('aria-controls')).toBe(body().id);
+    expect(panel().classList).not.toContain('is-closed');
+    expect(body().hasAttribute('inert')).toBeFalse();
+  });
+
+  it('puts the toggle on the heading row, after the heading', () => {
+    const head = el.querySelector('.sidebar-top')!;
+    expect(head.querySelector('.sidebar-head')).not.toBeNull();
+    expect(head.querySelector('.sidebar-toggle')).toBe(toggle());
+  });
+
+  it('closes: relabels, flags the panel, and takes the checkboxes out of reach', () => {
+    click();
+    expect(toggle().getAttribute('aria-label')).toBe('Show ingredients');
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    expect(panel().classList).toContain('is-closed');
+    expect(el.querySelector('.cook-body')!.classList).toContain('is-closed');
+    expect(body().hasAttribute('inert')).toBeTrue();
+    const inputs = body().querySelectorAll('input[type=checkbox]');
+    expect(inputs.length).toBe(2);
+    inputs.forEach((i) => expect(i.closest('[inert]')).not.toBeNull());
+  });
+
+  it('hides the list from sight once the close has run its course', async () => {
+    jasmine.clock().uninstall(); // the transition needs real time
+    click();
+    await new Promise((r) => setTimeout(r, 400));
+    expect(getComputedStyle(body()).visibility).toBe('hidden');
+  });
+
+  it('opens again and restores everything', () => {
+    click();
+    click();
+    expect(toggle().getAttribute('aria-label')).toBe('Hide ingredients');
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+    expect(panel().classList).not.toContain('is-closed');
+    expect(body().hasAttribute('inert')).toBeFalse();
+    expect(getComputedStyle(body()).visibility).toBe('visible');
+  });
+
+  it('keeps the checks working while open', () => {
+    el.querySelector<HTMLInputElement>('input[type=checkbox]')!.click();
+    refresh();
+    expect(el.querySelectorAll('.ing-list li.is-checked').length).toBe(1);
+  });
+
+  it('remembers the choice when the component is created again', async () => {
+    click();
+    fixture.destroy();
+    jasmine.clock().uninstall();
+    fixture = TestBed.createComponent(CookModeComponent);
+    fixture.componentRef.setInput('slug', RECIPE.slug);
+    fixture.detectChanges();
+    el = fixture.nativeElement;
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    expect(panel().classList).toContain('is-closed');
+    expect(body().hasAttribute('inert')).toBeTrue();
+  });
+
+  it('starts closed when the stored choice is closed', async () => {
+    fixture.destroy();
+    jasmine.clock().uninstall();
+    TestBed.resetTestingModule();
+    localStorage.setItem('cookbook.cookIngredients', 'false');
+    await create();
+    expect(toggle().getAttribute('aria-label')).toBe('Show ingredients');
+    expect(body().hasAttribute('inert')).toBeTrue();
+  });
+
+  describe('layout', () => {
+    const cols = () => getComputedStyle(el.querySelector('.cook-body')!).gridTemplateColumns.split(' ').map(parseFloat);
+    const settle = () => new Promise((r) => setTimeout(r, 450));
+
+    beforeEach(() => {
+      jasmine.clock().uninstall();
+      el.style.display = 'block';
+      el.style.width = '1200px';
+      refresh();
+    });
+
+    it('gives the ingredients column about 41% of the row, the step column the rest', () => {
+      const [stage, side] = cols();
+      expect(side / (stage + side)).toBeGreaterThan(0.39);
+      expect(side / (stage + side)).toBeLessThan(0.43);
+    });
+
+    it('shrinks to a slim rail when closed and the step column takes the room', async () => {
+      const [stageOpen, sideOpen] = cols();
+      click();
+      await settle();
+      const [stage, side] = cols();
+      expect(side).toBeLessThan(100);
+      expect(side).toBeGreaterThan(44);
+      expect(stage).toBeGreaterThan(stageOpen);
+      expect(sideOpen).toBeGreaterThan(side);
+    });
   });
 });

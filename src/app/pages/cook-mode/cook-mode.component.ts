@@ -17,6 +17,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
 import { formatQty } from '../../core/scale';
+import { PrefsStore } from '../../core/stores/prefs.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
 import { formatCountdown, parseDuration } from '../../core/timer';
 
@@ -44,6 +45,7 @@ export class CookModeComponent {
   private readonly recipes = inject(RecipeStore);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
+  private readonly prefs = inject(PrefsStore);
   private readonly exitLink = viewChild<ElementRef<HTMLElement>>('exitLink');
 
   protected readonly recipe = computed(() => this.recipes.bySlug(this.slug()));
@@ -54,6 +56,13 @@ export class CookModeComponent {
   /** Try again after a failed first load. */
   protected retry(): void {
     void this.recipes.load();
+  }
+
+  /** The ingredients panel's open state, remembered between visits. */
+  protected readonly ingredientsOpen = this.prefs.cookIngredientsOpen;
+
+  protected toggleIngredients(): void {
+    this.prefs.toggleCookIngredients();
   }
 
   protected readonly stepIndex = signal(0);

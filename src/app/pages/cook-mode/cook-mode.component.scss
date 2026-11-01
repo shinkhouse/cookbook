@@ -166,16 +166,51 @@
     transition: width var(--motion-progress) var(--ease);
 }
 
+// The step and the ingredients sit side by side, the ingredients column on the
+// right. It used to be a wrapping flex row (stage `2 1 420px`, panel `1 1 260px`),
+// which gave the panel a third of the free room: 260px at the narrowest side by
+// side, 357px of a 1140px-wide page. A grid column can be animated between open
+// and closed, which flex-grow shares cannot, so the panel is now a fixed share of
+// the row: 41% of it, about 1.1x the old share (37-38%). That is 286px at the
+// narrowest side by side and 393px at 1140px. The step column takes the rest.
 .cook-body {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--gutter);
-    align-items: flex-start;
+    --sidebar-pad: 18px;
+    --motion-panel: 0.22s;
+    // The toggle plus the panel's padding and border: all a closed panel keeps.
+    --sidebar-rail: calc(var(--touch) + 2 * var(--sidebar-pad) + 2px);
+    --sidebar-open: calc((100% - var(--gutter)) * 0.41);
+    display: grid;
+    grid-template-columns: 1fr var(--sidebar-open);
+    column-gap: var(--gutter);
+    align-items: start;
     padding: calc(var(--pad-section) * 0.7) 0;
+    transition: grid-template-columns var(--motion-panel) var(--ease);
+
+    &.is-closed {
+        grid-template-columns: 1fr var(--sidebar-rail);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cook-body {
+        --motion-panel: 0s;
+    }
+}
+
+// Where the panel would be narrower than it used to be allowed, it stacks below
+// the step instead (the old row wrapped at 420px + 260px + the gutter), and the
+// toggle folds it up by height rather than width.
+@container (max-width: 820px) {
+    .cook-body,
+    .cook-body.is-closed {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: var(--gutter);
+    }
 }
 
 .stage {
-    flex: 2 1 420px;
+    // Lets the 1fr column shrink below the step text's own width.
+    min-width: 0;
 }
 
 .step-counter {
@@ -266,16 +301,84 @@
 }
 
 .sidebar {
-    flex: 1 1 260px;
-    padding: 18px;
+    min-width: 0;
+    // Clips the list while the column is narrowing, so it never reflows.
+    overflow: hidden;
+    padding: var(--sidebar-pad);
     border: 1px solid var(--cook-rule);
     border-radius: var(--radius-card);
     background: var(--cook-surface);
 }
 
+// The heading row: the label on the left, the toggle at the top right. The label
+// gives way first as the panel narrows, leaving the toggle alone in the rail.
+.sidebar-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
 .sidebar-head {
-    margin: 0 0 10px;
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    white-space: nowrap;
     color: var(--cook-accent) !important;
+}
+
+.sidebar-toggle {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--touch);
+    height: var(--touch);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: none;
+    color: var(--cook-text);
+    cursor: pointer;
+    opacity: 0.75;
+
+    &:hover {
+        opacity: 1;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--cook-accent);
+        outline-offset: 2px;
+    }
+}
+
+// Open, the list is a full row; closed, it folds to nothing and is hidden once
+// the fold is done (the delayed `visibility`), so nothing in it can take focus
+// or be read while the panel is shut. `inert` in the template says the same to
+// the browser.
+.sidebar-body {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition:
+        grid-template-rows var(--motion-panel) var(--ease),
+        visibility 0s linear 0s;
+}
+
+.sidebar.is-closed .sidebar-body {
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition:
+        grid-template-rows var(--motion-panel) var(--ease),
+        visibility 0s linear var(--motion-panel);
+}
+
+.sidebar-clip {
+    min-height: 0;
+    overflow: hidden;
+    // The list keeps this much room however narrow the panel gets mid-fold.
+    min-width: 15rem;
+    padding-top: 10px;
 }
 
 .ing-list {

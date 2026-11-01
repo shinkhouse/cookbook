@@ -3,7 +3,6 @@
     <header class="cook-head">
       <a class="exit" [routerLink]="['/recipes', r.slug]">
         <mat-icon fontIcon="close" aria-hidden="true" />
-        <span>Leave cook mode</span>
       </a>
 
       <p class="cook-title">{{ r.title }}</p>
@@ -67,8 +66,10 @@
               Back
             </button>
             <button type="button" class="btn-accent" (click)="next()">
-              {{ isLastStep() ? 'Done cooking' : 'Next step' }}
-              <mat-icon [fontIcon]="isLastStep() ? 'check' : 'arrow_forward'" aria-hidden="true" />
+              {{ isLastStep() ? 'Finished' : 'Next step' }}
+              @if (!isLastStep()) {
+                <mat-icon fontIcon="arrow_forward" aria-hidden="true" />
+              }
             </button>
           </div>
         </section>

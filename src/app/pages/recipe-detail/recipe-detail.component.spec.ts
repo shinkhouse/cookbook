@@ -31,13 +31,13 @@ describe('RecipeDetailComponent archive', () => {
   const confirm = (): HTMLElement | null => el().querySelector('.archive-confirm');
 
   async function openConfirm(): Promise<void> {
-    byText('Archive recipe')!.click();
+    byText('Archive')!.click();
     fixture.detectChanges();
   }
 
   it('has no archive button when the build is not writable', async () => {
     await setup(false);
-    expect(byText('Archive recipe')).toBeUndefined();
+    expect(byText('Archive')).toBeUndefined();
   });
 
   it('asks before archiving, and Cancel hides the question', async () => {
@@ -49,7 +49,7 @@ describe('RecipeDetailComponent archive', () => {
     byText('Cancel')!.click();
     fixture.detectChanges();
     expect(confirm()).toBeNull();
-    expect(byText('Archive recipe')).toBeDefined();
+    expect(byText('Archive')).toBeDefined();
   });
 
   it('archives and goes back to the library', async () => {

@@ -117,7 +117,7 @@ export class CookModeComponent {
 
   protected next(): void {
     if (this.isLastStep()) {
-      // The last step's button reads "Done cooking" and returns to the recipe.
+      // The last step's button reads "Finished" and returns to the recipe.
       this.router.navigate(['/recipes', this.slug()]);
       return;
     }

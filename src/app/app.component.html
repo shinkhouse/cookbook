@@ -49,9 +49,3 @@
 <main [class.is-cook]="isCookMode()">
     <router-outlet />
 </main>
-
-@if (!isCookMode()) {
-    <footer class="site-footer">
-        <p class="credit">Cooked, eaten and written down.</p>
-    </footer>
-}

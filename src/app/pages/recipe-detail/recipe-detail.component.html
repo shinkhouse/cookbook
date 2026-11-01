@@ -110,7 +110,7 @@
         @if (writable && !confirmingArchive()) {
           <button type="button" class="btn-ghost btn-quiet" (click)="askArchive()">
             <mat-icon fontIcon="archive" aria-hidden="true" />
-            Archive recipe
+            Archive
           </button>
         }
 
@@ -133,41 +133,41 @@
       </div>
 
       <div class="columns">
-        <aside class="ingredients-card">
+        <aside>
           <div class="section-head">
-            <span class="section-kicker">what you need</span>
             <h2 class="section-title">Ingredients</h2>
           </div>
-
-          @for (group of ingredientGroups(); track $index) {
-            @if (group.name) {
-              <h3 class="ing-group">{{ group.name }}</h3>
-            }
-            <ul class="ingredient-list">
-              @for (item of group.items; track item.index) {
-                <li [class.is-checked]="item.checked">
-                  <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
-                    <!-- Amount and name are separate columns so figures line up
-                         down the list, the way a printed recipe card sets them. -->
-                    <span class="ing-row">
-                      <span class="ing-amount tnum">{{ amountLabel(item.amount, item.unit) }}</span>
-                      <span class="ing-name">{{ item.name }}</span>
-                    </span>
-                  </mat-checkbox>
-                </li>
+          <div class="ingredients-card">
+            @for (group of ingredientGroups(); track $index) {
+              @if (group.name) {
+                <h3 class="ing-group">{{ group.name }}</h3>
               }
-            </ul>
-          }
+              <ul class="ingredient-list">
+                @for (item of group.items; track item.index) {
+                  <li [class.is-checked]="item.checked">
+                    <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
+                      <!-- Amount and name are separate columns so figures line up
+                           down the list, the way a printed recipe card sets them. -->
+                      <span class="ing-row">
+                        <span class="ing-amount tnum">{{ amountLabel(item.amount, item.unit) }}</span>
+                        <span class="ing-name">{{ item.name }}</span>
+                      </span>
+                    </mat-checkbox>
+                  </li>
+                }
+              </ul>
+            }
+  
+            @if (checkedCount() > 0) {
+              <p class="checked-count label">{{ checkedCount() }} of {{ ingredients().length }} in hand</p>
+            }
 
-          @if (checkedCount() > 0) {
-            <p class="checked-count label">{{ checkedCount() }} of {{ ingredients().length }} in hand</p>
-          }
+          </div>
         </aside>
 
         <section class="steps">
           <div class="section-head">
-            <span class="section-kicker">step by step</span>
-            <h2 class="section-title">Method</h2>
+            <h2 class="section-title">Instructions</h2>
           </div>
 
           @if (r.steps.length === 0) {
@@ -187,7 +187,6 @@
           @if (r.notes.length > 0) {
             <div class="notes">
               <div class="section-head notes-head">
-                <span class="section-kicker">from the cook</span>
                 <h3 class="section-title">Notes</h3>
               </div>
               <ul>

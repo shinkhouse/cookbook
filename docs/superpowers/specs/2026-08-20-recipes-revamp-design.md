@@ -374,7 +374,7 @@ upper bound**. Returns the first match in a step.
 
 - Dark full-screen view; one step at `clamp(28px, 3.6vw, 40px)`, progress bar,
   "Step n of m".
-- Back / **Next step**; the final step's button reads "Done cooking" and returns
+- Back / **Next step**; the final step's button reads "Finished" and returns
   to the recipe.
 - Jump list of all steps below, current highlighted, tap to jump.
 - Ingredient sidebar sharing the detail page's check state and scale factor.

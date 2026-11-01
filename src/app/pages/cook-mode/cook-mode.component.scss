@@ -176,8 +176,8 @@
 .cook-body {
     --sidebar-pad: 18px;
     --motion-panel: 0.22s;
-    // The toggle plus the panel's padding and border: all a closed panel keeps.
-    --sidebar-rail: calc(var(--touch) + 2 * var(--sidebar-pad) + 2px);
+    // Side by side, a closed panel is just the round toggle: no box around it.
+    --sidebar-rail: var(--touch);
     --sidebar-open: calc((100% - var(--gutter)) * 0.41);
     display: grid;
     grid-template-columns: 1fr var(--sidebar-open);
@@ -308,6 +308,11 @@
     border: 1px solid var(--cook-rule);
     border-radius: var(--radius-card);
     background: var(--cook-surface);
+    transition:
+        padding var(--motion-panel) var(--ease),
+        border-width var(--motion-panel) var(--ease),
+        border-color var(--motion-panel) var(--ease),
+        background-color var(--motion-panel) var(--ease);
 }
 
 // The heading row: the label on the left, the toggle at the top right. The label
@@ -317,6 +322,11 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+}
+
+.sidebar.is-closed .sidebar-top {
+    // Nothing to space apart: the toggle alone is centred in the rail.
+    gap: 0;
 }
 
 .sidebar-head {
@@ -330,18 +340,19 @@
 
 .sidebar-toggle {
     flex: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
     width: var(--touch);
     height: var(--touch);
     padding: 0;
-    border: 0;
+    border: 1px solid transparent;
     border-radius: var(--radius-pill);
     background: none;
     color: var(--cook-text);
     cursor: pointer;
     opacity: 0.75;
+    transition: border-color var(--motion-panel) var(--ease);
 
     &:hover {
         opacity: 1;
@@ -349,7 +360,24 @@
 
     &:focus-visible {
         outline: 2px solid var(--cook-accent);
-        outline-offset: 2px;
+        // Inside the circle: the closed panel clips anything outside it.
+        outline-offset: -3px;
+    }
+}
+
+// Side by side and closed, the panel gives up its box entirely and the toggle is
+// left as a round icon button, like the app's menu trigger. Stacked, the closed
+// panel stays a heading row with its toggle, which tells the cook what it is.
+@container (min-width: 821px) {
+    .sidebar.is-closed {
+        padding: 0;
+        border-width: 0;
+        border-color: transparent;
+        background-color: transparent;
+    }
+
+    .sidebar.is-closed .sidebar-toggle {
+        border-color: var(--cook-rule);
     }
 }
 
@@ -378,11 +406,12 @@
     overflow: hidden;
     // The list keeps this much room however narrow the panel gets mid-fold.
     min-width: 15rem;
-    padding-top: 10px;
 }
 
 .ing-list {
-    margin: 0;
+    // The room under the heading lives here, inside the clip, so it folds away
+    // with the list.
+    margin: 10px 0 0;
     padding: 0;
     list-style: none;
 
@@ -524,9 +553,29 @@
 
 // After the base rules it overrides, so phones get the compact header.
 @container (max-width: 480px) {
+    // The side columns shrink to the exit button, so the title has nearly the
+    // whole width and stays centred by construction. The timer chip drops to its
+    // own row under the title (present only while a timer exists).
     .cook-head {
-        --side: 6.9rem;
+        --side: var(--touch);
         column-gap: 6px;
+        row-gap: 8px;
+    }
+
+    .exit {
+        grid-row: 1;
+        grid-column: 1;
+    }
+
+    .cook-title {
+        grid-row: 1;
+        grid-column: 2;
+    }
+
+    .timers {
+        grid-row: 2;
+        grid-column: 1 / -1;
+        justify-self: center;
     }
 
     .timer {

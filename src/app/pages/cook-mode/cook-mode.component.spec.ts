@@ -247,6 +247,32 @@ describe('cook mode timers', () => {
         expect(el.querySelector('.timer')!.getBoundingClientRect().width).toBe(chipWidth);
       });
     }
+
+    for (const width of [360, 390]) {
+      it(`gives the title the width at ${width}px and puts the chip under it`, () => {
+        fixture.componentRef.setInput('slug', OTHER.slug);
+        refresh();
+        el.style.display = 'block';
+        el.style.width = `${width}px`;
+        // `5vw` follows the test window, not the host; a phone's window gives 24px.
+        el.style.setProperty('--pad-section', '24px');
+        refresh();
+        click(startButton());
+        tick(3);
+        const title = el.querySelector('.cook-title')!.getBoundingClientRect();
+        const exit = el.querySelector('.exit')!.getBoundingClientRect();
+        const chip = el.querySelector('.timer')!.getBoundingClientRect();
+        const h = head().getBoundingClientRect();
+        const overlap = (a: DOMRect, b: DOMRect) =>
+          a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+        expect(overlap(chip, title)).toBeFalse();
+        expect(overlap(chip, exit)).toBeFalse();
+        expect(chip.top).toBeGreaterThanOrEqual(title.bottom);
+        expect(Math.abs(centreOf(el.querySelector('.cook-title')!) - (h.left + h.width / 2))).toBeLessThan(1);
+        expect(title.width).toBeGreaterThanOrEqual(200);
+        expect(Math.abs(chip.left + chip.width / 2 - (h.left + h.width / 2))).toBeLessThan(1);
+      });
+    }
   });
 });
 
@@ -352,6 +378,44 @@ describe('cook mode ingredients panel', () => {
     expect(body().hasAttribute('inert')).toBeTrue();
   });
 
+  it('centres the toggle in the closed rail', async () => {
+    jasmine.clock().uninstall();
+    el.style.display = 'block';
+    el.style.width = '1200px';
+    refresh();
+    click();
+    await new Promise((r) => setTimeout(r, 450));
+    const side = panel().getBoundingClientRect();
+    const btn = toggle().getBoundingClientRect();
+    expect(Math.abs(btn.left + btn.width / 2 - (side.left + side.width / 2))).toBeLessThan(1);
+  });
+
+  it('closes to a round toggle with its icon centred and no box around it', async () => {
+    jasmine.clock().uninstall();
+    el.style.display = 'block';
+    el.style.width = '1200px';
+    refresh();
+    click();
+    await new Promise((r) => setTimeout(r, 450));
+    const btn = toggle().getBoundingClientRect();
+    const icon = toggle().querySelector('mat-icon')!.getBoundingClientRect();
+    expect(Math.abs(btn.width - btn.height)).toBeLessThan(1);
+    expect(Math.abs(icon.left + icon.width / 2 - (btn.left + btn.width / 2))).toBeLessThan(1);
+    expect(Math.abs(icon.top + icon.height / 2 - (btn.top + btn.height / 2))).toBeLessThan(1);
+    expect(Math.abs(panel().getBoundingClientRect().width - btn.width)).toBeLessThan(1);
+    expect(Math.abs(panel().getBoundingClientRect().height - btn.height)).toBeLessThan(1);
+  });
+
+  it('leaves nothing under the heading when closed', async () => {
+    jasmine.clock().uninstall();
+    el.style.display = 'block';
+    el.style.width = '1200px';
+    refresh();
+    click();
+    await new Promise((r) => setTimeout(r, 450));
+    expect(body().getBoundingClientRect().height).toBe(0);
+  });
+
   describe('layout', () => {
     const cols = () => getComputedStyle(el.querySelector('.cook-body')!).gridTemplateColumns.split(' ').map(parseFloat);
     const settle = () => new Promise((r) => setTimeout(r, 450));
@@ -374,8 +438,8 @@ describe('cook mode ingredients panel', () => {
       click();
       await settle();
       const [stage, side] = cols();
-      expect(side).toBeLessThan(100);
-      expect(side).toBeGreaterThan(44);
+      expect(side).toBeLessThan(46);
+      expect(side).toBeGreaterThanOrEqual(44);
       expect(stage).toBeGreaterThan(stageOpen);
       expect(sideOpen).toBeGreaterThan(side);
     });

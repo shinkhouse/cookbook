@@ -473,6 +473,8 @@
           <p class="hint">Each section needs a title before it can be saved.</p>
         } @else if (!canSave()) {
           <p class="hint">A title and at least one ingredient are needed to save.</p>
+        } @else if (editing()) {
+          <p class="hint">Saving updates this recipe in the shared collection.</p>
         } @else {
           <p class="hint">
             Saving adds this recipe to the shared collection. Copy the JSON if you

@@ -891,15 +891,21 @@ describe('RecipeStore embedded components', () => {
 
   afterEach(() => localStorage.clear());
 
-  it('keeps component recipes out of the library, search, tags, facets and counts', () => {
+  it('includes component recipes in the library, search, tags, facets and counts', () => {
+    expect(store.recipes().map((r) => r.slug).sort()).toEqual(['lasagna', 'red-sauce']);
+    store.setQuery('tomatoes');
+    expect(store.results().map((r) => r.slug)).toContain('red-sauce');
+    expect(store.tags()).toContain('sauce');
+    expect(store.gapCounts()['photo']).toBeGreaterThan(0);
+    expect(store.needsWorkCount()).toBeGreaterThan(0);
+    expect(store.inCookbook(DEFAULT_COOKBOOK_ID).map((r) => r.slug)).toContain('red-sauce');
+  });
+
+  it('keeps an archived component out of the library and search', async () => {
+    await store.archive('red-sauce');
     expect(store.recipes().map((r) => r.slug)).toEqual(['lasagna']);
     store.setQuery('tomatoes');
     expect(store.results()).toEqual([]);
-    expect(store.tags()).not.toContain('sauce');
-    expect(store.gapCounts()['photo']).toBe(0);
-    expect(store.needsWorkCount()).toBe(0);
-    expect(store.mostCooked()?.slug).toBe('lasagna');
-    expect(store.inCookbook(DEFAULT_COOKBOOK_ID).map((r) => r.slug)).toEqual(['lasagna']);
   });
 
   it('still resolves a component by slug', () => {
@@ -937,10 +943,9 @@ describe('RecipeStore embedded components', () => {
     expect(store.componentsOf('lasagna').length).toBe(1);
   });
 
-  it('hides a component from the library once its parent is archived', async () => {
+  it('keeps a component in the library once its parent is archived', async () => {
     await store.archive('lasagna');
-    expect(store.recipes()).toEqual([]);
-    expect(store.results()).toEqual([]);
+    expect(store.recipes().map((r) => r.slug)).toEqual(['red-sauce']);
     expect(store.bySlug('red-sauce')).toBeDefined();
   });
 });

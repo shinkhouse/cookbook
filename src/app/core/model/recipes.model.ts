@@ -59,8 +59,8 @@ export interface Recipe {
   sourceUrl?: string;
   /**
    * True for a sub-recipe ("the sauce") that exists only to be embedded in a
-   * parent. It is a full recipe document but is hidden from the library, search
-   * and facets; `bySlug` still resolves it.
+   * parent. It is a full recipe document and is listed and searchable like any
+   * other recipe; `componentsOf` is how a parent finds it.
    */
   component?: boolean;
   /** Sub-recipes embedded in this one, in display order. One level deep only. */

@@ -88,6 +88,16 @@ describe('CreateRecipeComponent', () => {
   const button = (): HTMLButtonElement =>
     fixture.nativeElement.querySelector('.btn-primary') as HTMLButtonElement;
 
+  it('says saving adds the recipe, and offers the JSON copy, in create mode', async () => {
+    await setup();
+    await TestBed.inject(RecipeStore).whenLoaded();
+    fixture.detectChanges();
+    const t = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(t).toContain('Saving adds this recipe to the shared collection.');
+    expect(t).toContain('Copy the JSON');
+    expect(t).not.toContain('Saving updates this recipe');
+  });
+
   it('disables Save and says "Saving…" while the write is pending', async () => {
     await setup();
     await TestBed.inject(RecipeStore).whenLoaded();
@@ -282,6 +292,13 @@ describe('CreateRecipeComponent edit mode', () => {
     expect(text()).toContain('Edit recipe');
     expect(page.title()).toBe('Old Soup');
     expect(text()).toContain('/old-soup');
+  });
+
+  it('says saving updates the recipe, without the JSON sentence, in edit mode', async () => {
+    await setup();
+    expect(text()).toContain('Saving updates this recipe in the shared collection.');
+    expect(text()).not.toContain('Saving adds');
+    expect(text()).not.toContain('Copy the JSON');
   });
 
   it('saves with update, keeps the slug when the title changes, and preserves hidden fields', async () => {
@@ -613,9 +630,9 @@ describe('CreateRecipeComponent import and sections', () => {
     expect(navigate).not.toHaveBeenCalled();
     expect(page.notice()).toContain("Couldn't reach the recipe server");
     expect(store.bySlug('soup')).toBeUndefined();
-    // The saved section stays, hidden, and the form remembers it.
+    // The saved section stays, listed like any recipe, and the form remembers it.
     expect(store.bySlug('soup-sauce')?.component).toBeTrue();
-    expect(store.recipes().some((r) => r.slug === 'soup-sauce')).toBeFalse();
+    expect(store.recipes().some((r) => r.slug === 'soup-sauce')).toBeTrue();
     expect(page.sections().map((s) => s.slug)).toEqual(['soup-sauce', null]);
     expect(page.title()).toBe('Soup');
 

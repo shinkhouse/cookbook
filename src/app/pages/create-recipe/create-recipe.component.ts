@@ -567,7 +567,7 @@ export class CreateRecipeComponent {
 
   /**
    * Takes the section off this recipe. A section already saved stays stored as
-   * a hidden component; it just stops being listed here.
+   * a component recipe; it just stops being listed here.
    */
   protected removeSection(index: number): void {
     this.sections.update((list) => list.filter((_, i) => i !== index));

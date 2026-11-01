@@ -26,12 +26,11 @@ export class RecipeStore {
    * archived recipes too (a writable build loads them), so slugs stay unique.
    */
   private readonly _recipes = signal<readonly Recipe[]>([]);
-  /** What the library sees: everything loaded except the archived and embedded components. */
-  private readonly visible = computed(() =>
-    this._recipes().filter((r) => !r.archived && !r.component),
-  );
-  /** Everything that can be opened by slug: components included, archived not. */
-  private readonly resolvable = computed(() => this._recipes().filter((r) => !r.archived));
+  /**
+   * What the library sees, and what can be opened by slug: everything loaded
+   * except the archived. Embedded components are included, so they are searchable.
+   */
+  private readonly visible = computed(() => this._recipes().filter((r) => !r.archived));
   private readonly _status = signal<'loading' | 'ready' | 'error'>('loading');
   private inflight: Promise<void> | null = null;
 
@@ -124,7 +123,7 @@ export class RecipeStore {
 
   /** Resolves components too, so a parent page can open its sub-recipes. */
   bySlug(slug: string): Recipe | undefined {
-    return this.resolvable().find((r) => r.slug === slug);
+    return this.visible().find((r) => r.slug === slug);
   }
 
   /**

@@ -248,6 +248,33 @@ describe('cook mode timers', () => {
       });
     }
 
+    it('gives the title over 400px at 768px, still centred', () => {
+      el.style.display = 'block';
+      el.style.width = '768px';
+      el.style.setProperty('--pad-section', '38px');
+      refresh();
+      const title = el.querySelector('.cook-title')!;
+      const h = head().getBoundingClientRect();
+      expect(title.getBoundingClientRect().width).toBeGreaterThanOrEqual(400);
+      expect(Math.abs(centreOf(title) - (h.left + h.width / 2))).toBeLessThan(1);
+      click(startButton());
+      const chip = el.querySelector('.timer')!.getBoundingClientRect();
+      expect(chip.left).toBeGreaterThanOrEqual(title.getBoundingClientRect().right);
+      expect(chip.right).toBeLessThanOrEqual(h.right + 0.5);
+    });
+
+    it('has no empty second row at 390px when there is no timer', () => {
+      el.style.display = 'block';
+      el.style.width = '390px';
+      el.style.setProperty('--pad-section', '24px');
+      refresh();
+      const h = head().getBoundingClientRect();
+      const title = el.querySelector('.cook-title')!.getBoundingClientRect();
+      const exit = el.querySelector('.exit')!.getBoundingClientRect();
+      // 18px of padding above and below the tallest item in the one row.
+      expect(h.height).toBeCloseTo(36 + Math.max(title.height, exit.height), 0);
+    });
+
     for (const width of [360, 390]) {
       it(`gives the title the width at ${width}px and puts the chip under it`, () => {
         fixture.componentRef.setInput('slug', OTHER.slug);
@@ -404,6 +431,32 @@ describe('cook mode ingredients panel', () => {
     expect(Math.abs(icon.top + icon.height / 2 - (btn.top + btn.height / 2))).toBeLessThan(1);
     expect(Math.abs(panel().getBoundingClientRect().width - btn.width)).toBeLessThan(1);
     expect(Math.abs(panel().getBoundingClientRect().height - btn.height)).toBeLessThan(1);
+  });
+
+  it('fades the list out at the start of closing, before the fold ends', async () => {
+    jasmine.clock().uninstall();
+    click();
+    await new Promise((r) => setTimeout(r, 140));
+    expect(getComputedStyle(body()).opacity).toBe('0');
+  });
+
+  it('shows the list icon set for the layout: chevrons wide, expand arrows stacked', () => {
+    el.style.display = 'block';
+    el.style.width = '1200px';
+    refresh();
+    const wide = toggle().querySelector<HTMLElement>('.icon-wide')!;
+    const stacked = toggle().querySelector<HTMLElement>('.icon-stacked')!;
+    expect(getComputedStyle(wide).display).not.toBe('none');
+    expect(getComputedStyle(stacked).display).toBe('none');
+    expect(wide.textContent!.trim() || wide.getAttribute('fonticon')).toContain('chevron_right');
+    el.style.width = '600px';
+    refresh();
+    expect(getComputedStyle(wide).display).toBe('none');
+    expect(getComputedStyle(stacked).display).not.toBe('none');
+    expect(stacked.getAttribute('fonticon')).toBe('expand_less');
+    click();
+    expect(stacked.getAttribute('fonticon')).toBe('expand_more');
+    expect(wide.getAttribute('fonticon')).toBe('chevron_left');
   });
 
   it('leaves nothing under the heading when closed', async () => {

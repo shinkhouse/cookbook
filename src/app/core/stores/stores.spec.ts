@@ -237,7 +237,7 @@ describe('RecipeStore', () => {
     }
   });
 
-  it('filters to favourites when asked', () => {
+  it('filters to favorites when asked', () => {
     const prefs = TestBed.inject(PrefsStore);
     store.toggleFavsOnly();
     expect(store.results().length).toBe(FAV_SEED.length);
@@ -666,13 +666,13 @@ describe('PrefsStore', () => {
 
   afterEach(() => localStorage.clear());
 
-  it('seeds favourites from the old flags on a first run', () => {
+  it('seeds favorites from the old flags on a first run', () => {
     const prefs = TestBed.inject(PrefsStore);
     expect(prefs.favCount()).toBe(FAV_SEED.length);
     expect(prefs.isFav(FAV_SEED[0])).toBe(true);
   });
 
-  it('toggles a favourite both ways', () => {
+  it('toggles a favorite both ways', () => {
     const prefs = TestBed.inject(PrefsStore);
     prefs.toggleFav('grandmas-chili');
     expect(prefs.isFav('grandmas-chili')).toBe(false);
@@ -680,14 +680,14 @@ describe('PrefsStore', () => {
     expect(prefs.isFav('grandmas-chili')).toBe(true);
   });
 
-  it('persists favourites across a fresh injection', () => {
+  it('persists favorites across a fresh injection', () => {
     TestBed.inject(PrefsStore).toggleFav('grandmas-spaghetti');
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
     expect(TestBed.inject(PrefsStore).isFav('grandmas-spaghetti')).toBe(false);
   });
 
-  it('respects a deliberately emptied favourites list rather than reseeding', () => {
+  it('respects a deliberately emptied favorites list rather than reseeding', () => {
     const prefs = TestBed.inject(PrefsStore);
     for (const slug of [...prefs.favs()]) prefs.toggleFav(slug);
     expect(prefs.favCount()).toBe(0);
@@ -695,19 +695,8 @@ describe('PrefsStore', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
     // The bug this guards: treating "empty" as "unseeded" and handing back the
-    // seed, so clearing favourites silently undid itself on reload.
+    // seed, so clearing favorites silently undid itself on reload.
     expect(TestBed.inject(PrefsStore).favCount()).toBe(0);
-  });
-
-  it('defaults to the side-by-side layout and persists a change', () => {
-    const prefs = TestBed.inject(PrefsStore);
-    expect(prefs.layout()).toBe('side-by-side');
-    prefs.toggleLayout();
-    expect(prefs.layout()).toBe('single-column');
-
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
-    expect(TestBed.inject(PrefsStore).layout()).toBe('single-column');
   });
 });
 

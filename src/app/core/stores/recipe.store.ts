@@ -16,7 +16,7 @@ import { PrefsStore } from './prefs.store';
  */
 @Injectable({ providedIn: 'root' })
 export class RecipeStore {
-  // Favourites are a preference, so they live in PrefsStore; the dependency
+  // Favorites are a preference, so they live in PrefsStore; the dependency
   // runs this way only (PrefsStore knows nothing about recipes).
   private readonly prefs = inject(PrefsStore);
   private readonly repo = inject(RecipeRepository);
@@ -166,7 +166,7 @@ export class RecipeStore {
 
   /**
    * Soft-deletes a recipe: sets `archived` and sends the whole record, so it
-   * disappears from every screen but stays stored. Favourites and list entries
+   * disappears from every screen but stays stored. Favorites and list entries
    * are kept; they just stop resolving while it is archived.
    *
    * Returns false when the slug is unknown, here or on the server. Throws if the

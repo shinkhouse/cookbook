@@ -1,6 +1,7 @@
 import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import { Facet, GAP_FACET, GAP_LABELS, GapKey } from '../../core/facets';
 import { gapLabel, gapsOf } from '../../core/recipe-health';
 import { Recipe } from '../../core/model/recipes.model';
@@ -29,6 +30,12 @@ export class LibraryComponent {
   protected readonly recipes = inject(RecipeStore);
   protected readonly list = inject(ListStore);
   protected readonly prefs = inject(PrefsStore);
+
+  /**
+   * The shopping list is a local convenience, and the deployed site is a
+   * read-only showcase, so production builds leave its controls out.
+   */
+  protected readonly showListControls = !environment.production;
 
   protected readonly tagLabel = tagLabel;
 

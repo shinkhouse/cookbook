@@ -1,5 +1,5 @@
 @if (recipe(); as r) {
-  <article class="detail" [class.single-column]="prefs.layout() === 'single-column'">
+  <article class="detail">
     <div class="hero" [class.is-empty]="!showPhoto()">
       @if (showPhoto()) {
         <img [src]="r.photo" [alt]="r.title" (error)="onPhotoError()" />
@@ -82,18 +82,20 @@
           Start cooking
         </a>
 
-        <button
-          type="button"
-          class="btn-ghost"
-          [class.is-on]="list.has(r.slug)"
-          (click)="list.toggleRecipe(r.slug)"
-        >
-          @if (list.has(r.slug)) {
-            <mat-icon fontIcon="check" aria-hidden="true" /> On the list
-          } @else {
-            <mat-icon fontIcon="add_shopping_cart" aria-hidden="true" /> Add to list
-          }
-        </button>
+        @if (showListControls) {
+          <button
+            type="button"
+            class="btn-ghost"
+            [class.is-on]="list.has(r.slug)"
+            (click)="list.toggleRecipe(r.slug)"
+          >
+            @if (list.has(r.slug)) {
+              <mat-icon fontIcon="check" aria-hidden="true" /> On the list
+            } @else {
+              <mat-icon fontIcon="add_shopping_cart" aria-hidden="true" /> Add to list
+            }
+          </button>
+        }
 
         <button
           type="button"
@@ -102,15 +104,7 @@
           [attr.aria-pressed]="prefs.isFav(r.slug)"
         >
           <mat-icon [fontIcon]="prefs.isFav(r.slug) ? 'star' : 'star_border'" aria-hidden="true" />
-          {{ prefs.isFav(r.slug) ? 'Favourite' : 'Add to favourites' }}
-        </button>
-
-        <button type="button" class="btn-ghost layout-toggle" (click)="prefs.toggleLayout()">
-          <mat-icon
-            [fontIcon]="prefs.layout() === 'side-by-side' ? 'view_agenda' : 'view_column'"
-            aria-hidden="true"
-          />
-          {{ prefs.layout() === 'side-by-side' ? 'Single column' : 'Side by side' }}
+          {{ prefs.isFav(r.slug) ? 'Favorite' : 'Add to favorites' }}
         </button>
 
         @if (writable && !confirmingArchive()) {

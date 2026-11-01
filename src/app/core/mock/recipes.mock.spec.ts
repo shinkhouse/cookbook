@@ -163,7 +163,7 @@ describe('migrated seed data', () => {
     }
   });
 
-  it('seeds favourites from the old flags and only with real slugs', () => {
+  it('seeds favorites from the old flags and only with real slugs', () => {
     expect(FAV_SEED.length).toBe(7);
     const slugs = new Set(Recipes.map((r) => r.slug));
     for (const fav of FAV_SEED) {

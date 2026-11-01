@@ -431,19 +431,6 @@ h1 {
     }
 }
 
-// The "Single column" reading layout: one 68ch measure, nothing sticky.
-.detail.single-column {
-    .columns {
-        display: block;
-        max-width: 68ch;
-    }
-
-    .ingredients-card {
-        position: static;
-        margin-bottom: var(--gutter);
-    }
-}
-
 .not-found {
     display: grid;
     justify-items: center;

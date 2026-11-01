@@ -1,5 +1,5 @@
 import { InputSignal, Type } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -163,5 +163,41 @@ describe('recipeTitle resolver', () => {
     await nav;
     expect(TestBed.inject(Title).getTitle()).not.toBe("Sam's Recipes");
     expect(TestBed.inject(Title).getTitle()).toContain('Spaghetti');
+  });
+});
+
+describe('library list toggle', () => {
+  async function render(): Promise<ComponentFixture<LibraryComponent>> {
+    const repo = setup();
+    const fixture = TestBed.createComponent(LibraryComponent);
+    fixture.detectChanges();
+    repo.resolve();
+    await settled();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const toggles = (fixture: ComponentFixture<LibraryComponent>): string[] =>
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.card-actions button'))
+      .map((b) => b.textContent?.trim() ?? '')
+      .filter((t) => /^(List|On list)$/.test(t));
+
+  it('shows the list toggle on cards in the dev environment', async () => {
+    const fixture = await render();
+    expect(toggles(fixture).length).toBeGreaterThan(0);
+  });
+
+  it('shows no list toggle on cards in a production build', async () => {
+    const fixture = await render();
+    // Simulates a production build, where environment.production is true.
+    (fixture.componentInstance as unknown as { showListControls: boolean }).showListControls =
+      false;
+    // A plain field, so tell the view to look again.
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    expect(toggles(fixture).length).toBe(0);
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.card-actions button').length,
+    ).toBeGreaterThan(0);
   });
 });

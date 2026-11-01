@@ -107,3 +107,46 @@ describe('RecipeDetailComponent archive', () => {
     });
   }
 });
+
+describe('RecipeDetailComponent list and layout controls', () => {
+  let fixture: ComponentFixture<RecipeDetailComponent>;
+
+  async function setup(): Promise<void> {
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(new FakeRecipeRepository())],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+  }
+
+  const buttonTexts = (): string[] =>
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).map(
+      (b) => b.textContent?.trim() ?? '',
+    );
+
+  it('offers Add to list in the dev environment', async () => {
+    await setup();
+    expect(buttonTexts()).toContain('Add to list');
+  });
+
+  it('has no Add to list button in a production build', async () => {
+    await setup();
+    // Simulates a production build, where environment.production is true.
+    (fixture.componentInstance as unknown as { showListControls: boolean }).showListControls =
+      false;
+    // A plain field, so tell the view to look again.
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    expect(buttonTexts()).not.toContain('Add to list');
+    expect(buttonTexts()).not.toContain('On the list');
+  });
+
+  it('renders no Single column or Side by side toggle', async () => {
+    await setup();
+    expect(buttonTexts()).not.toContain('Single column');
+    expect(buttonTexts()).not.toContain('Side by side');
+  });
+});

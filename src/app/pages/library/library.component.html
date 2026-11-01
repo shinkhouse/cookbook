@@ -44,7 +44,7 @@
       [attr.aria-pressed]="recipes.favsOnly()"
     >
       <mat-icon [fontIcon]="recipes.favsOnly() ? 'star' : 'star_border'" aria-hidden="true" />
-      Favourites
+      Favorites
     </button>
   </div>
 
@@ -174,7 +174,7 @@
                 (click)="toggleFav(recipe, $event)"
                 [attr.aria-pressed]="prefs.isFav(recipe.slug)"
                 [attr.aria-label]="
-                  (prefs.isFav(recipe.slug) ? 'Remove ' : 'Add ') + recipe.title + ' to favourites'
+                  (prefs.isFav(recipe.slug) ? 'Remove ' : 'Add ') + recipe.title + ' to favorites'
                 "
               >
                 <mat-icon [fontIcon]="prefs.isFav(recipe.slug) ? 'star' : 'star_border'" />
@@ -204,18 +204,20 @@
                   <button type="button" class="btn-outline" (click)="cook(recipe, $event)">
                     Cook this
                   </button>
-                  <button
-                    type="button"
-                    class="btn-ghost"
-                    [class.is-on]="list.has(recipe.slug)"
-                    (click)="toggleList(recipe, $event)"
-                  >
-                    @if (list.has(recipe.slug)) {
-                      <mat-icon fontIcon="check" aria-hidden="true" /> On list
-                    } @else {
-                      <mat-icon fontIcon="add" aria-hidden="true" /> List
-                    }
-                  </button>
+                  @if (showListControls) {
+                    <button
+                      type="button"
+                      class="btn-ghost"
+                      [class.is-on]="list.has(recipe.slug)"
+                      (click)="toggleList(recipe, $event)"
+                    >
+                      @if (list.has(recipe.slug)) {
+                        <mat-icon fontIcon="check" aria-hidden="true" /> On list
+                      } @else {
+                        <mat-icon fontIcon="add" aria-hidden="true" /> List
+                      }
+                    </button>
+                  }
                 </div>
               </div>
             </li>

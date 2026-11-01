@@ -2,6 +2,7 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import { gapSentence, gapsOf } from '../../core/recipe-health';
 import { formatQty, scaleFactor, scaleLabel } from '../../core/scale';
 import { ListStore } from '../../core/stores/list.store';
@@ -33,6 +34,12 @@ export class RecipeDetailComponent {
   private readonly router = inject(Router);
   protected readonly list = inject(ListStore);
   protected readonly prefs = inject(PrefsStore);
+
+  /**
+   * The shopping list is a local convenience, and the deployed site is a
+   * read-only showcase, so production builds leave its controls out.
+   */
+  protected readonly showListControls = !environment.production;
 
   protected readonly tagLabel = tagLabel;
   protected readonly scaleLabel = scaleLabel;

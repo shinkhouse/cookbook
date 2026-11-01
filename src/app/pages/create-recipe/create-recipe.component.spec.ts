@@ -754,17 +754,55 @@ describe('CreateRecipeComponent import and sections', () => {
     expect(page.tagsText()).toBe('');
   });
 
-  it('clears what an earlier draft held when a recipe is imported', async () => {
+  it('keeps a hand-typed blurb when the paste text is edited', async () => {
     await setup();
     page.onPaste('Toast\n\nIngredients\n1 slice bread\n\nSteps\nToast it.');
-    page.subtitle.set('From Mum');
     page.blurb.set('Crunchy.');
+    page.subtitle.set('From Mum');
     page.notes.set(['Use stale bread.']);
+    page.onPaste('Toast\n\nIngredients\n2 slices bread\n\nSteps\nToast it.');
+    expect(page.blurb()).toBe('Crunchy.');
+    expect(page.subtitle()).toBe('From Mum');
+    expect(page.notes()).toEqual(['Use stale bread.']);
+    expect(page.ingredients()[0].qty).toBe(2);
+  });
+
+  it('keeps hand-typed copy across an import, which writes none of it', async () => {
+    await setup();
+    page.onPaste('Toast\n\nIngredients\n1 slice bread\n\nSteps\nToast it.');
+    page.blurb.set('Crunchy.');
     await importIt();
-    expect(page.subtitle()).toBe('');
-    expect(page.blurb()).toBe('');
-    expect(page.notes()).toEqual([]);
-    expect('subtitle' in page.draft()).toBeFalse();
+    expect(page.blurb()).toBe('Crunchy.');
+    expect(page.title()).toBe('Leek Soup');
+  });
+
+  it('clears what the previous import wrote when the next import has none of it', async () => {
+    await setup();
+    await importIt();
+    await importIt({
+      sourceUrl: 'https://example.com/toast',
+      title: 'Toast',
+      description: '',
+      ingredientGroups: [{ name: null, lines: ['1 slice bread'] }],
+      steps: ['Toast it.'],
+    });
+    const draft = page.draft();
+    expect(draft.sourceUrl).toBe('https://example.com/toast');
+    expect(draft.photo).toBeUndefined();
+    expect(page.sections()).toEqual([]);
+    expect(page.desc()).toBe('');
+    expect(page.time()).toBe('');
+    expect(page.tagsText()).toBe('');
+    expect(page.servings()).toBe(4);
+  });
+
+  it('keeps a field the user edited after the import that wrote it', async () => {
+    await setup();
+    await importIt();
+    page.setSectionTitle(0, 'Croutons');
+    page.onPaste('Toast\n\nIngredients\n1 slice bread\n\nSteps\nToast it.');
+    expect(page.sections().map((x) => x.title)).toEqual(['Croutons', 'For the cream']);
+    expect(page.draft().sourceUrl).toBeUndefined();
   });
 
   it('sends no components when a recipe has no sections', async () => {

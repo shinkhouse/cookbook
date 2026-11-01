@@ -1,5 +1,14 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  Component,
+  WritableSignal,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { AISLE_ORDER, Aisle } from '../../core/aisle';
@@ -40,6 +49,19 @@ interface SectionDraft {
   /** Whether the stored reference carried a label, so an unchanged save keeps it as it was. */
   hadLabel: boolean;
 }
+
+/** A draft field a paste, file or import writes. */
+type FillField =
+  | 'title'
+  | 'desc'
+  | 'servings'
+  | 'time'
+  | 'tagsText'
+  | 'photo'
+  | 'sourceUrl'
+  | 'ingredients'
+  | 'steps'
+  | 'sections';
 
 /** Which list an editor row belongs to: the recipe itself, or section n. */
 type Owner = number | undefined;
@@ -222,28 +244,42 @@ export class CreateRecipeComponent {
   }
 
   /**
-   * Blanks every draft field before a paste, file or import fills it. Create
-   * mode only: the fill paths are not offered while editing, and an edit must
-   * never lose the stored recipe's fields.
+   * The draft fields a paste, file or import can write, each with the value it
+   * goes back to when cleared.
    */
-  private resetDraft(): void {
-    if (this.editing()) return;
-    this.title.set('');
-    this.subtitle.set('');
-    this.servings.set(4);
-    this.time.set('');
-    this.blurb.set('');
-    this.desc.set('');
-    this.tagsText.set('');
-    this.ingredients.set([]);
-    this.steps.set([]);
-    this.notes.set([]);
-    this.review.set([]);
-    this.sections.set([]);
-    this.photo.set('');
-    this.sourceUrl.set('');
-    this.unresolved.set([]);
-    this.parsedSomething.set(false);
+  private readonly fillable = {
+    title: [this.title, ''],
+    desc: [this.desc, ''],
+    servings: [this.servings, 4],
+    time: [this.time, ''],
+    tagsText: [this.tagsText, ''],
+    photo: [this.photo, ''],
+    sourceUrl: [this.sourceUrl, ''],
+    ingredients: [this.ingredients, []],
+    steps: [this.steps, []],
+    sections: [this.sections, []],
+  } as const;
+
+  /** What the last fill wrote, field by field, so the next one knows what is its to clear. */
+  private lastFill = new Map<FillField, unknown>();
+
+  /**
+   * Writes a fill into the draft. A field the previous fill wrote, that this
+   * one does not, and that still holds exactly what was written, is cleared, so
+   * an import's source, photo or sections never ride along onto a different
+   * recipe. A field the user typed, or edited since the fill, is never touched;
+   * arrays are replaced on every edit, so identity tells the two apart.
+   */
+  private fill(values: Partial<Record<FillField, unknown>>): void {
+    for (const [field, written] of this.lastFill) {
+      if (field in values) continue;
+      const [target, blank] = this.fillable[field] as unknown as [WritableSignal<unknown>, unknown];
+      if (target() === written) target.set(blank);
+    }
+    for (const [field, value] of Object.entries(values) as [FillField, unknown][]) {
+      (this.fillable[field][0] as unknown as WritableSignal<unknown>).set(value);
+    }
+    this.lastFill = new Map(Object.entries(values) as [FillField, unknown][]);
   }
 
   protected setTab(tab: Tab): void {
@@ -334,9 +370,10 @@ export class CreateRecipeComponent {
   private async loadFile(file: File): Promise<void> {
     const text = await file.text();
     const { meta } = splitFrontMatter(text);
-    this.applyDraft(parseRecipeText(text));
-    if (meta.servings) this.servings.set(meta.servings);
-    if (meta.tags?.length) this.tagsText.set(meta.tags.join(', '));
+    this.applyDraft(parseRecipeText(text), {
+      ...(meta.servings ? { servings: meta.servings } : {}),
+      ...(meta.tags?.length ? { tagsText: meta.tags.join(', ') } : {}),
+    });
   }
 
   protected onDragOver(event: DragEvent): void {
@@ -377,7 +414,6 @@ export class CreateRecipeComponent {
   }
 
   private applyPreview(preview: ImportPreview): void {
-    this.resetDraft();
     const parse = (lines: readonly string[]) =>
       lines.map((line) => ({ line, result: parseIngredient(line) }));
     const toIngredients = (parsed: ReturnType<typeof parse>): Ingredient[] =>
@@ -394,27 +430,31 @@ export class CreateRecipeComponent {
       .filter((g): g is { name: string; lines: string[] } => !!g.name)
       .map((g) => ({ name: g.name, parsed: parse(g.lines) }));
 
-    this.title.set(preview.title ?? '');
-    this.desc.set(preview.description ?? '');
-    if (typeof preview.servings === 'number' && preview.servings > 0) {
-      this.servings.set(Math.round(preview.servings));
-    }
-    this.time.set(preview.time ?? '');
-    this.tagsText.set((preview.tags ?? []).map((t) => t.toLowerCase()).join(', '));
-    this.photo.set(preview.image ?? '');
-    this.sourceUrl.set(preview.sourceUrl ?? '');
-    this.ingredients.set(toIngredients(own));
-    this.steps.set([...(preview.steps ?? [])]);
-    this.sections.set(
-      named.map((g) => ({
-        slug: null,
-        title: g.name,
-        ingredients: toIngredients(g.parsed),
-        steps: [],
-        ownTitle: null,
-        hadLabel: true,
-      })),
-    );
+    // Only what the page supplied is written, so an empty description never
+    // wipes one typed by hand.
+    const tags = (preview.tags ?? []).map((t) => t.toLowerCase()).join(', ');
+    const sections: SectionDraft[] = named.map((g) => ({
+      slug: null,
+      title: g.name,
+      ingredients: toIngredients(g.parsed),
+      steps: [],
+      ownTitle: null,
+      hadLabel: true,
+    }));
+    this.fill({
+      title: preview.title ?? '',
+      ingredients: toIngredients(own),
+      steps: [...(preview.steps ?? [])],
+      ...(preview.description ? { desc: preview.description } : {}),
+      ...(typeof preview.servings === 'number' && preview.servings > 0
+        ? { servings: Math.round(preview.servings) }
+        : {}),
+      ...(preview.time ? { time: preview.time } : {}),
+      ...(tags ? { tagsText: tags } : {}),
+      ...(preview.image ? { photo: preview.image } : {}),
+      ...(preview.sourceUrl ? { sourceUrl: preview.sourceUrl } : {}),
+      ...(sections.length > 0 ? { sections } : {}),
+    });
     this.review.set(
       [own, ...named.map((g) => g.parsed)]
         .flat()
@@ -670,15 +710,19 @@ export class CreateRecipeComponent {
   }
 
   /**
-   * Fills the shared draft from a parse. Everything the parse does not set is
-   * cleared first, so nothing from an earlier import or paste (its source,
-   * photo or sections above all) is saved onto a different recipe.
+   * Fills the shared draft from a parse, leaving hand-entered copy alone. What
+   * an earlier fill wrote and this one does not is cleared; see `fill`.
    */
-  private applyDraft(parsed: ReturnType<typeof parseRecipeText>): void {
-    this.resetDraft();
-    this.title.set(parsed.title);
-    this.ingredients.set(parsed.ingredients);
-    this.steps.set(parsed.steps);
+  private applyDraft(
+    parsed: ReturnType<typeof parseRecipeText>,
+    extra: Partial<Record<FillField, unknown>> = {},
+  ): void {
+    this.fill({
+      title: parsed.title,
+      ingredients: parsed.ingredients,
+      steps: parsed.steps,
+      ...extra,
+    });
     this.review.set(parsed.review);
     this.parsedSomething.set(parsed.confidence === 'clean');
   }

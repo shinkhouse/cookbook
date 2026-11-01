@@ -265,4 +265,24 @@ describe('RecipeDetailComponent embedded recipes', () => {
     expect(text(el().querySelector('.checked-count'))).toBe('1 of 2 in hand');
     expect(el().querySelectorAll('.is-checked').length).toBe(1);
   });
+
+  it('puts the component sections before the parent\'s own ingredients and steps', () => {
+    const section = el().querySelector('.component-section')!;
+    const own = el().querySelector('.detail-body > .columns')!;
+    expect(section.compareDocumentPosition(own) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('keeps a parent ingredient\'s check apart from a component\'s', () => {
+    const own = () => el().querySelector<HTMLInputElement>('.detail-body > .columns input[type=checkbox]')!;
+    const part = () => el().querySelector<HTMLInputElement>('.component-section input[type=checkbox]')!;
+    own().click();
+    fixture.detectChanges();
+    expect(own().checked).toBeTrue();
+    expect(part().checked).toBeFalse();
+    own().click();
+    part().click();
+    fixture.detectChanges();
+    expect(own().checked).toBeFalse();
+    expect(part().checked).toBeTrue();
+  });
 });

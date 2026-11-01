@@ -142,73 +142,6 @@
         }
       </div>
 
-      <div class="columns">
-        <aside>
-          <div class="section-head">
-            <h2 class="section-title">Ingredients</h2>
-          </div>
-          <div class="ingredients-card">
-            @for (group of ingredientGroups(); track $index) {
-              @if (group.name) {
-                <h3 class="ing-group">{{ group.name }}</h3>
-              }
-              <ul class="ingredient-list">
-                @for (item of group.items; track item.index) {
-                  <li [class.is-checked]="item.checked">
-                    <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
-                      <!-- Amount and name are separate columns so figures line up
-                           down the list, the way a printed recipe card sets them. -->
-                      <span class="ing-row">
-                        <span class="ing-amount tnum">{{ amountLabel(item.amount, item.unit) }}</span>
-                        <span class="ing-name">{{ item.name }}</span>
-                      </span>
-                    </mat-checkbox>
-                  </li>
-                }
-              </ul>
-            }
-  
-            @if (checkedCount() > 0) {
-              <p class="checked-count label">{{ checkedCount() }} of {{ ingredientTotal() }} in hand</p>
-            }
-
-          </div>
-        </aside>
-
-        <section class="steps">
-          <div class="section-head">
-            <h2 class="section-title">Instructions</h2>
-          </div>
-
-          @if (r.steps.length === 0) {
-            <p class="no-steps">No steps written down for this one yet.</p>
-          } @else {
-            <ol class="step-list">
-              @for (step of r.steps; track $index) {
-                <li>
-                  <span class="step-number tnum">{{ $index + 1 }}</span>
-                  <p>{{ step }}</p>
-                </li>
-              }
-            </ol>
-          }
-
-          <!-- §6.2 — the notes panel renders only when there are notes. -->
-          @if (r.notes.length > 0) {
-            <div class="notes">
-              <div class="section-head notes-head">
-                <h3 class="section-title">Notes</h3>
-              </div>
-              <ul>
-                @for (note of r.notes; track $index) {
-                  <li>{{ note }}</li>
-                }
-              </ul>
-            </div>
-          }
-        </section>
-      </div>
-
       @for (part of componentSections(); track $index) {
         <section class="component-section">
           <div class="section-head">
@@ -247,6 +180,73 @@
           </div>
         </section>
       }
+
+      <div class="columns">
+        <aside>
+          <div class="section-head">
+            <h2 class="section-title">Ingredients</h2>
+          </div>
+          <div class="ingredients-card">
+            @for (group of ingredientGroups(); track $index) {
+              @if (group.name) {
+                <h3 class="ing-group">{{ group.name }}</h3>
+              }
+              <ul class="ingredient-list">
+                @for (item of group.items; track item.index) {
+                  <li [class.is-checked]="item.checked">
+                    <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
+                      <!-- Amount and name are separate columns so figures line up
+                           down the list, the way a printed recipe card sets them. -->
+                      <span class="ing-row">
+                        <span class="ing-amount tnum">{{ amountLabel(item.amount, item.unit) }}</span>
+                        <span class="ing-name">{{ item.name }}</span>
+                      </span>
+                    </mat-checkbox>
+                  </li>
+                }
+              </ul>
+            }
+  
+            @if (checkedCount() > 0) {
+              <p class="checked-count label">{{ checkedCount() }} of {{ totalIngredients() }} in hand</p>
+            }
+
+          </div>
+        </aside>
+
+        <section class="steps">
+          <div class="section-head">
+            <h2 class="section-title">Instructions</h2>
+          </div>
+
+          @if (r.steps.length === 0) {
+            <p class="no-steps">No steps written down for this one yet.</p>
+          } @else {
+            <ol class="step-list">
+              @for (step of r.steps; track $index) {
+                <li>
+                  <span class="step-number tnum">{{ $index + 1 }}</span>
+                  <p>{{ step }}</p>
+                </li>
+              }
+            </ol>
+          }
+
+          <!-- §6.2 — the notes panel renders only when there are notes. -->
+          @if (r.notes.length > 0) {
+            <div class="notes">
+              <div class="section-head notes-head">
+                <h3 class="section-title">Notes</h3>
+              </div>
+              <ul>
+                @for (note of r.notes; track $index) {
+                  <li>{{ note }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </section>
+      </div>
     </div>
   </article>
 } @else if (status() === 'loading') {

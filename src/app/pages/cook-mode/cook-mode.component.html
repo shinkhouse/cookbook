@@ -176,10 +176,8 @@
         <h2 class="label">All steps</h2>
         <ol>
           @for (step of flatSteps(); track $index) {
-            @if ($index === 0 || step.label !== flatSteps()[$index - 1].label) {
-              @if (step.label) {
-                <li class="jump-group label" role="presentation">{{ step.label }}</li>
-              }
+            @if (jumpHeaders().has($index)) {
+              <li class="jump-group label" role="presentation">{{ step.label }}</li>
             }
             <li>
               <button

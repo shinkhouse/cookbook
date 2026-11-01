@@ -127,7 +127,7 @@ export class RecipeDetailComponent {
   protected readonly ingredients = computed<DetailIngredient[]>(() => {
     const recipe = this.recipe();
     if (!recipe) return [];
-    return this.rows(recipe.ingredients, 0);
+    return this.rows(recipe.ingredients, this.componentIngredientCount());
   });
 
   /**
@@ -146,7 +146,7 @@ export class RecipeDetailComponent {
   protected readonly componentSections = computed(() => {
     const recipe = this.recipe();
     if (!recipe) return [];
-    let offset = recipe.ingredients.length;
+    let offset = 0;
     return this.recipes.componentsOf(recipe.slug).map((part) => {
       const items = this.rows(part.recipe.ingredients, offset);
       offset += items.length;
@@ -154,13 +154,16 @@ export class RecipeDetailComponent {
     });
   });
 
-  private readonly totalIngredients = computed(
-    () =>
-      this.ingredients().length +
-      this.componentSections().reduce(
-        (sum, s) => sum + s.groups.reduce((n, g) => n + g.items.length, 0),
-        0,
-      ),
+  private readonly componentIngredientCount = computed(() => {
+    const recipe = this.recipe();
+    if (!recipe) return 0;
+    return this.recipes
+      .componentsOf(recipe.slug)
+      .reduce((sum, part) => sum + part.recipe.ingredients.length, 0);
+  });
+
+  protected readonly totalIngredients = computed(
+    () => this.ingredients().length + this.componentIngredientCount(),
   );
 
   private rows(list: Recipe['ingredients'], offset: number): DetailIngredient[] {
@@ -177,7 +180,6 @@ export class RecipeDetailComponent {
   }
 
   protected readonly checkedCount = computed(() => this.checked().size);
-  protected readonly ingredientTotal = this.totalIngredients;
 
   /** Some stored photo URLs are hotlink blocked; fall back to the placeholder. */
   private readonly photoBroken = signal(false);

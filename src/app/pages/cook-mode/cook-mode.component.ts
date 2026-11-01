@@ -34,6 +34,14 @@ interface RunningTimer {
   finishedAt?: number;
 }
 
+interface FlatStep {
+  text: string;
+  /** The component's label, or the parent's title when components exist; else null. */
+  label: string | null;
+  /** Which part the step belongs to: a component's position, or the parent. */
+  owner: 'parent' | number;
+}
+
 @Component({
   selector: 'app-cook-mode',
   imports: [RouterLink, MatIconModule, MatCheckboxModule, MatMenuModule],
@@ -81,15 +89,28 @@ export class CookModeComponent {
    * the component, then the parent's own. The counter, progress bar, timers and
    * jump list all index into this list.
    */
-  protected readonly flatSteps = computed<{ text: string; label: string | null }[]>(() => {
+  protected readonly flatSteps = computed<FlatStep[]>(() => {
     const recipe = this.recipe();
     if (!recipe) return [];
     const parts = this.parts();
-    const own = recipe.steps.map((text) => ({ text, label: parts.length ? recipe.title : null }));
     return [
-      ...parts.flatMap((p) => p.recipe.steps.map((text) => ({ text, label: p.label as string | null }))),
-      ...own,
+      ...parts.flatMap((p, i) =>
+        p.recipe.steps.map((text): FlatStep => ({ text, label: p.label, owner: i })),
+      ),
+      ...recipe.steps.map((text): FlatStep => ({
+        text,
+        label: parts.length ? recipe.title : null,
+        owner: 'parent',
+      })),
     ];
+  });
+
+  /** The jump list's headers: the index of each step that opens a new owner's run. */
+  protected readonly jumpHeaders = computed(() => {
+    const steps = this.flatSteps();
+    return new Set(
+      steps.flatMap((s, i) => (s.label && (i === 0 || steps[i - 1].owner !== s.owner) ? [i] : [])),
+    );
   });
 
   protected readonly steps = computed(() => this.flatSteps().map((s) => s.text));
@@ -97,7 +118,7 @@ export class CookModeComponent {
   /** The current step's component label, if it belongs to one. */
   protected readonly stepLabel = computed(() => {
     const step = this.flatSteps()[this.stepIndex()];
-    return step && step.label !== this.recipe()?.title ? step.label : null;
+    return step && step.owner !== 'parent' ? step.label : null;
   });
   protected readonly stepCount = computed(() => this.steps().length);
 

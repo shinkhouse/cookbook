@@ -591,4 +591,70 @@ describe('cook mode with embedded recipes', () => {
     expect(Array.from(el.querySelectorAll('.ing-name')).map(text)).toEqual(['chicken', 'butter']);
     expect(Array.from(el.querySelectorAll('.ing-group')).map(text)).toEqual(['For the sauce']);
   });
+
+  it('checks an ingredient from a component without touching the parent\'s', () => {
+    const boxes = () => Array.from(el.querySelectorAll<HTMLInputElement>('.ing-list input[type=checkbox]'));
+    boxes()[1].click();
+    refresh();
+    expect(boxes().map((b) => b.checked)).toEqual([false, true]);
+    expect(el.querySelectorAll('.ing-list li.is-checked').length).toBe(1);
+  });
+});
+
+describe('cook mode step ownership and slug changes', () => {
+  const part = (slug: string, steps: string[]): Recipe => ({ ...RECIPE, slug, title: slug, component: true, ingredients: [], steps });
+  const PARENT: Recipe = {
+    ...RECIPE,
+    slug: 'parent',
+    title: 'Same',
+    ingredients: [],
+    steps: ['Own one.', 'Own two.'],
+    components: [{ slug: 'a', label: 'Same' }, { slug: 'b', label: 'Dup' }, { slug: 'c', label: 'Dup' }],
+  };
+  const SOLO: Recipe = { ...RECIPE, slug: 'solo', title: 'Solo', steps: ['Only step.'] };
+  let fixture: ComponentFixture<CookModeComponent>;
+  let el: HTMLElement;
+  const text = (node: Element | null | undefined) => (node?.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        ...provideFakeRecipes(
+          new FakeRecipeRepository([PARENT, SOLO, part('a', ['A1.']), part('b', ['B1.']), part('c', ['C1.'])]),
+        ),
+        ...provideFakeCookbooks(new FakeCookbookRepository([])),
+      ],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    jasmine.clock().install();
+    fixture = TestBed.createComponent(CookModeComponent);
+    fixture.componentRef.setInput('slug', 'parent');
+    fixture.detectChanges();
+    el = fixture.nativeElement;
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+    jasmine.clock().uninstall();
+  });
+
+  it('shows a component label even when it matches the parent title', () => {
+    expect(text(el.querySelector('.step-label'))).toBe('Same');
+  });
+
+  it('keeps headers for adjacent components that share a label', () => {
+    expect(Array.from(el.querySelectorAll('.jump-group')).map(text)).toEqual(['Same', 'Dup', 'Dup', 'Same']);
+  });
+
+  it('resets to step 1 of a shorter recipe when the slug changes', () => {
+    el.querySelectorAll<HTMLElement>('.stage-nav button')[1].click();
+    fixture.detectChanges();
+    fixture.componentRef.setInput('slug', 'solo');
+    fixture.detectChanges();
+    expect(text(el.querySelector('.step-counter'))).toBe('Step 1 of 1');
+    expect(el.querySelectorAll('.jump button').length).toBe(1);
+    expect(el.querySelector('.step-label')).toBeNull();
+    expect(el.querySelectorAll('.jump-group').length).toBe(0);
+  });
 });

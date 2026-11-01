@@ -66,6 +66,9 @@ type FillField =
 /** Which list an editor row belongs to: the recipe itself, or section n. */
 type Owner = number | undefined;
 
+/** The API refuses a recipe with more embedded components than this. */
+const MAX_SECTIONS = 20;
+
 @Component({
   selector: 'app-create-recipe',
   imports: [RouterLink, MatIconModule, NgTemplateOutlet],
@@ -156,7 +159,8 @@ export class CreateRecipeComponent {
   protected readonly canSave = computed(
     () =>
       this.title().trim().length > 0 &&
-      this.ingredients().length > 0 &&
+      (this.ingredients().length > 0 ||
+        this.sections().some((x) => x.ingredients.length > 0)) &&
       this.sections().every((s) => s.title.trim().length > 0),
   );
 
@@ -404,14 +408,27 @@ export class CreateRecipeComponent {
     try {
       const preview = await this.importer.previewRecipe(url);
       this.applyPreview(preview);
-      this.notice.set('Imported. Check it over, fill in the sections\' steps, then Save.');
+      const dropped = this.droppedSections;
+      this.notice.set(
+        'Imported. Check it over, fill in the sections\' steps, then Save.' +
+          (dropped > 0
+            ? ` The recipe server allows ${MAX_SECTIONS} sections, so ${dropped} ingredient ${dropped === 1 ? 'group was' : 'groups were'} left out.`
+            : ''),
+      );
       this.tab.set('manual');
     } catch (err) {
-      this.notice.set(describeWriteError(err));
+      this.notice.set(
+        (err as { status?: unknown } | null)?.status === 404
+          ? "Import isn't switched on in the local API. Add RECIPE_IMPORT_ENABLED=true to its .env and restart it."
+          : describeWriteError(err),
+      );
     } finally {
       this.importing.set(false);
     }
   }
+
+  /** How many named groups the last import dropped to stay within the cap. */
+  private droppedSections = 0;
 
   private applyPreview(preview: ImportPreview): void {
     const parse = (lines: readonly string[]) =>
@@ -425,10 +442,15 @@ export class CreateRecipeComponent {
       }));
 
     const groups = preview.ingredientGroups ?? [];
-    const own = parse(groups.filter((g) => !g.name).flatMap((g) => g.lines));
-    const named = groups
-      .filter((g): g is { name: string; lines: string[] } => !!g.name)
-      .map((g) => ({ name: g.name, parsed: parse(g.lines) }));
+    const unnamed = groups.filter((g) => !g.name).flatMap((g) => g.lines);
+    const allNamed = groups.filter((g): g is { name: string; lines: string[] } => !!g.name);
+    // recipe-scrapers only yields an unnamed group for lines before the first
+    // heading. A lone heading ("Ingredients") is then the recipe's own list.
+    const lone = unnamed.length === 0 && allNamed.length === 1;
+    const own = parse(lone ? allNamed[0].lines : unnamed);
+    const kept = lone ? [] : allNamed.slice(0, MAX_SECTIONS);
+    this.droppedSections = lone ? 0 : allNamed.length - kept.length;
+    const named = kept.map((g) => ({ name: g.name, parsed: parse(g.lines) }));
 
     // Only what the page supplied is written, so an empty description never
     // wipes one typed by hand.
@@ -554,7 +576,10 @@ export class CreateRecipeComponent {
     this.editSteps(owner, (list) => list.filter((_, i) => i !== index));
   }
 
+  protected readonly atSectionLimit = computed(() => this.sections().length >= MAX_SECTIONS);
+
   protected addSection(): void {
+    if (this.atSectionLimit()) return;
     this.sections.update((list) => [
       ...list,
       { slug: null, title: '', ingredients: [], steps: [], ownTitle: null, hadLabel: true },

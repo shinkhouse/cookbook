@@ -294,7 +294,7 @@
               <div class="editor-block">
                 <div class="editor-head">
                   <span class="field-label">Sections</span>
-                  <button type="button" class="btn-ghost btn-small" (click)="addSection()">
+                  <button type="button" class="btn-ghost btn-small" [disabled]="atSectionLimit()" (click)="addSection()">
                     <mat-icon fontIcon="add" aria-hidden="true" /> Add section
                   </button>
                 </div>

@@ -412,6 +412,8 @@ type Full = {
   steps(): string[];
   sections(): Section[];
   draft(): Recipe;
+  canSave(): boolean;
+  atSectionLimit(): boolean;
   notice(): string;
   importing(): boolean;
   importUrl: { set(v: string): void };
@@ -811,6 +813,51 @@ describe('CreateRecipeComponent import and sections', () => {
     expect(page.time()).toBe('');
     expect(page.tagsText()).toBe('');
     expect(page.servings()).toBe(4);
+  });
+
+  it('uses a lone named heading as the recipe\'s own ingredients', async () => {
+    await setup();
+    await importIt({ ...PREVIEW, ingredientGroups: [{ name: 'Ingredients', lines: ['2 tbsp olive oil', '3 leeks'] }] });
+    expect(page.ingredients().map((i) => i.name)).toEqual(['olive oil', 'leeks']);
+    expect(page.sections()).toEqual([]);
+    expect(page.canSave()).toBeTrue();
+  });
+
+  it('keeps several named headings as sections and can save with ingredients only there', async () => {
+    await setup();
+    await importIt({
+      ...PREVIEW,
+      ingredientGroups: [
+        { name: 'Dough', lines: ['2 cups flour'] },
+        { name: 'Filling', lines: ['1 cup cheese'] },
+      ],
+    });
+    expect(page.ingredients()).toEqual([]);
+    expect(page.sections().map((x) => x.title)).toEqual(['Dough', 'Filling']);
+    expect(page.canSave()).toBeTrue();
+  });
+
+  it('says the import is switched off when the preview answers 404', async () => {
+    await setup();
+    preview().and.rejectWith({ status: 404 });
+    page.importUrl.set('https://example.com/soup');
+    await page.importFromUrl();
+    expect(page.notice()).toBe(
+      "Import isn't switched on in the local API. Add RECIPE_IMPORT_ENABLED=true to its .env and restart it.",
+    );
+  });
+
+  it('caps sections at 20, on import with a notice and on Add section', async () => {
+    await setup();
+    const groups = Array.from({ length: 23 }, (_, i) => ({ name: `Part ${i}`, lines: ['1 egg'] }));
+    await importIt({ ...PREVIEW, ingredientGroups: [{ name: null, lines: ['1 leek'] }, ...groups] });
+    expect(page.sections().length).toBe(20);
+    expect(page.notice()).toContain('3 ingredient groups were left out');
+    expect(page.atSectionLimit()).toBeTrue();
+    page.addSection();
+    expect(page.sections().length).toBe(20);
+    const btn = Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.includes('Add section'));
+    expect(btn?.disabled).toBeTrue();
   });
 
   it('keeps a field the user edited after the import that wrote it', async () => {

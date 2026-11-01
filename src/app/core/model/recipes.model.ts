@@ -55,6 +55,16 @@ export interface Recipe {
    * database. There is no restore in the app — clear the flag by hand in Mongo.
    */
   archived?: boolean;
+  /** Where the recipe was imported from. An http(s) URL; the page links to it. */
+  sourceUrl?: string;
+  /**
+   * True for a sub-recipe ("the sauce") that exists only to be embedded in a
+   * parent. It is a full recipe document but is hidden from the library, search
+   * and facets; `bySlug` still resolves it.
+   */
+  component?: boolean;
+  /** Sub-recipes embedded in this one, in display order. One level deep only. */
+  components?: { slug: string; label?: string }[];
 }
 
 /**

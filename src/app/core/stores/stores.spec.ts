@@ -865,3 +865,120 @@ describe('ListStore', () => {
     expect(boughtKey('a-recipe', 3)).toBe('a-recipe:3');
   });
 });
+
+describe('RecipeStore embedded components', () => {
+  let store: RecipeStore;
+
+  const sauce = fixture('red-sauce', {
+    title: 'Red sauce',
+    component: true,
+    tags: ['sauce'],
+    photo: undefined,
+    ingredients: [{ qty: 2, unit: 'cup', name: 'tomatoes', aisle: 'produce' }],
+  });
+  const parent = fixture('lasagna', {
+    components: [{ slug: 'red-sauce', label: 'For the sauce' }, { slug: 'gone' }],
+  });
+
+  beforeEach(async () => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideFakeRecipes(new FakeRecipeRepository([parent, sauce]))],
+    });
+    store = TestBed.inject(RecipeStore);
+    await store.whenLoaded();
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('keeps component recipes out of the library, search, tags, facets and counts', () => {
+    expect(store.recipes().map((r) => r.slug)).toEqual(['lasagna']);
+    store.setQuery('tomatoes');
+    expect(store.results()).toEqual([]);
+    expect(store.tags()).not.toContain('sauce');
+    expect(store.gapCounts()['photo']).toBe(0);
+    expect(store.needsWorkCount()).toBe(0);
+    expect(store.mostCooked()?.slug).toBe('lasagna');
+    expect(store.inCookbook(DEFAULT_COOKBOOK_ID).map((r) => r.slug)).toEqual(['lasagna']);
+  });
+
+  it('still resolves a component by slug', () => {
+    expect(store.bySlug('red-sauce')?.title).toBe('Red sauce');
+  });
+
+  it('lists a parent\'s components in order, skipping ones that do not resolve', () => {
+    const parts = store.componentsOf('lasagna');
+    expect(parts.map((p) => p.recipe.slug)).toEqual(['red-sauce']);
+    expect(parts[0].label).toBe('For the sauce');
+  });
+
+  it('labels a component with its title when no label is given', () => {
+    const bare = fixture('bare', { components: [{ slug: 'red-sauce' }] });
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideFakeRecipes(new FakeRecipeRepository([bare, sauce]))],
+    });
+    const s = TestBed.inject(RecipeStore);
+    return s.whenLoaded().then(() => expect(s.componentsOf('bare')[0].label).toBe('Red sauce'));
+  });
+
+  it('answers an empty list for a recipe with no components or an unknown slug', () => {
+    expect(store.componentsOf('red-sauce')).toEqual([]);
+    expect(store.componentsOf('nope')).toEqual([]);
+  });
+
+  it('skips an archived component', async () => {
+    await store.archive('red-sauce');
+    expect(store.componentsOf('lasagna')).toEqual([]);
+  });
+
+  it('still lists a parent whose component slug no longer resolves', () => {
+    expect(store.recipes().some((r) => r.slug === 'lasagna')).toBe(true);
+    expect(store.componentsOf('lasagna').length).toBe(1);
+  });
+
+  it('hides a component from the library once its parent is archived', async () => {
+    await store.archive('lasagna');
+    expect(store.recipes()).toEqual([]);
+    expect(store.results()).toEqual([]);
+    expect(store.bySlug('red-sauce')).toBeDefined();
+  });
+});
+
+describe('ListStore with embedded components', () => {
+  let list: ListStore;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    const sauce = fixture('red-sauce', {
+      title: 'Red sauce',
+      component: true,
+      ingredients: [{ qty: 2, unit: 'cup', name: 'tomatoes', aisle: 'produce' }],
+    });
+    const parent = fixture('lasagna', { components: [{ slug: 'red-sauce' }, { slug: 'gone' }] });
+    TestBed.configureTestingModule({
+      providers: [provideFakeRecipes(new FakeRecipeRepository([parent, sauce]))],
+    });
+    list = TestBed.inject(ListStore);
+    await TestBed.inject(RecipeStore).whenLoaded();
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('includes a parent\'s component ingredients', () => {
+    list.addRecipe('lasagna');
+    expect(list.totalItems()).toBe(2);
+    const produce = list.groups().find((g) => g.aisle === 'produce')!;
+    expect(produce.rows[0].ingredient.name).toBe('tomatoes');
+  });
+
+  it('checks off component rows independently and drops their marks with the parent', () => {
+    list.addRecipe('lasagna');
+    const row = list.groups().find((g) => g.aisle === 'produce')!.rows[0];
+    list.toggleBought(row.recipeSlug, row.index);
+    expect(list.boughtCount()).toBe(1);
+    list.removeRecipe('lasagna');
+    list.addRecipe('lasagna');
+    expect(list.boughtCount()).toBe(0);
+  });
+});

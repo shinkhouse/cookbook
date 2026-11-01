@@ -26,8 +26,12 @@ export class RecipeStore {
    * archived recipes too (a writable build loads them), so slugs stay unique.
    */
   private readonly _recipes = signal<readonly Recipe[]>([]);
-  /** What the screens see: everything loaded except the archived. */
-  private readonly visible = computed(() => this._recipes().filter((r) => !r.archived));
+  /** What the library sees: everything loaded except the archived and embedded components. */
+  private readonly visible = computed(() =>
+    this._recipes().filter((r) => !r.archived && !r.component),
+  );
+  /** Everything that can be opened by slug: components included, archived not. */
+  private readonly resolvable = computed(() => this._recipes().filter((r) => !r.archived));
   private readonly _status = signal<'loading' | 'ready' | 'error'>('loading');
   private inflight: Promise<void> | null = null;
 
@@ -118,8 +122,23 @@ export class RecipeStore {
     ),
   );
 
+  /** Resolves components too, so a parent page can open its sub-recipes. */
   bySlug(slug: string): Recipe | undefined {
-    return this.visible().find((r) => r.slug === slug);
+    return this.resolvable().find((r) => r.slug === slug);
+  }
+
+  /**
+   * A recipe's embedded sub-recipes, in order. A component that is missing or
+   * archived is skipped rather than failing the parent. The label falls back to
+   * the component's own title.
+   */
+  componentsOf(slug: string): { label: string; recipe: Recipe }[] {
+    const parts: { label: string; recipe: Recipe }[] = [];
+    for (const ref of this.bySlug(slug)?.components ?? []) {
+      const recipe = this.bySlug(ref.slug);
+      if (recipe) parts.push({ label: ref.label || recipe.title, recipe });
+    }
+    return parts;
   }
 
   /**

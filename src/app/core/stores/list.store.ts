@@ -64,20 +64,30 @@ export class ListStore {
     for (const slug of this._cart()) {
       const recipe = this.recipes.bySlug(slug);
       if (!recipe) continue; // a stored slug that no longer exists
-      recipe.ingredients.forEach((ingredient, index) => {
-        const key = boughtKey(slug, index);
-        const row: ListRow = {
-          key,
-          index,
-          ingredient,
-          recipeSlug: slug,
-          recipeTitle: recipe.title,
-          bought: bought.has(key),
-        };
-        const rows = byAisle.get(ingredient.aisle);
-        if (rows) rows.push(row);
-        else byAisle.set(ingredient.aisle, [row]);
-      });
+      // The parent's own ingredients, then each component's. A component row is
+      // keyed on the component's slug so its checks never collide with the parent's.
+      const sources = [
+        { owner: slug, ingredients: recipe.ingredients },
+        ...this.recipes
+          .componentsOf(slug)
+          .map((c) => ({ owner: c.recipe.slug, ingredients: c.recipe.ingredients })),
+      ];
+      for (const { owner, ingredients } of sources) {
+        ingredients.forEach((ingredient, index) => {
+          const key = boughtKey(owner, index);
+          const row: ListRow = {
+            key,
+            index,
+            ingredient,
+            recipeSlug: owner,
+            recipeTitle: recipe.title,
+            bought: bought.has(key),
+          };
+          const rows = byAisle.get(ingredient.aisle);
+          if (rows) rows.push(row);
+          else byAisle.set(ingredient.aisle, [row]);
+        });
+      }
     }
 
     return AISLE_ORDER.filter((aisle) => byAisle.has(aisle)).map((aisle) => ({
@@ -106,9 +116,14 @@ export class ListStore {
 
   /** Removing a recipe drops its bought marks too, per §6.5. */
   removeRecipe(slug: string): void {
+    // Component rows are keyed on the component's slug, so their marks go too.
+    const prefixes = [slug, ...this.recipes.componentsOf(slug).map((c) => c.recipe.slug)].map(
+      (s) => `${s}:`,
+    );
     this.setCart(this._cart().filter((s) => s !== slug));
-    const prefix = `${slug}:`;
-    const next = new Set([...this._bought()].filter((k) => !k.startsWith(prefix)));
+    const next = new Set(
+      [...this._bought()].filter((k) => !prefixes.some((p) => k.startsWith(p))),
+    );
     this.setBought(next);
   }
 

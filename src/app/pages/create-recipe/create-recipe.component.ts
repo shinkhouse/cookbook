@@ -92,7 +92,8 @@ export class CreateRecipeComponent {
     () => this.title().trim().length > 0 && this.ingredients().length > 0,
   );
 
-  protected readonly draft = computed<Recipe>(() => ({
+  protected readonly draft = computed<Recipe>(() => {
+    const draft: Recipe = {
     // Edit mode keeps what the form has no field for: cooked, photo, archived,
     // sourceUrl, components, cookbooks.
     ...this.original(),
@@ -110,7 +111,11 @@ export class CreateRecipeComponent {
     notes: this.notes(),
     // Unfiled until this screen offers a cookbook to file into.
     cookbooks: this.original()?.cookbooks ?? [],
-  }));
+    };
+    // The spread above would otherwise keep a stored subtitle the form cleared.
+    if (!this.subtitle().trim()) delete draft.subtitle;
+    return draft;
+  });
 
   protected readonly draftJson = computed(() => JSON.stringify(this.draft(), null, 2));
 
@@ -372,7 +377,10 @@ export class CreateRecipeComponent {
   }
 
   protected retry(): void {
-    void this.recipes.load();
+    void this.recipes.load().then(() => {
+      const slug = this.slug_();
+      if (slug !== undefined && !this.original()) void this.loadForEdit(slug);
+    });
   }
 
   protected async copyJson(): Promise<void> {

@@ -234,14 +234,20 @@ describe('CreateRecipeComponent edit mode', () => {
     title: { set(v: string): void; (): string };
     save(): Promise<void>;
     notice(): string;
+    subtitle: { set(v: string): void };
+    updateIngredientName(i: number, raw: string): void;
+    ingredients(): { name: string; group?: string }[];
   };
   let fake: FakeRecipeRepository;
   let fixture: ComponentFixture<CreateRecipeComponent>;
   let navigate: jasmine.Spy;
   let page: Edit;
 
-  async function setup(slug = 'old-soup'): Promise<void> {
-    fake = new FakeRecipeRepository([stored]);
+  async function setup(
+    slug = 'old-soup',
+    repo: FakeRecipeRepository = new FakeRecipeRepository([stored]),
+  ): Promise<void> {
+    fake = repo;
     TestBed.configureTestingModule({
       imports: [CreateRecipeComponent],
       providers: [provideRouter([]), ...provideFakeRecipes(fake)],
@@ -294,5 +300,63 @@ describe('CreateRecipeComponent edit mode', () => {
   it('shows not-found for an unknown slug', async () => {
     await setup('nope');
     expect(text()).toContain('No recipe by that name.');
+  });
+
+  it('sends no subtitle once the field is cleared', async () => {
+    fake = new FakeRecipeRepository([{ ...stored, subtitle: 'From Mum' }]);
+    await setup('old-soup', fake);
+    page.subtitle.set('  ');
+    const update = spyOn(fake, 'update').and.callThrough();
+    await page.save();
+    expect('subtitle' in update.calls.mostRecent().args[0]).toBeFalse();
+  });
+
+  it('shows the manual form straight away, with no tab strip', async () => {
+    await setup();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.tabs')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('#paste-area')).toBeNull();
+  });
+
+  it('keeps Save disabled until the store has loaded', async () => {
+    const slow = new SlowListFake([stored]);
+    TestBed.configureTestingModule({
+      imports: [CreateRecipeComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(slow)],
+    });
+    fixture = TestBed.createComponent(CreateRecipeComponent);
+    fixture.componentRef.setInput('slug', 'old-soup');
+    fixture.detectChanges();
+    const btn = (): HTMLButtonElement =>
+      (fixture.nativeElement as HTMLElement).querySelector('.btn-primary') as HTMLButtonElement;
+    expect(btn().disabled).toBeTrue();
+    slow.release();
+    await TestBed.inject(RecipeStore).whenLoaded();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(btn().disabled).toBeFalse();
+  });
+
+  it('says so when the update finds no recipe', async () => {
+    await setup();
+    spyOn(fake, 'update').and.resolveTo(null);
+    await page.save();
+    expect(page.notice()).toContain('That recipe no longer exists');
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('shows the load error, not not-found, when the collection fails to load', async () => {
+    const flaky = new FlakyListFake([stored]);
+    await setup('old-soup', flaky);
+    expect(text()).toContain("Couldn't load the recipe.");
+    expect(text()).not.toContain('No recipe by that name.');
+  });
+
+  it('keeps an ingredient group through an edit', async () => {
+    fake = new FakeRecipeRepository([
+      { ...stored, ingredients: [{ qty: 1, unit: '', name: 'leek', aisle: 'produce', group: 'Sauce' }] },
+    ]);
+    await setup('old-soup', fake);
+    page.updateIngredientName(0, '2 leeks');
+    expect(page.ingredients()[0].group).toBe('Sauce');
   });
 });

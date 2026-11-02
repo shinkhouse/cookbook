@@ -26,8 +26,8 @@
         type="search"
         [value]="typed()"
         (input)="onSearch($any($event.target).value)"
-        placeholder="Search a title, a tag, or an ingredient"
-        aria-label="Search recipes by title, tag or ingredient"
+        [placeholder]="haveMode() ? 'List what you have: chicken, rice, broccoli' : 'Search a title, a tag, or an ingredient'"
+        [attr.aria-label]="haveMode() ? 'Ingredients you have' : 'Search recipes by title, tag or ingredient'"
       />
       @if (typed()) {
         <button type="button" class="search-clear" (click)="clearSearch()" aria-label="Clear search">
@@ -35,6 +35,17 @@
         </button>
       }
     </div>
+
+    <button
+      type="button"
+      class="pill-have"
+      [class.is-on]="haveMode()"
+      (click)="toggleHave()"
+      [attr.aria-pressed]="haveMode()"
+    >
+      <mat-icon fontIcon="kitchen" aria-hidden="true" />
+      What can I make?
+    </button>
 
     <button
       type="button"
@@ -187,6 +198,9 @@
 
               <div class="card-body">
                 <div class="card-meta label">
+                  @if (haveMode() && recipes.coverage().get(recipe.slug); as c) {
+                    <span class="card-coverage">Uses {{ c.covered }} of {{ c.total }}</span>
+                  }
                   @if (recipe.time) {
                     <span>{{ recipe.time }}</span>
                   }

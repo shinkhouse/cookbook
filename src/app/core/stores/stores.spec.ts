@@ -1314,3 +1314,67 @@ describe('RecipeStore surprise', () => {
     expect(store.surprise()).toBeNull();
   });
 });
+
+describe('RecipeStore what can I make', () => {
+  let store: RecipeStore;
+
+  const ing = (name: string) => ({ qty: 1, unit: '', name, aisle: 'pantry' as const });
+  const seed = [
+    fixture('half', { tags: ['dinner'], ingredients: [ing('chicken'), ing('peas'), ing('salt')] }),
+    fixture('full', { tags: ['lunch'], ingredients: [ing('chicken breasts'), ing('rice')] }),
+    fixture('none', { ingredients: [ing('tofu'), ing('kale')] }),
+    fixture('staples', { ingredients: [ing('salt'), ing('water')] }),
+    fixture('stew', {
+      ingredients: [ing('beef'), ing('carrots')],
+      components: [{ slug: 'gravy' }],
+    }),
+    fixture('gravy', { component: true, ingredients: [ing('rice'), ing('stock')] }),
+  ];
+
+  beforeEach(async () => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideFakeRecipes(new FakeRecipeRepository(seed))],
+    });
+    store = TestBed.inject(RecipeStore);
+    await store.whenLoaded();
+    store.mode.set('have');
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('defaults to search mode, and reset returns to it', () => {
+    store.reset();
+    expect(store.mode()).toBe('search');
+  });
+
+  it('ranks by covered share in have mode', () => {
+    store.setQuery('chicken, rice');
+    expect(store.results().map((r) => r.slug)).toEqual(['full', 'half', 'stew']);
+    expect(store.coverage().get('half')).toEqual({ covered: 1, total: 2, ratio: 0.5 });
+  });
+
+  it('drops recipes with no coverage and all components', () => {
+    store.setQuery('rice; stock');
+    const slugs = store.results().map((r) => r.slug);
+    expect(slugs).not.toContain('gravy');
+    expect(slugs).not.toContain('none');
+    expect(slugs).not.toContain('staples');
+  });
+
+  it('still applies facets in have mode', () => {
+    store.setQuery('chicken');
+    store.toggleTag('dinner');
+    expect(store.results().map((r) => r.slug)).toEqual(['half']);
+  });
+
+  it('counts a parent\'s component ingredients', () => {
+    store.setQuery('rice and stock');
+    expect(store.coverage().get('stew')).toEqual({ covered: 2, total: 4, ratio: 0.5 });
+  });
+
+  it('searches as usual with nothing listed', () => {
+    store.setQuery('  ');
+    expect(store.results().length).toBe(seed.length);
+  });
+});

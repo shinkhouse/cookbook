@@ -71,6 +71,8 @@ export class LibraryComponent {
   private debounce?: ReturnType<typeof setTimeout>;
 
   protected readonly results = computed(() => this.recipes.results());
+  /** The search box takes a list of what you have, and results rank by coverage. */
+  protected readonly haveMode = computed(() => this.recipes.mode() === 'have');
   /** Components are not offered, so a set of only those has nothing to pick. */
   protected readonly canSurprise = computed(() => this.results().some((r) => !r.component));
   /** The cookbook facet leads when there is more than one cookbook to choose. */
@@ -169,6 +171,11 @@ export class LibraryComponent {
     this.clearSearch();
     this.recipes.reset();
     this.closeFacet();
+  }
+
+  /** Keeps what was typed: a search word is often an ingredient you have. */
+  protected toggleHave(): void {
+    this.recipes.mode.update((m) => (m === 'have' ? 'search' : 'have'));
   }
 
   /** "Cook this" goes straight into cook mode, per §6.1. */

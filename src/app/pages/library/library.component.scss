@@ -359,8 +359,9 @@
     }
 }
 
-// The favorites toggle keeps the old pill shape.
-.pill-fav {
+// The favorites toggle keeps the old pill shape; the have-mode toggle shares it.
+.pill-fav,
+.pill-have {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -540,6 +541,10 @@
 .card-meta {
     display: flex;
     gap: 14px;
+}
+
+.card-coverage {
+    color: var(--navy-deep);
 }
 
 .card-body h3 {

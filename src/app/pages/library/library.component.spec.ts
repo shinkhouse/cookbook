@@ -2,18 +2,20 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
+import { Recipes } from '../../core/mock/recipes.mock';
 import {
   FakeCookbookRepository,
+  FakeRecipeRepository,
   provideFakeCookbooks,
   provideFakeRecipes,
 } from '../../core/testing/fake-repositories';
 import { LibraryComponent } from './library.component';
 
-async function render(cookbooks?: FakeCookbookRepository) {
+async function render(cookbooks?: FakeCookbookRepository, recipes?: FakeRecipeRepository) {
   localStorage.clear();
   TestBed.configureTestingModule({
     imports: [LibraryComponent],
-    providers: [provideFakeRecipes(), provideFakeCookbooks(cookbooks), provideRouter([])],
+    providers: [provideFakeRecipes(recipes), provideFakeCookbooks(cookbooks), provideRouter([])],
   });
   await TestBed.inject(RecipeStore).whenLoaded();
   await TestBed.inject(CookbookStore).whenLoaded();
@@ -78,5 +80,39 @@ describe('LibraryComponent surprise me', () => {
     expect(button(el).disabled).toBe(false);
     button(el).click();
     expect(navigate).toHaveBeenCalledWith(['/recipes', store.recipes()[0].slug]);
+  });
+});
+
+describe('LibraryComponent what can I make', () => {
+  afterEach(() => localStorage.clear());
+
+  const ing = (name: string) => ({ qty: 1, unit: '', name, aisle: 'pantry' as const });
+
+  it('switches the placeholder and shows "Uses 2 of 3" on cards in have mode', async () => {
+    const recipe = {
+      ...Recipes[0],
+      slug: 'stir-fry',
+      title: 'Stir fry',
+      component: false,
+      components: undefined,
+      ingredients: [ing('chicken'), ing('rice'), ing('broccoli'), ing('salt')],
+    };
+    const fixture = await render(undefined, new FakeRecipeRepository([recipe]));
+    const el = fixture.nativeElement as HTMLElement;
+    const input = el.querySelector<HTMLInputElement>('.search input')!;
+    const toggle = [...el.querySelectorAll<HTMLButtonElement>('.controls button')].find((b) =>
+      b.textContent?.includes('What can I make?'),
+    )!;
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(el.textContent).not.toContain('Uses');
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(input.placeholder).toBe('List what you have: chicken, rice, broccoli');
+
+    TestBed.inject(RecipeStore).setQuery('chicken, rice');
+    fixture.detectChanges();
+    expect(el.querySelector('.card-meta')?.textContent).toContain('Uses 2 of 3');
   });
 });

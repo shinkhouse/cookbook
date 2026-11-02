@@ -1,6 +1,7 @@
 import { Injectable, WritableSignal, computed, inject, signal } from '@angular/core';
 import { Recipe } from '../model/recipes.model';
 import { Facet, buildFacets, matchesSelection } from '../facets';
+import { Coverage, compareCoverage, coverageOf, parseHave } from '../pantry';
 import { gapKeys, gapsOf } from '../recipe-health';
 import { RecipeRepository } from '../recipe-repository';
 import { PrefsStore } from './prefs.store';
@@ -252,13 +253,13 @@ export class RecipeStore {
   }
 
   /**
-   * Search matches title, tags and ingredient names. The ingredient match is
-   * the point of the feature (§6.1) — "what can I make with feta".
-   *
-   * Debouncing is the caller's business; this is a pure derivation.
+   * What the search box means: a text search, or a list of what is in the
+   * kitchen ("what can I make", roadmap item 12).
    */
-  readonly results = computed(() => {
-    const needle = this.query().trim().toLowerCase();
+  readonly mode = signal<'search' | 'have'>('search');
+
+  /** The facet, gap, cookbook and favorites filters, shared by both modes. */
+  private readonly filtered = computed(() => {
     const selected = this.selectedTags();
     const favsOnly = this.favsOnly();
     const gaps = this.selectedGaps();
@@ -271,13 +272,59 @@ export class RecipeStore {
       if (gaps.size > 0 && !gapKeys(r).some((k) => gaps.has(k))) return false;
       // OR within the cookbook facet; a recipe filed nowhere matches no option.
       if (cookbooks.size > 0 && !r.cookbooks.some((id) => cookbooks.has(id))) return false;
-      if (!needle) return true;
-      return (
+      return true;
+    });
+  });
+
+  /**
+   * In have mode with something listed, the covered recipes, best first, with
+   * their coverage; otherwise null. Components are left out — they are parts,
+   * not meals — but a parent counts its components' ingredients.
+   */
+  private readonly ranked = computed(() => {
+    if (this.mode() !== 'have') return null;
+    const have = parseHave(this.query());
+    if (have.length === 0) return null;
+
+    const ranked: { recipe: Recipe; title: string; coverage: Coverage }[] = [];
+    for (const recipe of this.filtered()) {
+      if (recipe.component) continue;
+      const ingredients = [
+        ...recipe.ingredients,
+        ...this.componentsOf(recipe.slug).flatMap((c) => c.recipe.ingredients),
+      ];
+      const coverage = coverageOf(ingredients, have);
+      if (coverage && coverage.covered > 0) ranked.push({ recipe, title: recipe.title, coverage });
+    }
+    return ranked.sort(compareCoverage);
+  });
+
+  /** Each shown recipe's coverage, by slug. Empty outside have mode. */
+  readonly coverage = computed<ReadonlyMap<string, Coverage>>(
+    () => new Map((this.ranked() ?? []).map((r) => [r.recipe.slug, r.coverage])),
+  );
+
+  /**
+   * Search matches title, tags and ingredient names. The ingredient match is
+   * the point of the feature (§6.1) — "what can I make with feta". In have
+   * mode the text is a list of ingredients instead, and results rank by how
+   * much of each recipe it covers.
+   *
+   * Debouncing is the caller's business; this is a pure derivation.
+   */
+  readonly results = computed(() => {
+    const ranked = this.ranked();
+    if (ranked) return ranked.map((r) => r.recipe);
+
+    const needle = this.query().trim().toLowerCase();
+    const filtered = this.filtered();
+    if (!needle) return filtered;
+    return filtered.filter(
+      (r) =>
         r.title.toLowerCase().includes(needle) ||
         r.tags.some((t) => t.toLowerCase().includes(needle)) ||
-        r.ingredients.some((i) => i.name.toLowerCase().includes(needle))
-      );
-    });
+        r.ingredients.some((i) => i.name.toLowerCase().includes(needle)),
+    );
   });
 
   /**
@@ -368,6 +415,7 @@ export class RecipeStore {
     this.selectedGaps.set(new Set());
     this.selectedCookbooks.set(new Set());
     this.favsOnly.set(false);
+    this.mode.set('search');
   }
 }
 

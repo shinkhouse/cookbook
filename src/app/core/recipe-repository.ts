@@ -34,7 +34,7 @@ export abstract class RecipeRepository {
 
   /**
    * Appends a note and resolves to the updated recipe. Null when the slug is
-   * unknown (404). The only write besides the dev key an unlocked device makes.
+   * unknown (404). One of the narrow writes an unlocked device makes.
    */
   abstract addNote(slug: string, note: string): Promise<Recipe | null>;
 
@@ -43,6 +43,12 @@ export abstract class RecipeRepository {
    * stamps `lastCooked`. Null when the slug is unknown (404).
    */
   abstract markCooked(slug: string): Promise<Recipe | null>;
+
+  /**
+   * Stars or unstars a recipe and resolves to the updated recipe. Null when the
+   * slug is unknown (404). One of the narrow writes an unlocked device makes.
+   */
+  abstract setFavorite(slug: string, favorite: boolean): Promise<Recipe | null>;
 
   /** True when this build is allowed to write; screens hide editing otherwise. */
   abstract readonly writable: boolean;
@@ -110,6 +116,21 @@ export class HttpRecipeRepository extends RecipeRepository {
         this.http.post<Recipe>(
           `${this.url}/${encodeURIComponent(slug)}/cooked`,
           {},
+          { headers: this.device.headers() },
+        ),
+      );
+    } catch (error) {
+      if (isNotFound(error)) return null;
+      throw error;
+    }
+  }
+
+  override async setFavorite(slug: string, favorite: boolean): Promise<Recipe | null> {
+    try {
+      return await firstValueFrom(
+        this.http.put<Recipe>(
+          `${this.url}/${encodeURIComponent(slug)}/favorite`,
+          { favorite },
           { headers: this.device.headers() },
         ),
       );

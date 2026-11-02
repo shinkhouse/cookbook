@@ -114,15 +114,21 @@
           </button>
         }
 
-        <button
-          type="button"
-          class="btn-ghost"
-          (click)="prefs.toggleFav(r.slug)"
-          [attr.aria-pressed]="prefs.isFav(r.slug)"
-        >
-          <mat-icon [fontIcon]="prefs.isFav(r.slug) ? 'star' : 'star_border'" aria-hidden="true" />
-          {{ prefs.isFav(r.slug) ? 'Favorite' : 'Add to favorites' }}
-        </button>
+        @if (canSave()) {
+          <button
+            type="button"
+            class="btn-ghost"
+            [disabled]="favSaving()"
+            (click)="toggleFav()"
+            [attr.aria-pressed]="isFav()"
+          >
+            <mat-icon [fontIcon]="isFav() ? 'star' : 'star_border'" aria-hidden="true" />
+            {{ isFav() ? 'Favorite' : 'Add to favorites' }}
+          </button>
+        } @else if (isFav()) {
+          <!-- Read-only: the star is shown, not offered. -->
+          <mat-icon class="fav-static" fontIcon="star" role="img" aria-label="Favorite" />
+        }
 
         @if (canSave() && !confirmingCooked()) {
           <button type="button" class="btn-ghost" (click)="askCooked()">
@@ -161,6 +167,9 @@
           </div>
         }
         <!-- Outside the confirm: a 403 locks the device, which removes the controls. -->
+        @if (favError()) {
+          <p class="cooked-error fav-error" role="alert">{{ favError() }}</p>
+        }
         @if (cookedError()) {
           <p class="cooked-error" role="alert">{{ cookedError() }}</p>
         }

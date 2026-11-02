@@ -239,4 +239,31 @@ describe('HttpRecipeRepository', () => {
       expect(await result).toBeNull();
     });
   });
+  describe('setFavorite', () => {
+    it('puts a boolean with the device header', async () => {
+      localStorage.setItem('cookbook.deviceKey', JSON.stringify('sesame'));
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [provideHttpClient(), provideHttpClientTesting(), provideHttpRecipes()],
+      });
+      const r = TestBed.inject(RecipeRepository);
+      const mock = TestBed.inject(HttpTestingController);
+      const result = r.setFavorite('a b', true);
+      const req = mock.expectOne({ method: 'PUT', url: `${URL}/a%20b/favorite` });
+      expect(req.request.body).toEqual({ favorite: true });
+      expect(req.request.headers.get('x-device-key')).toBe('sesame');
+      req.flush({ ...draft('a b'), favorite: true });
+      expect((await result)?.favorite).toBeTrue();
+      mock.verify();
+      localStorage.removeItem('cookbook.deviceKey');
+    });
+
+    it('gives null on a 404', async () => {
+      const result = repo.setFavorite('gone', false);
+      const req = httpMock.expectOne({ method: 'PUT', url: `${URL}/gone/favorite` });
+      expect(req.request.body).toEqual({ favorite: false });
+      req.flush({}, { status: 404, statusText: 'Not Found' });
+      expect(await result).toBeNull();
+    });
+  });
 });

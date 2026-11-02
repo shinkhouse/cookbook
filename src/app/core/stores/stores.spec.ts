@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { FAV_SEED, Recipes } from '../mock/recipes.mock';
+import { Recipes } from '../mock/recipes.mock';
 import { DEFAULT_COOKBOOK_ID } from '../model/cookbooks.model';
 import { Recipe, RecipeTemplate } from '../model/recipes.model';
 import {
@@ -236,15 +236,6 @@ describe('RecipeStore', () => {
     for (const r of store.results()) {
       expect(r.tags).toContain('dinner');
     }
-  });
-
-  it('filters to favorites when asked', () => {
-    const prefs = TestBed.inject(PrefsStore);
-    store.toggleFavsOnly();
-    expect(store.results().length).toBe(FAV_SEED.length);
-    // Unfavoriting is reflected immediately — the predicate reads a signal.
-    prefs.toggleFav(FAV_SEED[0]);
-    expect(store.results().length).toBe(FAV_SEED.length - 1);
   });
 
   it('names the most-cooked recipe for the library header', () => {
@@ -556,6 +547,64 @@ describe('RecipeStore markCooked', () => {
   });
 });
 
+describe('RecipeStore favorites', () => {
+  function setup(fake: FakeRecipeRepository): RecipeStore {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes(fake)] });
+    return TestBed.inject(RecipeStore);
+  }
+
+  it('toggles favorite through the repository', async () => {
+    const fake = new FakeRecipeRepository([fixture('a'), fixture('b', { favorite: true })]);
+    const spy = spyOn(fake, 'setFavorite').and.callThrough();
+    const store = setup(fake);
+    await store.whenLoaded();
+    expect(store.isFav('a')).toBeFalse();
+    expect(store.favCount()).toBe(1);
+
+    expect(await store.toggleFav('a')).toBeTrue();
+    expect(spy).toHaveBeenCalledWith('a', true);
+    expect(store.isFav('a')).toBeTrue();
+    expect(store.favCount()).toBe(2);
+
+    expect(await store.toggleFav('b')).toBeTrue();
+    expect(spy).toHaveBeenCalledWith('b', false);
+    expect(store.isFav('b')).toBeFalse();
+  });
+
+  it('filters favsOnly by the server flag', async () => {
+    const store = setup(
+      new FakeRecipeRepository([fixture('a', { favorite: true }), fixture('b'), fixture('c', { favorite: false })]),
+    );
+    await store.whenLoaded();
+    store.toggleFavsOnly();
+    expect(store.results().map((r) => r.slug)).toEqual(['a']);
+    await store.setFavorite('b', true);
+    expect(store.results().map((r) => r.slug)).toEqual(['a', 'b']);
+  });
+
+  it('is false for an unknown slug, with no request', async () => {
+    const fake = new FakeRecipeRepository([fixture('a')]);
+    const spy = spyOn(fake, 'setFavorite').and.callThrough();
+    const store = setup(fake);
+    await store.whenLoaded();
+    expect(await store.toggleFav('nope')).toBeFalse();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('locks the device on 403, rethrows and leaves the flag alone', async () => {
+    const fake = new FakeRecipeRepository([fixture('a')]);
+    const store = setup(fake);
+    await store.whenLoaded();
+    const lock = spyOn(TestBed.inject(DeviceStore), 'lock');
+    const error = { status: 403 };
+    fake.failNext(error);
+    await expectAsync(store.toggleFav('a')).toBeRejectedWith(error);
+    expect(lock).toHaveBeenCalled();
+    expect(store.isFav('a')).toBeFalse();
+  });
+});
+
 describe('RecipeStore cookbook membership', () => {
   let store: RecipeStore;
   let fake: FakeRecipeRepository;
@@ -769,37 +818,33 @@ describe('PrefsStore', () => {
 
   afterEach(() => localStorage.clear());
 
-  it('seeds favorites from the old flags on a first run', () => {
-    const prefs = TestBed.inject(PrefsStore);
-    expect(prefs.favCount()).toBe(FAV_SEED.length);
-    expect(prefs.isFav(FAV_SEED[0])).toBe(true);
+  it('has no legacy favorites when nothing was ever stored', () => {
+    expect(TestBed.inject(PrefsStore).legacyFavs()).toBeNull();
   });
 
-  it('toggles a favorite both ways', () => {
-    const prefs = TestBed.inject(PrefsStore);
-    prefs.toggleFav('grandmas-chili');
-    expect(prefs.isFav('grandmas-chili')).toBe(false);
-    prefs.toggleFav('grandmas-chili');
-    expect(prefs.isFav('grandmas-chili')).toBe(true);
+  it('returns a stored favorites list, even an emptied one', () => {
+    localStorage.setItem('cookbook.favs', JSON.stringify(['grandmas-chili']));
+    expect(TestBed.inject(PrefsStore).legacyFavs()).toEqual(['grandmas-chili']);
+    localStorage.setItem('cookbook.favs', JSON.stringify([]));
+    expect(TestBed.inject(PrefsStore).legacyFavs()).toEqual([]);
   });
 
-  it('persists favorites across a fresh injection', () => {
-    TestBed.inject(PrefsStore).toggleFav('grandmas-spaghetti');
+  it('clears the legacy favorites list', () => {
+    localStorage.setItem('cookbook.favs', JSON.stringify(['grandmas-chili']));
+    const prefs = TestBed.inject(PrefsStore);
+    prefs.clearLegacyFavs();
+    expect(prefs.legacyFavs()).toBeNull();
+    expect(localStorage.getItem('cookbook.favs')).toBeNull();
+  });
+
+  it('remembers that favorites were migrated', () => {
+    const prefs = TestBed.inject(PrefsStore);
+    expect(prefs.favsMigrated()).toBeFalse();
+    prefs.markFavsMigrated();
+    expect(prefs.favsMigrated()).toBeTrue();
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
-    expect(TestBed.inject(PrefsStore).isFav('grandmas-spaghetti')).toBe(false);
-  });
-
-  it('respects a deliberately emptied favorites list rather than reseeding', () => {
-    const prefs = TestBed.inject(PrefsStore);
-    for (const slug of [...prefs.favs()]) prefs.toggleFav(slug);
-    expect(prefs.favCount()).toBe(0);
-
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
-    // The bug this guards: treating "empty" as "unseeded" and handing back the
-    // seed, so clearing favorites silently undid itself on reload.
-    expect(TestBed.inject(PrefsStore).favCount()).toBe(0);
+    expect(TestBed.inject(PrefsStore).favsMigrated()).toBeTrue();
   });
 
   it('defaults units to US and remembers a change', () => {

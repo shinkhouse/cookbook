@@ -7,7 +7,6 @@ import { gapLabel, gapsOf } from '../../core/recipe-health';
 import { Recipe } from '../../core/model/recipes.model';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { ListStore } from '../../core/stores/list.store';
-import { PrefsStore } from '../../core/stores/prefs.store';
 import { RecipeStore, tagLabel } from '../../core/stores/recipe.store';
 
 /** §6.1 — search is debounced 150ms. */
@@ -31,7 +30,6 @@ export class LibraryComponent {
   protected readonly recipes = inject(RecipeStore);
   protected readonly cookbooks = inject(CookbookStore);
   protected readonly list = inject(ListStore);
-  protected readonly prefs = inject(PrefsStore);
 
   /**
    * The shopping list is a local convenience, and the deployed site is a
@@ -199,8 +197,12 @@ export class LibraryComponent {
     this.list.toggleRecipe(recipe.slug);
   }
 
+  /**
+   * The star only changes once the server answers, so a failed write leaves it
+   * as it was; on a card that is enough, and no message is shown.
+   */
   protected toggleFav(recipe: Recipe, event: Event): void {
     event.stopPropagation();
-    this.prefs.toggleFav(recipe.slug);
+    this.recipes.toggleFav(recipe.slug).catch(() => undefined);
   }
 }

@@ -277,6 +277,16 @@ h1 {
     color: var(--ink-4);
 }
 
+// A read-only device sees the star but cannot change it.
+.fav-static {
+    align-self: center;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    color: var(--navy);
+}
+
 .archive-confirm {
     // A full-width row inside .actions, so it sits one flex gap below the buttons.
     flex: 1 0 100%;

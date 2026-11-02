@@ -136,6 +136,14 @@ export class FakeRecipeRepository extends RecipeRepository {
     return { ...this.items[i] };
   }
 
+  override async setFavorite(slug: string, favorite: boolean): Promise<Recipe | null> {
+    this.maybeFail();
+    const i = this.items.findIndex((r) => r.slug === slug);
+    if (i < 0) return null;
+    this.items[i] = { ...this.items[i], favorite };
+    return { ...this.items[i] };
+  }
+
   override async remove(slug: string): Promise<boolean> {
     this.maybeFail();
     const before = this.items.length;

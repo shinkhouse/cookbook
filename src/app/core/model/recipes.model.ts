@@ -32,6 +32,11 @@ export interface Recipe {
   servings: number;
   /** Times-cooked counter, shown on the card and the detail rail. */
   cooked: number;
+  /**
+   * Starred. Lives on the recipe so it is the same on every device; set through
+   * `PUT /recipes/:slug/favorite`. Absent on records never starred.
+   */
+  favorite?: boolean;
   /** ISO timestamp of the last time it was cooked, stamped by the server. */
   lastCooked?: string;
   /** Short card copy. */

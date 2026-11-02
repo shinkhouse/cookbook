@@ -75,6 +75,10 @@ export class RecipeDetailComponent {
   protected readonly noteSaving = signal(false);
   protected readonly noteError = signal('');
 
+  protected readonly isFav = computed(() => this.recipe()?.favorite === true);
+  protected readonly favSaving = signal(false);
+  protected readonly favError = signal('');
+
   protected readonly confirmingCooked = signal(false);
   protected readonly cookedSaving = signal(false);
   protected readonly cookedError = signal('');
@@ -125,6 +129,22 @@ export class RecipeDetailComponent {
   protected cancelCooked(): void {
     this.confirmingCooked.set(false);
     this.cookedError.set('');
+  }
+
+  /** The star changes once the server answers; a failure says why. */
+  protected async toggleFav(): Promise<void> {
+    if (this.favSaving()) return;
+    this.favSaving.set(true);
+    this.favError.set('');
+    try {
+      if (!(await this.recipes.toggleFav(this.slug()))) {
+        this.favError.set('That recipe no longer exists.');
+      }
+    } catch (err) {
+      this.favError.set(describeDeviceError(err, this.device.lockoutMinutes()));
+    } finally {
+      this.favSaving.set(false);
+    }
   }
 
   /** Confirms rather than undoes: the server has no decrement. */

@@ -5,7 +5,6 @@ import { Coverage, compareCoverage, coverageOf, parseHave } from '../pantry';
 import { gapKeys, gapsOf } from '../recipe-health';
 import { RecipeRepository } from '../recipe-repository';
 import { DeviceStore } from './device.store';
-import { PrefsStore } from './prefs.store';
 
 /** How the library orders its results; 'default' is the order the API gave. */
 export type LibrarySort = 'default' | 'stale';
@@ -36,9 +35,6 @@ export function compareStale(a: Recipe, b: Recipe): number {
  */
 @Injectable({ providedIn: 'root' })
 export class RecipeStore {
-  // Favorites are a preference, so they live in PrefsStore; the dependency
-  // runs this way only (PrefsStore knows nothing about recipes).
-  private readonly prefs = inject(PrefsStore);
   private readonly repo = inject(RecipeRepository);
   private readonly device = inject(DeviceStore);
 
@@ -223,6 +219,23 @@ export class RecipeStore {
     return this.deviceWrite(slug, () => this.repo.addNote(slug, text));
   }
 
+  /** Starred on the server, so the same on every device. */
+  isFav(slug: string): boolean {
+    return this.bySlug(slug)?.favorite === true;
+  }
+
+  readonly favCount = computed(() => this.visible().filter((r) => r.favorite === true).length);
+
+  /** Flips the star, by the same rules as `addNote`. False when the slug is unknown. */
+  toggleFav(slug: string): Promise<boolean> {
+    return this.setFavorite(slug, !this.isFav(slug));
+  }
+
+  /** Sets the star, by the same rules as `addNote`. False when the slug is unknown. */
+  setFavorite(slug: string, favorite: boolean): Promise<boolean> {
+    return this.deviceWrite(slug, () => this.repo.setFavorite(slug, favorite));
+  }
+
   /**
    * Counts a recipe as cooked, by the same rules as `addNote`. Returns false
    * when the slug is unknown, here or on the server.
@@ -336,7 +349,7 @@ export class RecipeStore {
 
     return this.visible().filter((r) => {
       if (!matchesSelection(r.tags, selected)) return false;
-      if (favsOnly && !this.prefs.isFav(r.slug)) return false;
+      if (favsOnly && r.favorite !== true) return false;
       // OR within the gap facet, matching how the tag facets behave.
       if (gaps.size > 0 && !gapKeys(r).some((k) => gaps.has(k))) return false;
       // OR within the cookbook facet; a recipe filed nowhere matches no option.

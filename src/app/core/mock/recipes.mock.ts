@@ -12,7 +12,8 @@ import { ImportedRecipes } from './imported-recipes';
  *
  * Dropped from the old shape: authors (promoted into subtitle where there was a
  * real source), calories, urls and equipment — no screen in the new design uses
- * them. `favorite` moved to PrefsStore; see FAV_SEED below.
+ * them. `favorite` is set on the server now; FAV_SEED below is what a device
+ * with no stored favorites pushes when the server has none.
  */
 export const CuratedRecipes: RecipeSource[] = [
   {
@@ -490,7 +491,10 @@ export const CuratedRecipes: RecipeSource[] = [
   },
 ];
 
-/** Seeded from the old `favorite: boolean` flags, which the model no longer carries. */
+/**
+ * The old `favorite: boolean` flags. Only FavoritesMigration reads this, to star
+ * these on a server that has no favorites yet.
+ */
 export const FAV_SEED: readonly string[] = [
   'grandmas-spaghetti',
   'grandmas-chili',

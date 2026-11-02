@@ -193,17 +193,22 @@
                 </div>
               </a>
 
-              <button
-                type="button"
-                class="fav-toggle"
-                (click)="toggleFav(recipe, $event)"
-                [attr.aria-pressed]="prefs.isFav(recipe.slug)"
-                [attr.aria-label]="
-                  (prefs.isFav(recipe.slug) ? 'Remove ' : 'Add ') + recipe.title + ' to favorites'
-                "
-              >
-                <mat-icon [fontIcon]="prefs.isFav(recipe.slug) ? 'star' : 'star_border'" />
-              </button>
+              @if (recipes.canSave()) {
+                <button
+                  type="button"
+                  class="fav-toggle"
+                  (click)="toggleFav(recipe, $event)"
+                  [attr.aria-pressed]="recipes.isFav(recipe.slug)"
+                  [attr.aria-label]="
+                    (recipes.isFav(recipe.slug) ? 'Remove ' : 'Add ') + recipe.title + ' to favorites'
+                  "
+                >
+                  <mat-icon [fontIcon]="recipes.isFav(recipe.slug) ? 'star' : 'star_border'" />
+                </button>
+              } @else if (recipes.isFav(recipe.slug)) {
+                <!-- Read-only: the star is shown, not offered. -->
+                <mat-icon class="fav-toggle fav-static" fontIcon="star" role="img" aria-label="Favorite" />
+              }
 
               <div class="card-body">
                 <div class="card-meta label">

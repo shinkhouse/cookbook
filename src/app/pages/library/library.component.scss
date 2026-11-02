@@ -553,6 +553,14 @@
         width: 20px;
         height: 20px;
     }
+
+    // The read-only star is the icon itself, on the same ground as the button.
+    &.fav-static {
+        box-sizing: border-box;
+        font-size: 20px;
+        color: var(--navy);
+        cursor: default;
+    }
 }
 
 .card-body {

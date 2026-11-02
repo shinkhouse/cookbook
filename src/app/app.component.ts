@@ -1,10 +1,11 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { DeviceUnlockComponent } from './device-unlock/device-unlock.component';
+import { FavoritesMigration } from './core/favorites-migration';
 import { ListStore } from './core/stores/list.store';
 import { RecipeStore } from './core/stores/recipe.store';
 
@@ -18,8 +19,11 @@ export class AppComponent {
   private readonly list = inject(ListStore);
   private readonly router = inject(Router);
 
+  private readonly recipes = inject(RecipeStore);
+  private readonly migration = inject(FavoritesMigration);
+
   /** Production builds are read-only, so the Add recipe links are left out. */
-  readonly writable = inject(RecipeStore).writable;
+  readonly writable = this.recipes.writable;
 
   /**
    * Cook mode is a full-screen dark view (§6.3), so the site header and footer
@@ -51,6 +55,14 @@ export class AppComponent {
   readonly isNarrow = computed(() => this.narrow());
 
   constructor() {
+    // Once this device can write and the collection is in, its old per-browser
+    // favorites go up to the server. The migration's own flag makes it once only;
+    // an unlock later in the session triggers it too.
+    effect(() => {
+      if (this.recipes.canSave() && this.recipes.status() === 'ready') {
+        untracked(() => void this.migration.run());
+      }
+    });
     if (typeof globalThis.matchMedia === 'function') {
       const query = globalThis.matchMedia('(max-width: 760px)');
       query.addEventListener('change', (e) => this.narrow.set(e.matches));

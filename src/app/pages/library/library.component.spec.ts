@@ -146,3 +146,62 @@ describe('LibraryComponent sort', () => {
     expect(titlesOf()).toEqual(['Stale', 'Fresh']);
   });
 });
+
+describe('LibraryComponent favorites', () => {
+  afterEach(() => localStorage.clear());
+
+  const seed = () => [
+    { ...Recipes[0], slug: 'fav', title: 'Fav', favorite: true },
+    { ...Recipes[0], slug: 'plain', title: 'Plain' },
+  ];
+  const card = (el: HTMLElement, title: string) =>
+    [...el.querySelectorAll<HTMLElement>('.grid .card')].find(
+      (c) => c.querySelector('h3')?.textContent?.trim() === title,
+    )!;
+
+  it('shows a static star, not a button, on a locked device', async () => {
+    const fake = new FakeRecipeRepository(seed());
+    fake.writable = false;
+    const fixture = await render(undefined, fake);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('button.fav-toggle')).toBeNull();
+    const star = card(el, 'Fav').querySelector('.fav-static');
+    expect(star?.getAttribute('aria-label')).toBe('Favorite');
+    expect(star?.getAttribute('fontIcon')).toBe('star');
+    expect(card(el, 'Plain').querySelector('.fav-static')).toBeNull();
+  });
+
+  it('toggles through the store on an unlocked device', async () => {
+    localStorage.clear();
+    localStorage.setItem('cookbook.deviceKey', JSON.stringify('sesame'));
+    const fake = new FakeRecipeRepository(seed());
+    fake.writable = false;
+    TestBed.configureTestingModule({
+      imports: [LibraryComponent],
+      providers: [provideFakeRecipes(fake), provideFakeCookbooks(), provideRouter([])],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    const fixture = TestBed.createComponent(LibraryComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const toggle = card(el, 'Plain').querySelector<HTMLButtonElement>('button.fav-toggle')!;
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    toggle.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(TestBed.inject(RecipeStore).isFav('plain')).toBeTrue();
+    expect(card(el, 'Plain').querySelector('button.fav-toggle')!.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('restores the star silently when the write fails', async () => {
+    const fake = new FakeRecipeRepository(seed());
+    const fixture = await render(undefined, fake);
+    const el = fixture.nativeElement as HTMLElement;
+    fake.failNext({ status: 503 });
+    card(el, 'Fav').querySelector<HTMLButtonElement>('button.fav-toggle')!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(card(el, 'Fav').querySelector('button.fav-toggle')!.getAttribute('aria-pressed')).toBe('true');
+    expect(el.querySelector('[role="alert"]')).toBeNull();
+  });
+});

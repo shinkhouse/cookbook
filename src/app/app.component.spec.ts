@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AppComponent } from './app.component';
+import { FavoritesMigration } from './core/favorites-migration';
+import { RecipeStore } from './core/stores/recipe.store';
 import { routes } from './app.routes';
 import {
   FakeCookbookRepository,
@@ -120,5 +122,26 @@ describe('read-only build', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.isCookMode()).toBeTrue();
     expect(fixture.nativeElement.querySelector('footer.site-footer')).toBeNull();
+  });
+});
+
+describe('favorites migration', () => {
+  async function boot(writable: boolean): Promise<jasmine.Spy> {
+    stubNarrow(false);
+    configure(writable);
+    const run = spyOn(TestBed.inject(FavoritesMigration), 'run').and.resolveTo(0);
+    await TestBed.inject(RecipeStore).whenLoaded();
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    return run;
+  }
+
+  it('runs once the collection is ready on a device that can save', async () => {
+    expect(await boot(true)).toHaveBeenCalled();
+  });
+
+  it('does not run on a locked read-only device', async () => {
+    expect(await boot(false)).not.toHaveBeenCalled();
   });
 });

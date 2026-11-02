@@ -582,3 +582,63 @@ describe('RecipeDetailComponent mark as cooked', () => {
     expect(el().querySelector('.cooked-error')?.textContent).toContain('Unlock it again from the footer.');
   });
 });
+
+describe('RecipeDetailComponent favorite', () => {
+  afterEach(() => localStorage.removeItem('cookbook.deviceKey'));
+
+  let fake: FakeRecipeRepository;
+  let fixture: ComponentFixture<RecipeDetailComponent>;
+  const SLUG = Recipes[0].slug;
+
+  async function setup(unlocked: boolean, favorite = false): Promise<void> {
+    if (unlocked) localStorage.setItem('cookbook.deviceKey', JSON.stringify('sesame'));
+    else localStorage.removeItem('cookbook.deviceKey');
+    fake = new FakeRecipeRepository([{ ...Recipes[0], favorite }]);
+    fake.writable = false;
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake)],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+  }
+
+  const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+  const button = (label: string): HTMLButtonElement | undefined =>
+    Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.includes(label));
+
+  it('toggles favorite on an unlocked device', async () => {
+    await setup(true);
+    const spy = spyOn(fake, 'setFavorite').and.callThrough();
+    const toggle = button('Add to favorites')!;
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    toggle.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(spy).toHaveBeenCalledOnceWith(SLUG, true);
+    expect(button('Favorite')!.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('explains a failed toggle', async () => {
+    await setup(true);
+    fake.failNext({ status: 403 });
+    button('Add to favorites')!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el().querySelector('.fav-error')?.textContent).toContain('Unlock it again from the footer.');
+  });
+
+  it('shows a static star on a locked device, and nothing when not a favorite', async () => {
+    await setup(false, true);
+    expect(button('favorites')).toBeUndefined();
+    const star = el().querySelector('.actions .fav-static');
+    expect(star?.getAttribute('aria-label')).toBe('Favorite');
+    expect(star?.getAttribute('fontIcon')).toBe('star');
+    TestBed.resetTestingModule();
+    await setup(false, false);
+    expect(el().querySelector('.fav-static')).toBeNull();
+    expect(button('favorites')).toBeUndefined();
+  });
+});

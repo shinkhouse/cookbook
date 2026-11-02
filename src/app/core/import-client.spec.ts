@@ -60,6 +60,23 @@ describe('ImportClient', () => {
     req.flush(answer);
     await expectAsync(pending).toBeResolvedTo(answer);
   });
+
+  for (const [name, type] of [
+    ['card.HEIC', 'image/heic'],
+    ['card.heif', 'image/heif'],
+  ]) {
+    it(`labels a typeless ${name} as ${type}, so the API's filter accepts it`, async () => {
+      const file = new File(['bytes'], name, { type: '' });
+      const pending = client.previewPhoto(file);
+      const req = http.expectOne(`${environment.apiBase}/import/photo`);
+      const sent = (req.request.body as FormData).get('photo') as File;
+      expect(sent.type).toBe(type);
+      expect(sent.name).toBe(name);
+      expect(await sent.text()).toBe('bytes');
+      req.flush({ sourceUrl: '', title: '', description: '', ingredientGroups: [], steps: [] });
+      await pending;
+    });
+  }
 });
 
 describe('photoProblem', () => {

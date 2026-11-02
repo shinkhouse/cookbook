@@ -3,7 +3,7 @@
  * ingredient, summing amounts where the units allow it.
  */
 import { Aisle } from './aisle';
-import { ingredientHead, ingredientKey, stripDescriptors } from './ingredient-key';
+import { displayHead, ingredientKey, stripDescriptors } from './ingredient-key';
 import { Ingredient } from './model/recipes.model';
 import { Measure, bestUnit, formatMeasure, measurable } from './units';
 
@@ -71,7 +71,7 @@ export function mergeSources(sources: readonly ListSource[]): MergedLine[] {
     const first = group[0].ingredient;
     return {
       key,
-      name: group.length === 1 ? first.name : stripDescriptors(ingredientHead(first.name)),
+      name: group.length === 1 ? first.name : stripDescriptors(displayHead(first.name)),
       aisle: first.aisle,
       amount: sumAmounts(group.map((s) => s.ingredient)),
       sources: group,

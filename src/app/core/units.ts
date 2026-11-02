@@ -38,7 +38,8 @@ const UNITS: Readonly<Record<string, UnitInfo>> = {
 const US_FRACTIONS = [0, 1 / 8, 1 / 4, 1 / 3, 3 / 8, 1 / 2, 5 / 8, 2 / 3, 3 / 4, 7 / 8, 1];
 
 export function measurable(unit: string): UnitInfo | null {
-  return Object.prototype.hasOwnProperty.call(UNITS, unit) ? { ...UNITS[unit] } : null;
+  const key = unit.toLowerCase();
+  return Object.prototype.hasOwnProperty.call(UNITS, key) ? { ...UNITS[key] } : null;
 }
 
 export function bestUnit(baseAmount: number, dimension: Dimension, system: UnitSystem): Measure {

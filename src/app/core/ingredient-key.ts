@@ -4,18 +4,22 @@
  * with itself across recipes, not understand English.
  */
 
-const DESCRIPTORS = /^(?:(?:small|medium|large|fresh|chopped|diced|minced|sliced)\s+)+/;
+const DESCRIPTORS = /^(?:(?:small|medium|large|fresh|chopped|diced|minced|sliced)\s+)+/i;
 
 /** Plurals that look like they end in a removable "s" but do not. */
 const INVARIANT = ['molasses', 'hummus', 'asparagus', 'couscous', 'swiss'];
 
 /** The text before the first comma, without parentheticals, lowercased. */
 export function ingredientHead(name: string): string {
+  return displayHead(name).toLowerCase();
+}
+
+/** Like `ingredientHead`, but keeps the author's casing for showing on the list. */
+export function displayHead(name: string): string {
   // Parentheticals go first so a comma inside "(12 oz, 342 g)" is not the cut.
   return name
     .replace(/\([^)]*\)/g, ' ')
     .split(',')[0]
-    .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
 }

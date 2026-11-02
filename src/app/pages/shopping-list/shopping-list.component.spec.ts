@@ -2,7 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ListStore } from '../../core/stores/list.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
-import { provideFakeRecipes } from '../../core/testing/fake-repositories';
+import { FakeRecipeRepository, provideFakeRecipes } from '../../core/testing/fake-repositories';
+import { DEFAULT_COOKBOOK_ID } from '../../core/model/cookbooks.model';
+import { Recipe } from '../../core/model/recipes.model';
 import { ShoppingListComponent } from './shopping-list.component';
 
 describe('ShoppingListComponent', () => {
@@ -39,5 +41,41 @@ describe('ShoppingListComponent', () => {
     expect(TestBed.inject(ListStore).extras().map((e) => e.name)).toEqual(['Paper towels']);
     expect(input.value).toBe('');
     expect(el.textContent).toContain('Paper towels');
+  });
+
+  it('keeps each source title whole and offers a recipe count for narrow screens', async () => {
+    const make = (slug: string, title: string): Recipe => ({
+      slug,
+      title,
+      tags: ['dinner'],
+      time: '20 min',
+      servings: 2,
+      cooked: 0,
+      blurb: '',
+      desc: '',
+      ingredients: [{ qty: 1, unit: '', name: 'onion', aisle: 'produce' }],
+      steps: ['Chop.'],
+      notes: [],
+      cookbooks: [DEFAULT_COOKBOOK_ID],
+    });
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [ShoppingListComponent],
+      providers: [
+        provideFakeRecipes(new FakeRecipeRepository([make('soup', 'Soup'), make('stew', 'Stew')])),
+        provideRouter([]),
+      ],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    const list = TestBed.inject(ListStore);
+    list.addRecipe('soup');
+    list.addRecipe('stew');
+    const fixture = TestBed.createComponent(ShoppingListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const titles = [...el.querySelectorAll('.row-source .source-title')];
+    expect(titles.map((t) => t.textContent)).toEqual(['Soup', 'Stew']);
+    expect(getComputedStyle(titles[0]).whiteSpace).toBe('nowrap');
+    expect(el.querySelector('.row-source .source-count')?.textContent?.trim()).toBe('2 recipes');
   });
 });

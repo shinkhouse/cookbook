@@ -95,7 +95,14 @@
                     <mat-icon fontIcon="close" />
                   </button>
                 } @else if (list.recipeCount() > 1) {
-                  <span class="row-source">{{ row.sourceTitles.join(' · ') }}</span>
+                  <span class="row-source">
+                    @for (title of row.sourceTitles; track title; let last = $last) {
+                      <span class="source-title">{{ title }}</span>@if (!last) { <span class="source-sep"> · </span> }
+                    }
+                    @if (row.sourceTitles.length > 1) {
+                      <span class="source-count">{{ row.sourceTitles.length }} recipes</span>
+                    }
+                  </span>
                 }
               </li>
             }

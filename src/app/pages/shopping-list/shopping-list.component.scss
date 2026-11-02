@@ -182,6 +182,41 @@
     text-align: right;
 }
 
+.source-title {
+    white-space: nowrap;
+}
+
+// Titles wrap only between themselves; on a phone they would stack three deep
+// in a third of the row, so say how many recipes instead.
+.source-count {
+    display: none;
+}
+
+@media (max-width: 480px) {
+    // The source drops under the item rather than squeezing the name.
+    .row {
+        flex-wrap: wrap;
+    }
+
+    .row-source {
+        flex-basis: 100%;
+        max-width: 100%;
+        padding: 0 0 6px 48px;
+        text-align: left;
+    }
+
+    .row-source:has(.source-count) {
+        .source-title,
+        .source-sep {
+            display: none;
+        }
+
+        .source-count {
+            display: inline;
+        }
+    }
+}
+
 // Struck-through rows use --ink-5, which is only AA-large; the line-through is
 // what actually communicates the state (see the token note in _tokens.scss).
 .row.is-bought {

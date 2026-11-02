@@ -1,6 +1,12 @@
 import { bestUnit, convertMeasure, formatMeasure, measurable } from './units';
 
 describe('measurable', () => {
+  it('looks units up case-insensitively', () => {
+    expect(measurable('Cup')).toEqual(measurable('cup'));
+    expect(measurable('KG')).toEqual(measurable('kg'));
+    expect(measurable('Small Can')).toBeNull();
+  });
+
   it('looks up exact units only', () => {
     expect(measurable('cup')).toEqual({ dimension: 'volume', system: 'us', base: 236.588 });
     expect(measurable('kg')).toEqual({ dimension: 'weight', system: 'metric', base: 1000 });

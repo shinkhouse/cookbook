@@ -51,7 +51,23 @@ describe('mergeSources', () => {
       source('a', 0, { qty: 2, unit: '', name: 'Large Tomatoes (ripe)', aisle: 'produce' }),
       source('b', 0, { qty: 1, unit: '', name: 'tomato', aisle: 'produce' }),
     ]);
-    expect(line.name).toBe('tomatoes');
+    expect(line.name).toBe('Tomatoes');
+  });
+
+  it('keeps the first source\'s casing on a merged row', () => {
+    const [line] = mergeSources([
+      source('a', 0, { qty: 1, unit: '', name: 'Fresh Basil Leaves, torn', aisle: 'produce' }),
+      source('b', 0, { qty: 1, unit: '', name: 'basil leaves', aisle: 'produce' }),
+    ]);
+    expect(line.name).toBe('Basil Leaves');
+  });
+
+  it('sums units that differ only by case into the canonical unit', () => {
+    const [line] = mergeSources([
+      source('a', 0, { qty: 1, unit: 'Cup', name: 'rice', aisle: 'pantry' }),
+      source('b', 0, { qty: 1, unit: 'cup', name: 'rice', aisle: 'pantry' }),
+    ]);
+    expect(line.amount).toBe('2 cup');
   });
 
   it('falls back to the source position when the name has no key', () => {

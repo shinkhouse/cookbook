@@ -116,3 +116,33 @@ describe('LibraryComponent what can I make', () => {
     expect(el.querySelector('.card-meta')?.textContent).toContain('Uses 2 of 3');
   });
 });
+
+describe('LibraryComponent sort', () => {
+  afterEach(() => localStorage.clear());
+
+  it('changes the order from the Sort select', async () => {
+    const base = Recipes[0];
+    const fixture = await render(
+      undefined,
+      new FakeRecipeRepository([
+        { ...base, slug: 'fresh', title: 'Fresh', cooked: 1, lastCooked: '2026-10-30T00:00:00.000Z' },
+        { ...base, slug: 'stale', title: 'Stale', cooked: 1, lastCooked: '2026-01-01T00:00:00.000Z' },
+      ]),
+    );
+    const el = fixture.nativeElement as HTMLElement;
+    const store = TestBed.inject(RecipeStore);
+    const titlesOf = () =>
+      [...el.querySelectorAll('.grid .card h3')].map((h) => h.textContent?.trim());
+    expect(titlesOf()).toEqual(['Fresh', 'Stale']);
+    const select = el.querySelector<HTMLSelectElement>('.sort select')!;
+    expect([...select.options].map((o) => o.textContent?.trim())).toEqual([
+      'Library order',
+      'Not cooked lately',
+    ]);
+    select.value = 'stale';
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(store.sort()).toBe('stale');
+    expect(titlesOf()).toEqual(['Stale', 'Fresh']);
+  });
+});

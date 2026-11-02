@@ -1481,3 +1481,55 @@ describe('RecipeStore what can I make', () => {
     expect(store.results().length).toBe(seed.length);
   });
 });
+
+describe('RecipeStore stale sort', () => {
+  let store: RecipeStore;
+
+  const seed = [
+    fixture('never-b', { title: 'B never' }),
+    fixture('recent', { cooked: 2, lastCooked: '2026-10-30T10:00:00.000Z' }),
+    fixture('undated', { cooked: 4 }),
+    fixture('old', { cooked: 1, lastCooked: '2026-01-05T10:00:00.000Z' }),
+    fixture('never-a', { title: 'A never' }),
+  ];
+
+  beforeEach(async () => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideFakeRecipes(new FakeRecipeRepository(seed))],
+    });
+    store = TestBed.inject(RecipeStore);
+    await store.whenLoaded();
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('orders cooked-but-undated, then oldest first, then never cooked', () => {
+    store.sort.set('stale');
+    expect(store.results().map((r) => r.slug)).toEqual([
+      'undated',
+      'old',
+      'recent',
+      'never-a',
+      'never-b',
+    ]);
+  });
+
+  it('keeps library order by default', () => {
+    expect(store.results().map((r) => r.slug)).toEqual(seed.map((r) => r.slug));
+  });
+
+  it('ignores the sort in have mode', () => {
+    store.mode.set('have');
+    store.setQuery('water');
+    const before = store.results().map((r) => r.slug);
+    store.sort.set('stale');
+    expect(store.results().map((r) => r.slug)).toEqual(before);
+  });
+
+  it('survives reset', () => {
+    store.sort.set('stale');
+    store.reset();
+    expect(store.sort()).toBe('stale');
+  });
+});

@@ -393,8 +393,33 @@
     }
 }
 
-.result-count {
+.result-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin: 0 0 14px;
+}
+
+.result-count {
+    margin: 0;
+}
+
+.sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    select {
+        font-family: var(--font);
+        font-size: var(--text-small);
+        color: var(--ink);
+        background: var(--paper);
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius-pill);
+        padding: 0 12px;
+        min-height: 40px;
+    }
 }
 
 // §6.1 — CSS Grid does this natively; mat-grid-list is dropped (§2.4).

@@ -184,6 +184,10 @@ export class LibraryComponent {
     this.router.navigate(['/recipes', recipe.slug, 'cook']);
   }
 
+  protected onSort(value: string): void {
+    this.recipes.sort.set(value === 'stale' ? 'stale' : 'default');
+  }
+
   /** Opens a random recipe from the current filtered set. */
   protected surprise(): void {
     const pick = this.recipes.surprise();

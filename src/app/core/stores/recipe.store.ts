@@ -7,6 +7,24 @@ import { RecipeRepository } from '../recipe-repository';
 import { DeviceStore } from './device.store';
 import { PrefsStore } from './prefs.store';
 
+/** How the library orders its results; 'default' is the order the API gave. */
+export type LibrarySort = 'default' | 'stale';
+
+/**
+ * "Not cooked lately": cooked but undated first (their last time is unknown, so
+ * they are the likeliest to be forgotten), then oldest `lastCooked` first, then
+ * never cooked. ISO timestamps compare chronologically as strings.
+ */
+export function compareStale(a: Recipe, b: Recipe): number {
+  const rank = (r: Recipe) => (r.lastCooked ? 1 : r.cooked > 0 ? 0 : 2);
+  const byRank = rank(a) - rank(b);
+  if (byRank !== 0) return byRank;
+  if (a.lastCooked && b.lastCooked && a.lastCooked !== b.lastCooked) {
+    return a.lastCooked < b.lastCooked ? -1 : 1;
+  }
+  return a.title.localeCompare(b.title);
+}
+
 /**
  * The recipe collection plus the library's search and filter state.
  *
@@ -306,6 +324,9 @@ export class RecipeStore {
    */
   readonly mode = signal<'search' | 'have'>('search');
 
+  /** A view preference rather than a filter, so `reset()` leaves it alone. */
+  readonly sort = signal<LibrarySort>('default');
+
   /** The facet, gap, cookbook and favorites filters, shared by both modes. */
   private readonly filtered = computed(() => {
     const selected = this.selectedTags();
@@ -366,13 +387,15 @@ export class RecipeStore {
 
     const needle = this.query().trim().toLowerCase();
     const filtered = this.filtered();
-    if (!needle) return filtered;
-    return filtered.filter(
-      (r) =>
-        r.title.toLowerCase().includes(needle) ||
-        r.tags.some((t) => t.toLowerCase().includes(needle)) ||
-        r.ingredients.some((i) => i.name.toLowerCase().includes(needle)),
-    );
+    const matched = !needle
+      ? filtered
+      : filtered.filter(
+          (r) =>
+            r.title.toLowerCase().includes(needle) ||
+            r.tags.some((t) => t.toLowerCase().includes(needle)) ||
+            r.ingredients.some((i) => i.name.toLowerCase().includes(needle)),
+        );
+    return this.sort() === 'stale' ? [...matched].sort(compareStale) : matched;
   });
 
   /**

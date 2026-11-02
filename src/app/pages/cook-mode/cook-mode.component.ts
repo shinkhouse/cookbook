@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
   Component,
   DestroyRef,
@@ -20,6 +21,7 @@ import { Recipe } from '../../core/model/recipes.model';
 import { PrefsStore } from '../../core/stores/prefs.store';
 import { UnitSystem, amountText } from '../../core/units';
 import { RecipeStore } from '../../core/stores/recipe.store';
+import { ScreenWakeLock } from '../../core/wake-lock';
 import { formatCountdown, parseDuration } from '../../core/timer';
 
 interface RunningTimer {
@@ -220,12 +222,12 @@ export class CookModeComponent {
       : `Step ${this.stepIndex() + 1} of ${this.stepCount()}. ${this.currentStep()}`,
   );
 
-  private wakeLock: WakeLockSentinel | null = null;
+  private readonly wakeLock = new ScreenWakeLock(navigator, inject(DOCUMENT));
   private nextTimerId = 1;
   private nextFinishOrder = 1;
 
   constructor() {
-    this.requestWakeLock();
+    void this.wakeLock.acquire();
 
     // A reused instance (the route param changing) must not carry one recipe's
     // timers, position or ticks onto another recipe's steps.
@@ -243,7 +245,7 @@ export class CookModeComponent {
 
     inject(DestroyRef).onDestroy(() => {
       clearInterval(tick);
-      this.releaseWakeLock();
+      this.wakeLock.release();
     });
   }
 
@@ -331,21 +333,6 @@ export class CookModeComponent {
     }
   }
 
-  private async requestWakeLock(): Promise<void> {
-    // Feature-detected and silently skipped where unsupported (§6.3).
-    try {
-      const nav = navigator as Navigator & { wakeLock?: WakeLock };
-      if (!nav.wakeLock) return;
-      this.wakeLock = await nav.wakeLock.request('screen');
-    } catch {
-      // A rejected request is not worth surfacing — the screen just dims.
-    }
-  }
-
-  private releaseWakeLock(): void {
-    void this.wakeLock?.release().catch(() => undefined);
-    this.wakeLock = null;
-  }
 }
 
 /** Drops a trailing ".0" so "20 min" does not read as "20.0 min". */

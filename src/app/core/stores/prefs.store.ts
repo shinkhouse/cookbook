@@ -1,9 +1,11 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { FAV_SEED } from '../mock/recipes.mock';
 import { Storage } from '../storage';
+import { UnitSystem } from '../units';
 
 const FAVS_KEY = 'cookbook.favs';
 const COOK_INGREDIENTS_KEY = 'cookbook.cookIngredients';
+const UNITS_KEY = 'cookbook.units';
 
 /**
  * Preferences that should still be true next time the app opens: the favorites
@@ -35,6 +37,18 @@ export class PrefsStore {
   );
 
   readonly cookIngredientsOpen = computed(() => this._cookIngredientsOpen());
+
+  /** US or metric amounts, on the detail page and in cook mode alike. */
+  private readonly _units = signal<UnitSystem>(
+    this.storage.read<string>(UNITS_KEY, 'us') === 'metric' ? 'metric' : 'us',
+  );
+
+  readonly units = computed(() => this._units());
+
+  setUnits(system: UnitSystem): void {
+    this._units.set(system);
+    this.storage.write(UNITS_KEY, system);
+  }
 
   isFav(slug: string): boolean {
     return this._favs().has(slug);

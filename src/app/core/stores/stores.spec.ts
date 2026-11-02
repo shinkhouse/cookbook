@@ -699,6 +699,16 @@ describe('PrefsStore', () => {
     expect(TestBed.inject(PrefsStore).favCount()).toBe(0);
   });
 
+  it('defaults units to US and remembers a change', () => {
+    const prefs = TestBed.inject(PrefsStore);
+    expect(prefs.units()).toBe('us');
+    prefs.setUnits('metric');
+    expect(prefs.units()).toBe('metric');
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
+    expect(TestBed.inject(PrefsStore).units()).toBe('metric');
+  });
+
   describe('the cook-mode ingredients panel', () => {
     it('defaults to open', () => {
       expect(TestBed.inject(PrefsStore).cookIngredientsOpen()).toBe(true);

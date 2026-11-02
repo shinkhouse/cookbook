@@ -342,6 +342,34 @@
     gap: 0;
 }
 
+// A two-button segmented control, after the toggle; hidden with the closed panel.
+.unit-toggle {
+    flex: none;
+    display: inline-flex;
+    border: 1px solid var(--cook-rule);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+
+    button {
+        padding: 6px 12px;
+        border: 0;
+        background: none;
+        color: var(--cook-text);
+        font-family: inherit;
+        font-size: var(--text-label);
+        cursor: pointer;
+
+        &[aria-pressed='true'] {
+            background: var(--cook-accent);
+            color: var(--cook-surface);
+        }
+    }
+}
+
+.sidebar.is-closed .unit-toggle {
+    display: none;
+}
+
 .sidebar-head {
     flex: 1 1 0;
     min-width: 0;

@@ -145,6 +145,10 @@
                 aria-hidden="true"
               />
             </button>
+            <div class="unit-toggle" role="group" aria-label="Units">
+              <button type="button" [attr.aria-pressed]="units() === 'us'" (click)="setUnits('us')">US</button>
+              <button type="button" [attr.aria-pressed]="units() === 'metric'" (click)="setUnits('metric')">Metric</button>
+            </div>
           </div>
           <!-- Inert while closed, so focus and screen readers skip the hidden checkboxes. -->
           <div id="cook-ingredients" class="sidebar-body" [attr.inert]="ingredientsOpen() ? null : ''">

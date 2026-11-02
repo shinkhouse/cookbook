@@ -160,6 +160,30 @@ h1 {
     }
 }
 
+// A two-button segmented control; the pressed side is filled.
+.unit-toggle {
+    display: inline-flex;
+    margin-top: 10px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+
+    button {
+        padding: 6px 14px;
+        border: 0;
+        background: var(--surface);
+        color: var(--ink-2);
+        font-family: var(--font);
+        font-size: var(--text-label);
+        cursor: pointer;
+
+        &[aria-pressed='true'] {
+            background: var(--navy);
+            color: var(--surface);
+        }
+    }
+}
+
 .stepper-value {
     min-width: 2ch;
     font-family: var(--font);

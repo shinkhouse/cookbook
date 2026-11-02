@@ -98,3 +98,14 @@ function roundTo(value: number, step: number, unit: string): Measure {
 function trimDecimals(qty: number): string {
   return String(Number(qty.toFixed(2)));
 }
+
+/** A row's amount as text: scaled, converted to `system`, unit included. Blank when there is no quantity. */
+export function amountText(
+  qty: number | null,
+  unit: string,
+  factor: number,
+  system: UnitSystem,
+): string {
+  if (qty === null) return '';
+  return formatMeasure(convertMeasure({ qty: qty * factor, unit }, system));
+}

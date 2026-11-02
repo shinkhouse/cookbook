@@ -4,11 +4,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { gapSentence, gapsOf } from '../../core/recipe-health';
-import { formatQty, scaleFactor, scaleLabel } from '../../core/scale';
+import { scaleFactor, scaleLabel } from '../../core/scale';
 import { ListStore } from '../../core/stores/list.store';
 import { PrefsStore } from '../../core/stores/prefs.store';
 import { RecipeStore, tagLabel } from '../../core/stores/recipe.store';
 import { Recipe } from '../../core/model/recipes.model';
+import { UnitSystem, amountText } from '../../core/units';
 import { describeWriteError } from '../../core/write-error';
 
 /** One row of the ingredient card, with its amount already scaled. */
@@ -168,13 +169,14 @@ export class RecipeDetailComponent {
 
   private rows(list: Recipe['ingredients'], offset: number): DetailIngredient[] {
     const factor = this.factor();
+    const units = this.prefs.units();
     const checked = this.checked();
     return list.map((ingredient, i) => ({
       index: offset + i,
       name: ingredient.name,
       unit: ingredient.unit,
       group: ingredient.group,
-      amount: ingredient.qty === null ? '' : formatQty(ingredient.qty * factor),
+      amount: amountText(ingredient.qty, ingredient.unit, factor, units),
       checked: checked.has(offset + i),
     }));
   }
@@ -188,6 +190,12 @@ export class RecipeDetailComponent {
 
   protected onPhotoError(): void {
     this.photoBroken.set(true);
+  }
+
+  protected readonly units = this.prefs.units;
+
+  protected setUnits(system: UnitSystem): void {
+    this.prefs.setUnits(system);
   }
 
   protected stepServings(delta: number): void {
@@ -205,8 +213,4 @@ export class RecipeDetailComponent {
     this.checked.set(next);
   }
 
-  protected amountLabel(amount: string, unit: string): string {
-    if (!amount) return '';
-    return unit ? `${amount} ${unit}` : amount;
-  }
 }

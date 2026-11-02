@@ -16,9 +16,9 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
-import { formatQty } from '../../core/scale';
 import { Recipe } from '../../core/model/recipes.model';
 import { PrefsStore } from '../../core/stores/prefs.store';
+import { UnitSystem, amountText } from '../../core/units';
 import { RecipeStore } from '../../core/stores/recipe.store';
 import { formatCountdown, parseDuration } from '../../core/timer';
 
@@ -69,6 +69,12 @@ export class CookModeComponent {
 
   /** The ingredients panel's open state, remembered between visits. */
   protected readonly ingredientsOpen = this.prefs.cookIngredientsOpen;
+
+  protected readonly units = this.prefs.units;
+
+  protected setUnits(system: UnitSystem): void {
+    this.prefs.setUnits(system);
+  }
 
   protected toggleIngredients(): void {
     this.prefs.toggleCookIngredients();
@@ -143,15 +149,13 @@ export class CookModeComponent {
     const recipe = this.recipe();
     if (!recipe) return [];
     const checked = this.checked();
+    const units = this.units();
     let offset = 0;
     const section = (label: string | null, list: Recipe['ingredients']) => {
       const items = list.map((ingredient, i) => ({
         index: offset + i,
         name: ingredient.name,
-        amount:
-          ingredient.qty === null
-            ? ''
-            : `${formatQty(ingredient.qty)}${ingredient.unit ? ' ' + ingredient.unit : ''}`,
+        amount: amountText(ingredient.qty, ingredient.unit, 1, units),
         checked: checked.has(offset + i),
       }));
       offset += list.length;

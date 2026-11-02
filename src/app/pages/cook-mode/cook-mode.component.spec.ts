@@ -1,6 +1,7 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Recipe } from '../../core/model/recipes.model';
+import { PrefsStore } from '../../core/stores/prefs.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
 import {
   FakeCookbookRepository,
@@ -656,5 +657,48 @@ describe('cook mode step ownership and slug changes', () => {
     expect(el.querySelectorAll('.jump button').length).toBe(1);
     expect(el.querySelector('.step-label')).toBeNull();
     expect(el.querySelectorAll('.jump-group').length).toBe(0);
+  });
+});
+
+describe('cook mode units', () => {
+  let fixture: ComponentFixture<CookModeComponent>;
+  let el: HTMLElement;
+
+  const amounts = () =>
+    Array.from(el.querySelectorAll('.ing-amount')).map((n) => (n.textContent ?? '').trim());
+  const unitButton = (label: string) =>
+    Array.from(el.querySelectorAll<HTMLButtonElement>('.unit-toggle button')).find(
+      (b) => b.textContent?.trim() === label,
+    )!;
+
+  beforeEach(() => localStorage.clear());
+  afterEach(() => {
+    fixture.destroy();
+    jasmine.clock().uninstall();
+    localStorage.clear();
+  });
+
+  it('converts the ingredients panel when Metric is chosen', async () => {
+    fixture = await setup();
+    el = fixture.nativeElement;
+    expect(amounts()).toEqual(['2 cup', '1']);
+    expect(unitButton('US').getAttribute('aria-pressed')).toBe('true');
+    unitButton('Metric').click();
+    fixture.detectChanges();
+    expect(amounts()).toEqual(['470 ml', '1']);
+    expect(unitButton('Metric').getAttribute('aria-pressed')).toBe('true');
+    expect(unitButton('US').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('shares the choice with the detail page', async () => {
+    // The detail page writes the preference through PrefsStore; cook mode, created
+    // afterwards, reads it back from the same storage.
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    TestBed.inject(PrefsStore).setUnits('metric');
+    TestBed.resetTestingModule();
+    fixture = await setup();
+    el = fixture.nativeElement;
+    expect(amounts()[0]).toBe('470 ml');
+    expect(unitButton('Metric').getAttribute('aria-pressed')).toBe('true');
   });
 });

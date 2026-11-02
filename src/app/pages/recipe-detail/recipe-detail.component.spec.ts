@@ -286,3 +286,76 @@ describe('RecipeDetailComponent embedded recipes', () => {
     expect(part().checked).toBeTrue();
   });
 });
+
+describe('RecipeDetailComponent units', () => {
+  const UNITS_RECIPE = {
+    ...Recipes[0],
+    slug: 'units-soup',
+    title: 'Units Soup',
+    servings: 2,
+    ingredients: [
+      { qty: 2, unit: 'cup', name: 'stock', aisle: 'pantry' as const },
+      { qty: 3, unit: '', name: 'onions', aisle: 'produce' as const },
+    ],
+    components: [],
+  };
+  let fixture: ComponentFixture<RecipeDetailComponent>;
+  let el: HTMLElement;
+
+  async function setup(): Promise<void> {
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(new FakeRecipeRepository([UNITS_RECIPE]))],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', UNITS_RECIPE.slug);
+    fixture.detectChanges();
+    el = fixture.nativeElement;
+  }
+
+  const amounts = (): string[] =>
+    Array.from(el.querySelectorAll('.ing-amount')).map((n) => (n.textContent ?? '').trim());
+  const unitButton = (label: string) =>
+    Array.from(el.querySelectorAll<HTMLButtonElement>('.unit-toggle button')).find(
+      (b) => b.textContent?.trim() === label,
+    )!;
+  const choose = (label: string) => {
+    unitButton(label).click();
+    fixture.detectChanges();
+  };
+
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  it('offers a two-button US | Metric group with aria-pressed', async () => {
+    await setup();
+    expect(unitButton('US').getAttribute('aria-pressed')).toBe('true');
+    expect(unitButton('Metric').getAttribute('aria-pressed')).toBe('false');
+    choose('Metric');
+    expect(unitButton('US').getAttribute('aria-pressed')).toBe('false');
+    expect(unitButton('Metric').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it("shows a recipe's cups as ml after switching to Metric", async () => {
+    await setup();
+    expect(amounts()[0]).toBe('2 cup');
+    choose('Metric');
+    expect(amounts()[0]).toBe('470 ml');
+  });
+
+  it('scales and converts together', async () => {
+    await setup();
+    choose('Metric');
+    (el.querySelector('button[aria-label="One more serving"]') as HTMLElement).click();
+    (el.querySelector('button[aria-label="One more serving"]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(amounts()[0]).toBe('950 ml');
+  });
+
+  it('leaves a countable row as written in Metric', async () => {
+    await setup();
+    choose('Metric');
+    expect(amounts()[1]).toBe('3');
+  });
+});

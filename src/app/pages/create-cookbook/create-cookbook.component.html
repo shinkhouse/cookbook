@@ -20,7 +20,7 @@
         [ngModel]="name()"
         (ngModelChange)="name.set($event)"
         [attr.aria-invalid]="taken() ? 'true' : null"
-        [attr.aria-describedby]="'name-hint'"
+        aria-describedby="name-hint"
       />
     </label>
     <p id="name-hint" class="hint">

@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
+import { cookbookFacet } from '../../core/facets';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
 import {
@@ -87,7 +88,9 @@ describe('CreateCookbookComponent', () => {
     type('input[name="name"]', 'Bob');
     await press();
     const recipes = TestBed.inject(RecipeStore);
-    expect(recipes.selectedCount()).toBe(1);
+    const facet = cookbookFacet(TestBed.inject(CookbookStore).cookbooks())!;
+    expect(recipes.isOptionSelected(facet, 'bob')).toBeTrue();
+    expect(recipes.isOptionSelected(facet, 'sams-cookbook')).toBeFalse();
   });
 
   it('omits an empty description', async () => {

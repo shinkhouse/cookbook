@@ -336,12 +336,14 @@ describe('RecipeDetailComponent units', () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
 
-  it('puts the units toggle in its own labelled rail item', () => {
+  it('puts the units toggle in its own labelled rail item', async () => {
+    await setup();
     const group = el.querySelector('.unit-toggle') as HTMLElement;
     const item = group.closest('.rail-item') as HTMLElement;
     expect(item.querySelector('.label')?.textContent?.trim()).toBe('Units');
     expect(item.querySelector('.stepper')).toBeNull();
     expect(group.parentElement).toBe(item);
+    expect(group.getAttribute('aria-labelledby')).toBe(item.querySelector('.label')!.id);
   });
 
   it('offers a two-button US | Metric group with aria-pressed', async () => {

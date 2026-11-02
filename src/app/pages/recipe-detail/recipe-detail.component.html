@@ -69,9 +69,9 @@
           </p>
         </div>
 
-        <div class="rail-item">
-          <p class="label">Units</p>
-          <div class="unit-toggle" role="group" aria-label="Units">
+        <div class="rail-item rail-units">
+          <p id="units-label" class="label">Units</p>
+          <div class="unit-toggle" role="group" aria-labelledby="units-label">
             <button type="button" [attr.aria-pressed]="units() === 'us'" (click)="setUnits('us')">US</button>
             <button type="button" [attr.aria-pressed]="units() === 'metric'" (click)="setUnits('metric')">Metric</button>
           </div>

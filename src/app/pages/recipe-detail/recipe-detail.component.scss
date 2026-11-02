@@ -501,7 +501,7 @@ h1 {
 }
 
 .note-error {
-    margin: 0;
+    margin: 10px 0 0;
     color: var(--mat-sys-error);
     font-size: var(--text-small);
 }
@@ -588,6 +588,7 @@ h1 {
     .rail-note .link-button,
     .gap-note,
     .note-form,
+    .note-error,
     .unit-toggle,
     .checked-count,
     .ingredient-list mat-checkbox ::ng-deep .mdc-checkbox {

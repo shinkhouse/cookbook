@@ -242,7 +242,7 @@
           }
 
           <!-- §6.2 — the notes panel renders when there are notes, or when one can be added. -->
-          @if (r.notes.length > 0 || canSave()) {
+          @if (r.notes.length > 0 || canSave() || noteError()) {
             <div class="notes">
               <div class="section-head notes-head">
                 <h3 class="section-title">Notes</h3>
@@ -270,10 +270,11 @@
                   <button type="submit" class="btn-outline" [disabled]="noteSaving() || !noteText.trim()">
                     {{ noteSaving() ? 'Adding…' : 'Add note' }}
                   </button>
-                  @if (noteError()) {
-                    <p id="note-problem" class="note-error" role="alert">{{ noteError() }}</p>
-                  }
                 </form>
+              }
+              <!-- Outside the form: a 403 locks the device, which removes the form. -->
+              @if (noteError()) {
+                <p id="note-problem" class="note-error" role="alert">{{ noteError() }}</p>
               }
             </div>
           }

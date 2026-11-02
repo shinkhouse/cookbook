@@ -118,8 +118,8 @@ export class RecipeDetailComponent {
     this.noteSaving.set(true);
     this.noteError.set('');
     try {
-      await this.recipes.addNote(this.slug(), this.noteText);
-      this.noteText = '';
+      if (await this.recipes.addNote(this.slug(), this.noteText)) this.noteText = '';
+      else this.noteError.set('That recipe no longer exists.');
     } catch (err) {
       this.noteError.set(describeDeviceError(err, this.device.lockoutMinutes()));
     } finally {

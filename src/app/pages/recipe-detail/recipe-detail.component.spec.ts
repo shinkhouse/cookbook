@@ -381,11 +381,14 @@ describe('RecipeDetailComponent print', () => {
 });
 
 describe('RecipeDetailComponent notes', () => {
+  afterEach(() => localStorage.removeItem('cookbook.deviceKey'));
+
   let fake: FakeRecipeRepository;
   let fixture: ComponentFixture<RecipeDetailComponent>;
 
-  async function setup(writable: boolean): Promise<void> {
-    localStorage.removeItem('cookbook.deviceKey');
+  async function setup(writable: boolean, unlocked = false): Promise<void> {
+    if (unlocked) localStorage.setItem('cookbook.deviceKey', JSON.stringify('sesame'));
+    else localStorage.removeItem('cookbook.deviceKey');
     fake = new FakeRecipeRepository();
     fake.writable = writable;
     TestBed.configureTestingModule({
@@ -456,6 +459,29 @@ describe('RecipeDetailComponent notes', () => {
     expect(el().querySelector('.note-error')?.textContent).toContain('This recipe has too many notes.');
     expect(field()!.value).toBe('more cumin');
     expect(el().querySelector('.notes')?.textContent).not.toContain('more cumin');
+  });
+
+  it('keeps the text and says so when the recipe is gone', async () => {
+    await setup(true);
+    type('more cumin');
+    spyOn(TestBed.inject(RecipeStore), 'addNote').and.resolveTo(false);
+    addButton()!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el().querySelector('.note-error')?.textContent).toContain('That recipe no longer exists.');
+    expect(field()!.value).toBe('more cumin');
+  });
+
+  it('explains a lost unlock after the form hides on a 403', async () => {
+    await setup(false, true);
+    expect(field()).not.toBeNull();
+    type('more cumin');
+    fake.failNext({ status: 403 });
+    addButton()!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(field()).toBeNull();
+    expect(el().querySelector('.note-error')?.textContent).toContain('Unlock it again from the footer.');
   });
 
   it('uses the lockout minutes from the device store on a 429', async () => {

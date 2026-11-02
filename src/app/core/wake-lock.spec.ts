@@ -74,4 +74,23 @@ describe('ScreenWakeLock', () => {
     await flush();
     expect(request).toHaveBeenCalledTimes(1);
   });
+
+  it('releases a lock that lands after release() was called', async () => {
+    const s = sentinel();
+    let resolve!: (v: FakeSentinel) => void;
+    const request = jasmine.createSpy('request').and.returnValue(new Promise((r) => (resolve = r)));
+    lock = new ScreenWakeLock(nav(request), document);
+    const acquiring = lock.acquire();
+    lock.release();
+    resolve(s);
+    await acquiring;
+    expect(s.release).toHaveBeenCalled();
+  });
+
+  it('requests only once for two quick acquires', async () => {
+    const request = jasmine.createSpy('request').and.resolveTo(sentinel());
+    lock = new ScreenWakeLock(nav(request), document);
+    await Promise.all([lock.acquire(), lock.acquire()]);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
 });

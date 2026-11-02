@@ -5,6 +5,8 @@
 export class ScreenWakeLock {
   private sentinel: WakeLockSentinel | null = null;
   private listening = false;
+  private wanted = false;
+  private pending: Promise<void> | null = null;
   private readonly onVisible = () => {
     if (this.doc.visibilityState === 'visible' && !this.sentinel) void this.acquire();
   };
@@ -14,7 +16,14 @@ export class ScreenWakeLock {
     private readonly doc: Document,
   ) {}
 
-  async acquire(): Promise<void> {
+  acquire(): Promise<void> {
+    // One request at a time, so two quick visibility events cannot make two sentinels.
+    this.wanted = true;
+    this.pending ??= this.request().finally(() => (this.pending = null));
+    return this.pending;
+  }
+
+  private async request(): Promise<void> {
     // Feature-detected and silently skipped where unsupported.
     try {
       if (!this.nav.wakeLock) return;
@@ -23,6 +32,11 @@ export class ScreenWakeLock {
         this.listening = true;
       }
       const sentinel = await this.nav.wakeLock.request('screen');
+      if (!this.wanted) {
+        // Released while the request was in flight: hand the lock straight back.
+        void sentinel.release().catch(() => undefined);
+        return;
+      }
       this.sentinel = sentinel;
       sentinel.addEventListener('release', () => {
         if (this.sentinel === sentinel) this.sentinel = null;
@@ -33,6 +47,7 @@ export class ScreenWakeLock {
   }
 
   release(): void {
+    this.wanted = false;
     try {
       this.doc.removeEventListener('visibilitychange', this.onVisible);
       this.listening = false;

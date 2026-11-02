@@ -709,3 +709,27 @@ describe('cook mode units', () => {
     expect(unitButton('Metric').getAttribute('aria-pressed')).toBe('true');
   });
 });
+
+describe('cook mode wake lock', () => {
+  const own = Object.getOwnPropertyDescriptor(navigator, 'wakeLock');
+  afterEach(() => {
+    jasmine.clock().uninstall();
+    if (own) Object.defineProperty(navigator, 'wakeLock', own);
+    else delete (navigator as { wakeLock?: unknown }).wakeLock;
+  });
+
+  it('requests the lock on creation and releases it on destroy', async () => {
+    const sentinel = {
+      release: jasmine.createSpy('release').and.resolveTo(undefined),
+      addEventListener: () => undefined,
+    };
+    const request = jasmine.createSpy('request').and.resolveTo(sentinel);
+    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+    const fixture = await setup();
+    expect(request).toHaveBeenCalledOnceWith('screen');
+    await Promise.resolve();
+    await Promise.resolve();
+    fixture.destroy();
+    expect(sentinel.release).toHaveBeenCalled();
+  });
+});

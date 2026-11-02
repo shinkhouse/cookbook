@@ -39,18 +39,8 @@ describe('migrated seed data', () => {
     }
   });
 
-  it('leaves the imported recipes their steps, bar the one the source never wrote', () => {
-    // 'Shrimp and pasta' has ingredients but no method in the source document —
-    // its steps cell holds the word "Instructions" and nothing else. Kept
-    // rather than dropped, since the ingredients are real, and the detail page
-    // already says so. Pinned so any *other* recipe losing its steps fails.
-    const INCOMPLETE_IN_SOURCE = new Set(['shrimp-and-pasta']);
+  it('gives every imported recipe its steps', () => {
     for (const r of ImportedRecipes) {
-      if (INCOMPLETE_IN_SOURCE.has(r.slug)) {
-        expect(r.steps).withContext(r.slug).toEqual([]);
-        expect(r.ingredients.length).toBeGreaterThan(0);
-        continue;
-      }
       expect(r.steps.length).withContext(r.slug).toBeGreaterThan(0);
     }
   });

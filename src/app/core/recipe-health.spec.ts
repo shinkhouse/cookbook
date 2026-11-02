@@ -107,13 +107,9 @@ describe('gapSentence', () => {
 });
 
 describe('the real collection', () => {
-  it('finds the three recipes with no method', () => {
+  it('finds no recipe without a method now that the last three were written up', () => {
     const none = Recipes.filter((r) => gapsOf(r).needsMethod).map((r) => r.slug);
-    // Two of these are curated, and predate the import.
-    expect(none).toContain('grandmas-chili');
-    expect(none).toContain('honey-buffalo-sauce');
-    expect(none).toContain('shrimp-and-pasta');
-    expect(none.length).toBe(3);
+    expect(none).toEqual([]);
   });
 
   it('flags every imported recipe as needing a photo, and no curated one', () => {

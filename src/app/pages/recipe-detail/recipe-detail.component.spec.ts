@@ -430,6 +430,16 @@ describe('RecipeDetailComponent notes', () => {
     fixture.detectChanges();
   }
 
+  it('marks an empty notes panel so print leaves it out', async () => {
+    await setup(true);
+    // SLUG's recipe has no notes; a writable build still shows the panel to add one.
+    expect(el().querySelector('.notes')?.classList).toContain('is-empty');
+    const noted = Recipes.find((r) => r.notes.length > 0)!;
+    fixture.componentRef.setInput('slug', noted.slug);
+    fixture.detectChanges();
+    expect(el().querySelector('.notes')?.classList).not.toContain('is-empty');
+  });
+
   it('hides the note field without unlock on a read-only build', async () => {
     await setup(false);
     expect(field()).toBeNull();

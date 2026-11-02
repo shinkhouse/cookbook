@@ -314,7 +314,7 @@
 
           <!-- §6.2 — the notes panel renders when there are notes, or when one can be added. -->
           @if (r.notes.length > 0 || canSave() || noteError()) {
-            <div class="notes">
+            <div class="notes" [class.is-empty]="r.notes.length === 0">
               <div class="section-head notes-head">
                 <h3 class="section-title">Notes</h3>
               </div>

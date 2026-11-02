@@ -18,7 +18,7 @@ import { parseIngredient } from '../../core/ingredient-parser';
 import { parseJsonLd, parseRecipeText, slugify, splitFrontMatter } from '../../core/recipe-text';
 import { formatQty } from '../../core/scale';
 import { RecipeStore } from '../../core/stores/recipe.store';
-import { describeWriteError } from '../../core/write-error';
+import { describePhotoError, describeWriteError } from '../../core/write-error';
 
 type Tab = 'paste' | 'file' | 'url' | 'photo' | 'manual';
 
@@ -417,11 +417,14 @@ export class CreateRecipeComponent {
       this.notice.set(problem);
       return;
     }
-    await this.runImport(() => this.importer.previewPhoto(file));
+    await this.runImport(() => this.importer.previewPhoto(file), describePhotoError);
   }
 
   /** The flow both imports share: busy flag, fill, notice, then the Manual tab. */
-  private async runImport(read: () => Promise<ImportPreview>): Promise<void> {
+  private async runImport(
+    read: () => Promise<ImportPreview>,
+    describe: (err: unknown) => string = describeWriteError,
+  ): Promise<void> {
     if (this.importing()) return;
     this.importing.set(true);
     this.notice.set('');
@@ -440,7 +443,7 @@ export class CreateRecipeComponent {
       this.notice.set(
         (err as { status?: unknown } | null)?.status === 404
           ? "Import isn't switched on in the local API. Add RECIPE_IMPORT_ENABLED=true to its .env and restart it."
-          : describeWriteError(err),
+          : describe(err),
       );
     } finally {
       this.importing.set(false);
@@ -494,7 +497,10 @@ export class CreateRecipeComponent {
       ...(preview.time ? { time: preview.time } : {}),
       ...(tags ? { tagsText: tags } : {}),
       ...(preview.image ? { photo: preview.image } : {}),
+      // A photo import answers sourceUrl '' on purpose: there is no page and no
+      // image, so whatever an earlier import or edit left there is cleared.
       ...(preview.sourceUrl ? { sourceUrl: preview.sourceUrl } : {}),
+      ...(preview.sourceUrl === '' ? { sourceUrl: '', ...(preview.image ? {} : { photo: '' }) } : {}),
       ...(sections.length > 0 ? { sections } : {}),
     });
     this.review.set(

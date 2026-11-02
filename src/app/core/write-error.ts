@@ -26,3 +26,20 @@ export function describeWriteError(err: unknown): string {
   }
   return 'Saving failed. Nothing was changed.';
 }
+
+/**
+ * `describeWriteError` for the photo import, where a 503 that carries a JSON
+ * body is the API itself saying it has no ANTHROPIC_API_KEY. A 503 with no JSON
+ * body is still the dev proxy's answer for a dead API, so that stays
+ * "unreachable". Anywhere else a 503 keeps that reading.
+ */
+export function describePhotoError(err: unknown): string {
+  const { status, error } = (err ?? {}) as { status?: unknown; error?: unknown };
+  if (status === 503 && typeof error === 'object' && error !== null) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === 'string' && message
+      ? message
+      : "Photo import needs ANTHROPIC_API_KEY in the local API's .env. Add it and restart the API.";
+  }
+  return describeWriteError(err);
+}

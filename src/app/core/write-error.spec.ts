@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { describeWriteError } from './write-error';
+import { describePhotoError, describeWriteError } from './write-error';
 
 describe('describeWriteError', () => {
   it('says the server is unreachable for status 0', () => {
@@ -89,5 +89,27 @@ describe('describeWriteError', () => {
     expect(
       describeWriteError({ status: 415, error: { message: "That photo couldn't be read. Try a JPEG or PNG." } }),
     ).toBe("That photo couldn't be read. Try a JPEG or PNG.");
+  });
+
+  describe('describePhotoError', () => {
+    const NO_KEY = "Photo import needs ANTHROPIC_API_KEY in the local API's .env. Add it and restart the API.";
+
+    it('relays the 503 message the API sent', () => {
+      expect(describePhotoError({ status: 503, error: { message: 'No key.' } })).toBe('No key.');
+    });
+
+    it('names the missing key when the API answered 503 without a message', () => {
+      expect(describePhotoError({ status: 503, error: {} })).toBe(NO_KEY);
+    });
+
+    it('keeps "unreachable" for a proxy 503 with no JSON body', () => {
+      const unreachable = "Couldn't reach the recipe server. Is it running?";
+      expect(describePhotoError({ status: 503, error: '<html>Bad gateway</html>' })).toBe(unreachable);
+      expect(describePhotoError({ status: 503, error: null })).toBe(unreachable);
+    });
+
+    it('defers to describeWriteError for other statuses', () => {
+      expect(describePhotoError({ status: 415, error: { message: 'Unreadable.' } })).toBe('Unreadable.');
+    });
   });
 });

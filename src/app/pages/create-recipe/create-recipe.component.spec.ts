@@ -890,6 +890,42 @@ describe('CreateRecipeComponent import and sections', () => {
     expect(page.importing()).toBeFalse();
   });
 
+  it('says the key is missing when the photo endpoint answers 503 with JSON', async () => {
+    await setup();
+    photoSpy().and.rejectWith({ status: 503, error: { message: 'Photo import is not configured.' } });
+    await page.importPhoto(files(new File(['x'], 'card.png', { type: 'image/png' })));
+    expect(page.notice()).toBe('Photo import is not configured.');
+    photoSpy().and.rejectWith({ status: 503, error: {} });
+    await page.importPhoto(files(new File(['x'], 'card.png', { type: 'image/png' })));
+    expect(page.notice()).toBe(
+      "Photo import needs ANTHROPIC_API_KEY in the local API's .env. Add it and restart the API.",
+    );
+  });
+
+  it('still says unreachable for a proxy 503 on a photo, and for a URL 503', async () => {
+    await setup();
+    photoSpy().and.rejectWith({ status: 503, error: '<html></html>' });
+    await page.importPhoto(files(new File(['x'], 'card.png', { type: 'image/png' })));
+    expect(page.notice()).toBe("Couldn't reach the recipe server. Is it running?");
+    preview().and.rejectWith({ status: 503, error: { message: 'x' } });
+    page.importUrl.set('https://example.com/soup');
+    await page.importFromUrl();
+    expect(page.notice()).toBe("Couldn't reach the recipe server. Is it running?");
+  });
+
+  it('a photo import after a URL import drops the earlier source and image', async () => {
+    await setup();
+    await importIt();
+    expect(page.draft().sourceUrl).toBe(PREVIEW.sourceUrl);
+    expect(page.draft().photo).toBe(PREVIEW.image);
+    photoSpy().and.resolveTo({ ...PREVIEW, sourceUrl: '', image: undefined, tags: undefined });
+    await page.importPhoto(files(new File(['x'], 'card.jpg', { type: 'image/jpeg' })));
+    fixture.detectChanges();
+    expect(page.draft().sourceUrl).toBeUndefined();
+    expect(page.draft().photo).toBeUndefined();
+    expect(el().querySelector('.preview-source')).toBeNull();
+  });
+
   it('refuses a GIF before calling the API', async () => {
     await setup();
     page.setTab('photo');

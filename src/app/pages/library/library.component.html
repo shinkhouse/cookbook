@@ -157,13 +157,16 @@
         <p class="result-count label" aria-live="polite">
           {{ results().length }} {{ results().length === 1 ? 'recipe' : 'recipes' }}
         </p>
-        <label class="sort">
-          <span class="label">Sort</span>
-          <select [value]="recipes.sort()" (change)="onSort($any($event.target).value)">
-            <option value="default">Library order</option>
-            <option value="stale">Not cooked lately</option>
-          </select>
-        </label>
+        <!-- Have mode ranks by coverage, so a sort there would do nothing. -->
+        @if (!haveMode()) {
+          <label class="sort">
+            <span class="label">Sort</span>
+            <select [value]="recipes.sort()" (change)="onSort($any($event.target).value)">
+              <option value="default">Library order</option>
+              <option value="stale">Not cooked lately</option>
+            </select>
+          </label>
+        }
       </div>
 
       @if (results().length === 0) {

@@ -145,6 +145,18 @@ describe('LibraryComponent sort', () => {
     expect(store.sort()).toBe('stale');
     expect(titlesOf()).toEqual(['Stale', 'Fresh']);
   });
+
+  it('hides the Sort select in have mode, where results rank by coverage', async () => {
+    const fixture = await render();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.sort select')).not.toBeNull();
+    TestBed.inject(RecipeStore).mode.set('have');
+    fixture.detectChanges();
+    expect(el.querySelector('.sort')).toBeNull();
+    TestBed.inject(RecipeStore).mode.set('search');
+    fixture.detectChanges();
+    expect(el.querySelector('.sort select')).not.toBeNull();
+  });
 });
 
 describe('LibraryComponent favorites', () => {

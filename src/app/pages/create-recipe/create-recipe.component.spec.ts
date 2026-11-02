@@ -10,7 +10,10 @@ const CONFLICT = 'A recipe with that name already exists. Change the title and t
 
 /** Stands in for the API's import endpoint; each test says what it answers. */
 function fakeImport(): ImportClient {
-  return { previewRecipe: jasmine.createSpy('previewRecipe') } as unknown as ImportClient;
+  return {
+    previewRecipe: jasmine.createSpy('previewRecipe'),
+    previewPhoto: jasmine.createSpy('previewPhoto'),
+  } as unknown as ImportClient;
 }
 
 /** A fake whose first `list()` never answers until the test says so. */
@@ -436,6 +439,8 @@ type Full = {
   canSave(): boolean;
   setTab(tab: string): void;
   importFromUrl(): Promise<void>;
+  importPhoto(files: FileList | null): Promise<void>;
+  tab(): string;
   save(): Promise<void>;
   addSection(): void;
   setSectionTitle(i: number, title: string): void;
@@ -495,6 +500,13 @@ describe('CreateRecipeComponent import and sections', () => {
 
   const preview = (): jasmine.Spy => importer.previewRecipe as jasmine.Spy;
   const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+
+  const photoSpy = (): jasmine.Spy => importer.previewPhoto as jasmine.Spy;
+  function files(...list: File[]): FileList {
+    const dt = new DataTransfer();
+    list.forEach((f) => dt.items.add(f));
+    return dt.files;
+  }
 
   async function importIt(answer: ImportPreview = PREVIEW): Promise<void> {
     preview().and.resolveTo(answer);
@@ -858,6 +870,39 @@ describe('CreateRecipeComponent import and sections', () => {
     preview().and.rejectWith({ status: 404 });
     page.importUrl.set('https://example.com/soup');
     await page.importFromUrl();
+    expect(page.notice()).toBe(
+      "Import isn't switched on in the local API. Add RECIPE_IMPORT_ENABLED=true to its .env and restart it.",
+    );
+  });
+
+  it('fills the form from a photo and switches to Manual', async () => {
+    await setup();
+    photoSpy().and.resolveTo({ ...PREVIEW, sourceUrl: '' });
+    const file = new File(['x'], 'card.jpg', { type: 'image/jpeg' });
+    page.setTab('photo');
+    await page.importPhoto(files(file));
+    fixture.detectChanges();
+    expect(photoSpy()).toHaveBeenCalledOnceWith(file);
+    expect(page.title()).toBe(PREVIEW.title);
+    expect(page.tab()).toBe('manual');
+    expect(page.notice()).toContain('Imported.');
+    expect(el().querySelector('.preview-source')).toBeNull();
+    expect(page.importing()).toBeFalse();
+  });
+
+  it('refuses a GIF before calling the API', async () => {
+    await setup();
+    page.setTab('photo');
+    await page.importPhoto(files(new File(['x'], 'a.gif', { type: 'image/gif' })));
+    expect(photoSpy()).not.toHaveBeenCalled();
+    expect(page.notice()).toBe('Use a JPEG, PNG, WebP or HEIC photo.');
+    expect(page.tab()).toBe('photo');
+  });
+
+  it('shows the not-switched-on notice on 404 from a photo', async () => {
+    await setup();
+    photoSpy().and.rejectWith({ status: 404 });
+    await page.importPhoto(files(new File(['x'], 'card.png', { type: 'image/png' })));
     expect(page.notice()).toBe(
       "Import isn't switched on in the local API. Add RECIPE_IMPORT_ENABLED=true to its .env and restart it.",
     );

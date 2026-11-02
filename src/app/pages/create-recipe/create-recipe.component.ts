@@ -13,14 +13,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { AISLE_ORDER, Aisle } from '../../core/aisle';
 import { Ingredient, Recipe } from '../../core/model/recipes.model';
-import { ImportClient, ImportPreview } from '../../core/import-client';
+import { ImportClient, ImportPreview, photoProblem } from '../../core/import-client';
 import { parseIngredient } from '../../core/ingredient-parser';
 import { parseJsonLd, parseRecipeText, slugify, splitFrontMatter } from '../../core/recipe-text';
 import { formatQty } from '../../core/scale';
 import { RecipeStore } from '../../core/stores/recipe.store';
 import { describeWriteError } from '../../core/write-error';
 
-type Tab = 'paste' | 'file' | 'url' | 'manual';
+type Tab = 'paste' | 'file' | 'url' | 'photo' | 'manual';
 
 /** The badge above the preview, per §6.4. */
 type Status = 'waiting' | 'check' | 'clean';
@@ -402,11 +402,31 @@ export class CreateRecipeComponent {
    */
   protected async importFromUrl(): Promise<void> {
     const url = this.importUrl().trim();
-    if (!url || this.importing()) return;
+    if (!url) return;
+    await this.runImport(() => this.importer.previewRecipe(url));
+  }
+
+  // ---- From a photo tab --------------------------------------------------
+
+  /** Reads the chosen photo through the API into the same draft a URL import fills. */
+  protected async importPhoto(files: FileList | null): Promise<void> {
+    const file = files?.item(0);
+    if (!file || this.importing()) return;
+    const problem = photoProblem(file);
+    if (problem) {
+      this.notice.set(problem);
+      return;
+    }
+    await this.runImport(() => this.importer.previewPhoto(file));
+  }
+
+  /** The flow both imports share: busy flag, fill, notice, then the Manual tab. */
+  private async runImport(read: () => Promise<ImportPreview>): Promise<void> {
+    if (this.importing()) return;
     this.importing.set(true);
     this.notice.set('');
     try {
-      const preview = await this.importer.previewRecipe(url);
+      const preview = await read();
       this.applyPreview(preview);
       const dropped = this.droppedSections;
       this.notice.set(

@@ -11,6 +11,7 @@
 export function describeWriteError(err: unknown): string {
   const { status, error } = (err ?? {}) as { status?: unknown; error?: { message?: unknown } };
   const message = typeof error?.message === 'string' && error.message ? error.message : '';
+  if ((status === 413 || status === 415) && message) return message;
   if (status === 422) return message || 'No recipe found on that page.';
   if ((status === 502 || status === 504) && message) return message;
   const unreachable = status === 0 || status === 502 || status === 503 || status === 504;

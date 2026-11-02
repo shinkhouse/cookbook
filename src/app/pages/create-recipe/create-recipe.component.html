@@ -32,6 +32,7 @@
         { id: 'paste', label: 'Paste text' },
         { id: 'file', label: 'Markdown file' },
         { id: 'url', label: 'From a URL' },
+        { id: 'photo', label: 'From a photo' },
         { id: 'manual', label: 'Manual' }
       ]; track t.id) {
         <button
@@ -93,6 +94,27 @@
                   (change)="onFiles($any($event.target).files)"
                 />
               </label>
+            </div>
+          }
+
+          @case ('photo') {
+            <label class="field-label" for="import-photo">Import from a photo</label>
+            <p class="hint">
+              Handwritten cards work. The photo is read by Claude on the local
+              recipe server; nothing is saved until you press Save.
+            </p>
+            <div class="editor-row import-row">
+              <input
+                id="import-photo"
+                type="file"
+                class="grow"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                [disabled]="importing()"
+                (change)="importPhoto($any($event.target).files); $any($event.target).value = ''"
+              />
+              @if (importing()) {
+                <span class="hint import-status" role="status">Importing…</span>
+              }
             </div>
           }
 

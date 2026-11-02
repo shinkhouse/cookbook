@@ -81,4 +81,13 @@ describe('describeWriteError', () => {
       ),
     ).toBe('The recipe server rejected it: steps must be an array.');
   });
+
+  it('relays the photo messages for 413 and 415', () => {
+    expect(describeWriteError({ status: 413, error: { message: 'That photo is over 10 MB.' } })).toBe(
+      'That photo is over 10 MB.',
+    );
+    expect(
+      describeWriteError({ status: 415, error: { message: "That photo couldn't be read. Try a JPEG or PNG." } }),
+    ).toBe("That photo couldn't be read. Try a JPEG or PNG.");
+  });
 });

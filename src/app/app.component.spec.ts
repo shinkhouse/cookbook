@@ -58,33 +58,52 @@ describe('read-only build', () => {
 
   const addLinks = (root: ParentNode): NodeListOf<Element> =>
     root.querySelectorAll('a[href$="/recipes/new"]');
+  const cookbookLinks = (root: ParentNode): NodeListOf<Element> =>
+    root.querySelectorAll('a[href$="/cookbooks/new"]');
 
-  it('wide layout offers the Add recipe button when writable', () => {
-    const el = shell(false, true).nativeElement as HTMLElement;
-    const link = el.querySelector('a.btn-primary');
-    expect(link).not.toBeNull();
-    expect(link?.getAttribute('href')).toMatch(/\/recipes\/new$/);
+  async function openAddMenu(fixture: ComponentFixture<AppComponent>): Promise<void> {
+    (fixture.nativeElement.querySelector('button.btn-primary') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  it('wide layout offers an Add menu with Add recipe and Add cookbook when writable', async () => {
+    const fixture = shell(false, true);
+    const trigger = fixture.nativeElement.querySelector('button.btn-primary') as HTMLButtonElement;
+    expect(trigger.textContent?.trim()).toBe('Add');
+    expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
+    await openAddMenu(fixture);
+    const recipe = addLinks(document.body);
+    const cookbook = cookbookLinks(document.body);
+    expect(recipe.length).toBe(1);
+    expect(recipe[0].textContent?.trim()).toBe('Add recipe');
+    expect(cookbook.length).toBe(1);
+    expect(cookbook[0].textContent?.trim()).toBe('Add cookbook');
   });
 
-  it('wide layout offers no Add recipe link when not writable', () => {
+  it('wide layout offers neither when not writable', () => {
     const el = shell(false, false).nativeElement as HTMLElement;
     expect(el.querySelector('nav.site-nav')).not.toBeNull();
-    expect(el.querySelector('a.btn-primary')).toBeNull();
+    expect(el.querySelector('.btn-primary')).toBeNull();
     expect(addLinks(el).length).toBe(0);
+    expect(cookbookLinks(el).length).toBe(0);
   });
 
-  it('narrow layout lists Add recipe in the open drawer when writable', async () => {
+  it('narrow layout lists both Add items in the open drawer when writable', async () => {
     const fixture = shell(true, true);
     await openDrawer(fixture);
     expect(addLinks(document.body).length).toBe(1);
+    expect(cookbookLinks(document.body).length).toBe(1);
   });
 
-  it('narrow layout leaves Add recipe out of the open drawer when not writable', async () => {
+  it('narrow layout leaves both out of the open drawer when not writable', async () => {
     const fixture = shell(true, false);
     await openDrawer(fixture);
     // The drawer really opened: its other items are there.
     expect(document.body.textContent).toContain('Shopping list');
     expect(addLinks(document.body).length).toBe(0);
+    expect(cookbookLinks(document.body).length).toBe(0);
   });
 
   it('sends /recipes/new home when not writable', async () => {

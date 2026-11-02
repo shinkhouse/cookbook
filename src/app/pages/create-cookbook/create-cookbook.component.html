@@ -1,0 +1,56 @@
+<div class="create">
+  <header class="create-head">
+    <a class="back" routerLink="/">
+      <mat-icon fontIcon="arrow_back" aria-hidden="true" />
+      All recipes
+    </a>
+    <h1>Add a cookbook</h1>
+    <p class="lede">A cookbook is a named shelf. File recipes into it from each recipe's page.</p>
+  </header>
+
+  <form class="panel" (ngSubmit)="save()">
+    <label class="field">
+      <span class="field-label">Name</span>
+      <input
+        type="text"
+        name="name"
+        required
+        maxlength="80"
+        autocomplete="off"
+        [ngModel]="name()"
+        (ngModelChange)="name.set($event)"
+        [attr.aria-invalid]="taken() ? 'true' : null"
+        [attr.aria-describedby]="'name-hint'"
+      />
+    </label>
+    <p id="name-hint" class="hint">
+      @if (taken()) {
+        There's already a cookbook called that.
+      } @else if (id()) {
+        Id: <code>{{ id() }}</code>
+      } @else {
+        The id is made from the name.
+      }
+    </p>
+
+    <label class="field">
+      <span class="field-label">Description</span>
+      <textarea
+        name="description"
+        rows="3"
+        maxlength="300"
+        [ngModel]="description()"
+        (ngModelChange)="description.set($event)"
+      ></textarea>
+    </label>
+
+    <div class="actions">
+      <button type="submit" class="btn-primary" [disabled]="!canSave()">
+        {{ saving() ? 'Saving…' : 'Save cookbook' }}
+      </button>
+    </div>
+    @if (error()) {
+      <p class="problem" role="alert">{{ error() }}</p>
+    }
+  </form>
+</div>

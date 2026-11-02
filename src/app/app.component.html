@@ -21,6 +21,7 @@
                 </a>
                 @if (writable) {
                     <a mat-menu-item routerLink="/recipes/new">Add recipe</a>
+                    <a mat-menu-item routerLink="/cookbooks/new">Add cookbook</a>
                 }
             </mat-menu>
         } @else {
@@ -37,10 +38,14 @@
             </nav>
 
             @if (writable) {
-                <a class="btn-primary" routerLink="/recipes/new">
+                <button class="btn-primary" type="button" [matMenuTriggerFor]="addMenu">
                     <mat-icon fontIcon="add" aria-hidden="true" />
-                    Add recipe
-                </a>
+                    Add
+                </button>
+                <mat-menu #addMenu="matMenu">
+                    <a mat-menu-item routerLink="/recipes/new">Add recipe</a>
+                    <a mat-menu-item routerLink="/cookbooks/new">Add cookbook</a>
+                </mat-menu>
             }
         }
     </header>

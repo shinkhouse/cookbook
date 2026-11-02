@@ -1,0 +1,127 @@
+.create {
+    max-width: var(--max-detail);
+    margin: 0 auto;
+    padding: var(--pad-section);
+}
+
+.back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--touch);
+    color: var(--ink-3);
+    font-size: var(--text-small);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+        color: var(--navy);
+    }
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+    }
+}
+
+.create-head {
+    margin-bottom: 22px;
+
+    h1 {
+        margin-top: 6px;
+        font-size: var(--size-detail-h1);
+    }
+}
+
+.lede {
+    max-width: 52ch;
+    margin: 10px 0 0;
+    color: var(--ink-3);
+    font-size: var(--text-body);
+}
+
+.panel {
+    max-width: 560px;
+}
+
+.field {
+    display: block;
+    margin-top: 18px;
+}
+
+.field-label {
+    display: block;
+    font-size: var(--text-label);
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+}
+
+.hint {
+    margin: 8px 0 0;
+    color: var(--ink-3);
+    font-size: var(--text-small);
+
+    code {
+        font-family: var(--font);
+        font-size: var(--text-label);
+    }
+}
+
+textarea,
+input[type="text"] {
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: var(--text-body);
+    line-height: 1.5;
+}
+
+textarea {
+    resize: vertical;
+}
+
+.actions {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+}
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: var(--touch);
+    padding: 0 20px;
+    border: 1px solid var(--navy);
+    border-radius: var(--radius-pill);
+    background: var(--navy);
+    color: var(--surface);
+    font-family: var(--font);
+    font-size: var(--text-small);
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: var(--navy-deep);
+    }
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+}
+
+.problem {
+    margin: 12px 0 0;
+    color: var(--mat-sys-error);
+    font-size: var(--text-small);
+}

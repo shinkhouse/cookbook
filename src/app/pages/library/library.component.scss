@@ -611,6 +611,11 @@
 }
 
 .btn-ghost {
+    &:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+
     border: 1px solid var(--rule-strong);
     background: transparent;
     color: var(--ink-3);
@@ -664,4 +669,10 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+// Sits in the controls row beside Favorites, so it matches that pill's height.
+.surprise {
+    min-height: var(--touch);
+    padding: 0 18px;
 }

@@ -280,6 +280,16 @@ export class RecipeStore {
     });
   });
 
+  /**
+   * A random recipe from what the library is showing now. Components are left
+   * out: they are parts of other recipes, not something to cook on their own.
+   */
+  surprise(rand: () => number = Math.random): Recipe | null {
+    const pool = this.results().filter((r) => !r.component);
+    if (pool.length === 0) return null;
+    return pool[Math.floor(rand() * pool.length)];
+  }
+
   setQuery(query: string): void {
     this.query.set(query);
   }

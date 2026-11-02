@@ -71,6 +71,8 @@ export class LibraryComponent {
   private debounce?: ReturnType<typeof setTimeout>;
 
   protected readonly results = computed(() => this.recipes.results());
+  /** Components are not offered, so a set of only those has nothing to pick. */
+  protected readonly canSurprise = computed(() => this.results().some((r) => !r.component));
   /** The cookbook facet leads when there is more than one cookbook to choose. */
   protected readonly facets = computed(() => {
     const cookbook = cookbookFacet(this.cookbooks.cookbooks());
@@ -173,6 +175,12 @@ export class LibraryComponent {
   protected cook(recipe: Recipe, event: Event): void {
     event.stopPropagation();
     this.router.navigate(['/recipes', recipe.slug, 'cook']);
+  }
+
+  /** Opens a random recipe from the current filtered set. */
+  protected surprise(): void {
+    const pick = this.recipes.surprise();
+    if (pick) this.router.navigate(['/recipes', pick.slug]);
   }
 
   protected toggleList(recipe: Recipe, event: Event): void {

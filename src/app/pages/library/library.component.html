@@ -46,6 +46,11 @@
       <mat-icon [fontIcon]="recipes.favsOnly() ? 'star' : 'star_border'" aria-hidden="true" />
       Favorites
     </button>
+
+    <button type="button" class="btn-ghost surprise" [disabled]="!canSurprise()" (click)="surprise()">
+      <mat-icon fontIcon="casino" aria-hidden="true" />
+      Surprise me
+    </button>
   </div>
 
   <!-- Grouped multi-select facets. Picking two options in one menu widens the

@@ -1275,3 +1275,42 @@ describe('RecipeStore cookbook facet', () => {
     expect(store.results().map((r) => r.slug)).toEqual(['one']);
   });
 });
+
+describe('RecipeStore surprise', () => {
+  let store: RecipeStore;
+
+  const seed = [
+    fixture('first', { tags: ['soup'] }),
+    fixture('sauce', { component: true }),
+    fixture('last', { tags: ['pasta'] }),
+  ];
+
+  beforeEach(async () => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideFakeRecipes(new FakeRecipeRepository(seed))],
+    });
+    store = TestBed.inject(RecipeStore);
+    await store.whenLoaded();
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('picks from the filtered results', () => {
+    expect(store.surprise(() => 0.99)?.slug).toBe('last');
+    expect(store.surprise(() => 0)?.slug).toBe('first');
+    store.setQuery('soup');
+    expect(store.surprise(() => 0.99)?.slug).toBe('first');
+  });
+
+  it('never picks a component', () => {
+    for (const r of [0, 0.4, 0.5, 0.99]) {
+      expect(store.surprise(() => r)?.component).toBeFalsy();
+    }
+  });
+
+  it('returns null when nothing matches', () => {
+    store.setQuery('zzz-no-such-thing');
+    expect(store.surprise()).toBeNull();
+  });
+});

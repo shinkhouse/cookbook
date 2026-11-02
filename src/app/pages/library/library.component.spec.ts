@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
 import {
@@ -50,5 +50,33 @@ describe('LibraryComponent cookbook facet', () => {
       o.textContent?.trim(),
     );
     expect(labels).toEqual(["Sam's Cookbook", "Bob's Cookbook"]);
+  });
+});
+
+describe('LibraryComponent surprise me', () => {
+  afterEach(() => localStorage.clear());
+
+  const button = (el: HTMLElement) =>
+    [...el.querySelectorAll<HTMLButtonElement>('.controls button')].find((b) =>
+      b.textContent?.includes('Surprise me'),
+    )!;
+
+  it('disables Surprise me with no results', async () => {
+    const fixture = await render();
+    TestBed.inject(RecipeStore).setQuery('zzz-no-such-thing');
+    fixture.detectChanges();
+    expect(button(fixture.nativeElement).disabled).toBe(true);
+  });
+
+  it('navigates to the picked recipe', async () => {
+    const fixture = await render();
+    const store = TestBed.inject(RecipeStore);
+    const router = TestBed.inject(Router);
+    const navigate = spyOn(router, 'navigate').and.resolveTo(true);
+    spyOn(store, 'surprise').and.returnValue(store.recipes()[0]);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(button(el).disabled).toBe(false);
+    button(el).click();
+    expect(navigate).toHaveBeenCalledWith(['/recipes', store.recipes()[0].slug]);
   });
 });

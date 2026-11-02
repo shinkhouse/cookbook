@@ -934,6 +934,26 @@ describe('ListStore', () => {
     expect(list.totalItems()).toBe(0);
   });
 
+  it('treats malformed stored extras as empty', () => {
+    for (const bad of ['{"a":1}', '[{"id":1}]', '[null]', '"x"']) {
+      localStorage.setItem('cookbook.extras', bad);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
+      expect(TestBed.inject(ListStore).extras()).withContext(bad).toEqual([]);
+    }
+  });
+
+  it('still adds an item when crypto.randomUUID is unavailable', () => {
+    const original = crypto.randomUUID;
+    (crypto as { randomUUID?: unknown }).randomUUID = undefined;
+    try {
+      expect(list.addExtra('Paper towels')).toBe(true);
+    } finally {
+      crypto.randomUUID = original;
+    }
+    expect(list.extras()[0].id).toBeTruthy();
+  });
+
   it('scopes the bought key per recipe', () => {
     expect(boughtKey('a-recipe', 3)).toBe('a-recipe:3');
   });

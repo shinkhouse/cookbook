@@ -60,7 +60,7 @@ export class ListStore {
   );
 
   private readonly _extras = signal<readonly ExtraItem[]>(
-    this.storage.read<ExtraItem[]>(EXTRAS_KEY, []),
+    validExtras(this.storage.read<unknown>(EXTRAS_KEY, [])),
   );
 
   readonly extras = computed(() => this._extras());
@@ -214,7 +214,7 @@ export class ListStore {
     if (trimmed === '') return false;
     const lower = trimmed.toLowerCase();
     if (this._extras().some((e) => e.name.toLowerCase() === lower)) return false;
-    this.setExtras([...this._extras(), { id: crypto.randomUUID(), name: trimmed, bought: false }]);
+    this.setExtras([...this._extras(), { id: newId(), name: trimmed, bought: false }]);
     return true;
   }
 
@@ -256,4 +256,25 @@ export class ListStore {
  */
 export function boughtKey(slug: string, index: number): string {
   return `${slug}:${index}`;
+}
+
+/** A phone on a plain-HTTP LAN address has no `crypto.randomUUID`. */
+function newId(): string {
+  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Stored extras are untrusted: anything not shaped right becomes empty. */
+function validExtras(raw: unknown): ExtraItem[] {
+  if (!Array.isArray(raw)) return [];
+  const ok = raw.every(
+    (e) =>
+      e !== null &&
+      typeof e === 'object' &&
+      typeof e.id === 'string' &&
+      typeof e.name === 'string' &&
+      typeof e.bought === 'boolean',
+  );
+  return ok ? (raw as ExtraItem[]) : [];
 }

@@ -33,7 +33,7 @@ describe('ShoppingListComponent', () => {
     const fixture = TestBed.createComponent(ShoppingListComponent);
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
-    const input = el.querySelector<HTMLInputElement>('input[aria-label="Add an item"], #add-item')!;
+    const input = el.querySelector<HTMLInputElement>('#add-item')!;
     input.value = 'Paper towels';
     input.dispatchEvent(new Event('input'));
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));

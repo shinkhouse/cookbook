@@ -14,13 +14,15 @@ export interface Measure {
 }
 
 interface UnitInfo {
+  /** The table's spelling ('cup' for 'Cup'), the one to print. */
+  unit: string;
   dimension: Dimension;
   system: UnitSystem;
   /** ml or g per unit. */
   base: number;
 }
 
-const UNITS: Readonly<Record<string, UnitInfo>> = {
+const UNITS: Readonly<Record<string, Omit<UnitInfo, 'unit'>>> = {
   tsp: { dimension: 'volume', system: 'us', base: 4.92892 },
   tbsp: { dimension: 'volume', system: 'us', base: 14.7868 },
   cup: { dimension: 'volume', system: 'us', base: 236.588 },
@@ -39,7 +41,7 @@ const US_FRACTIONS = [0, 1 / 8, 1 / 4, 1 / 3, 3 / 8, 1 / 2, 5 / 8, 2 / 3, 3 / 4,
 
 export function measurable(unit: string): UnitInfo | null {
   const key = unit.toLowerCase();
-  return Object.prototype.hasOwnProperty.call(UNITS, key) ? { ...UNITS[key] } : null;
+  return Object.prototype.hasOwnProperty.call(UNITS, key) ? { ...UNITS[key], unit: key } : null;
 }
 
 export function bestUnit(baseAmount: number, dimension: Dimension, system: UnitSystem): Measure {
@@ -69,7 +71,8 @@ export function convertMeasure(m: Measure, system: UnitSystem): Measure {
 export function formatMeasure(m: Measure): string {
   const info = measurable(m.unit);
   const qty = info?.system === 'metric' ? trimDecimals(m.qty) : formatQty(m.qty);
-  return m.unit ? `${qty} ${m.unit}` : qty;
+  const unit = info?.unit ?? m.unit;
+  return unit ? `${qty} ${unit}` : qty;
 }
 
 function usMeasure(baseAmount: number, unit: string): Measure {

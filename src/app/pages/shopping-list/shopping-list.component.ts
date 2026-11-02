@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,7 +8,7 @@ import { RecipeStore } from '../../core/stores/recipe.store';
 
 @Component({
   selector: 'app-shopping-list',
-  imports: [RouterLink, MatIconModule, MatCheckboxModule],
+  imports: [NgTemplateOutlet, RouterLink, MatIconModule, MatCheckboxModule],
   templateUrl: './shopping-list.component.html',
   styleUrl: './shopping-list.component.scss',
 })

@@ -18,7 +18,7 @@ const recipeTitle =
     // A direct hit on a recipe URL resolves before the collection has arrived.
     await store.whenLoaded();
     const recipe = store.bySlug(slug);
-    if (!recipe) return "Sam's Recipes";
+    if (!recipe) return "My Cookbooks";
     return suffix ? `${recipe.title} — ${suffix}` : recipe.title;
   };
 
@@ -32,7 +32,7 @@ export const routes: Routes = [
   {
     path: '',
     loadComponent: () => import('./pages/library/library.component').then((m) => m.LibraryComponent),
-    title: "Sam's Recipes",
+    title: "My Cookbooks",
   },
   {
     // Must precede ':slug', or "new" is read as a slug.

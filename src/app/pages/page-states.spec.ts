@@ -161,7 +161,7 @@ describe('recipeTitle resolver', () => {
     const nav = harness.navigateByUrl('/recipes/grandmas-spaghetti');
     repo.resolve();
     await nav;
-    expect(TestBed.inject(Title).getTitle()).not.toBe("Sam's Recipes");
+    expect(TestBed.inject(Title).getTitle()).not.toBe("My Cookbooks");
     expect(TestBed.inject(Title).getTitle()).toContain('Spaghetti');
   });
 });

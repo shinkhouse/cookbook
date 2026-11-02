@@ -1020,7 +1020,7 @@ describe('CreateRecipeComponent import and sections', () => {
     page.setTab('url');
     fixture.detectChanges();
     const link = el().querySelector('a.bookmarklet') as HTMLAnchorElement;
-    expect(link.textContent?.trim()).toBe("Add to Sam's Recipes");
+    expect(link.textContent?.trim()).toBe("Add to My Cookbooks");
     expect(link.getAttribute('href')).toBe(BOOKMARKLET_HREF);
     expect(link.getAttribute('href')).toMatch(/^javascript:location\.href=/);
   });

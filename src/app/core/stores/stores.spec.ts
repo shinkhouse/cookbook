@@ -745,7 +745,7 @@ describe('CookbookStore', () => {
   });
 
   it('finds a cookbook by id', () => {
-    expect(cookbooks.byId(DEFAULT_COOKBOOK_ID)?.name).toBe("Sam's Cookbook");
+    expect(cookbooks.byId(DEFAULT_COOKBOOK_ID)?.name).toBe("My Cookbooks");
     expect(cookbooks.byId('nope')).toBeUndefined();
   });
 
@@ -757,7 +757,7 @@ describe('CookbookStore', () => {
   it('suffixes an id that is already taken, and keeps both', async () => {
     const id = await cookbooks.add({ id: DEFAULT_COOKBOOK_ID, name: 'A Clash' });
     expect(id).toBe(`${DEFAULT_COOKBOOK_ID}-2`);
-    expect(cookbooks.byId(DEFAULT_COOKBOOK_ID)?.name).toBe("Sam's Cookbook");
+    expect(cookbooks.byId(DEFAULT_COOKBOOK_ID)?.name).toBe("My Cookbooks");
     expect(cookbooks.byId(`${DEFAULT_COOKBOOK_ID}-2`)?.name).toBe('A Clash');
   });
 

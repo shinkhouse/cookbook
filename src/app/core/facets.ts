@@ -20,15 +20,34 @@ export interface Facet {
   /**
    * What the options mean. Tag facets match against a recipe's tags; the gap
    * facet matches against what a recipe is still missing, which is derived
-   * rather than stored and so cannot live in the tag list.
+   * rather than stored and so cannot live in the tag list. The cookbook facet
+   * matches the cookbook ids a recipe is filed in.
    */
-  kind: 'tag' | 'gap';
+  kind: 'tag' | 'gap' | 'cookbook';
   /** Tag names, or gap keys, depending on `kind`. */
   options: string[];
 }
 
 /** The id of the derived completeness facet. */
 export const GAP_FACET = 'gaps';
+
+/** The id of the cookbook facet. */
+export const COOKBOOK_FACET = 'cookbook';
+
+/**
+ * The cookbook facet, or null when there is nothing to choose between: with one
+ * cookbook every recipe is in it, so the control would only be noise. Options are
+ * the ids, in store order; the library resolves them to names for display.
+ */
+export function cookbookFacet(cookbooks: readonly { id: string; name: string }[]): Facet | null {
+  if (cookbooks.length < 2) return null;
+  return {
+    id: COOKBOOK_FACET,
+    label: 'Cookbook',
+    kind: 'cookbook',
+    options: cookbooks.map((c) => c.id),
+  };
+}
 
 /** Gap keys, in the order they are offered. */
 export const GAP_OPTIONS = ['method', 'steps', 'photo'] as const;

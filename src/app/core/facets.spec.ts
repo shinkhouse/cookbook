@@ -1,6 +1,8 @@
 import {
   GAP_FACET,
   GAP_OPTIONS,
+  COOKBOOK_FACET,
+  cookbookFacet,
   OTHER_FACET,
   buildFacets,
   facetOf,
@@ -150,5 +152,25 @@ describe('matchesSelection', () => {
       expect(r.tags).toContain('italian');
     }
     expect(italianDinners.length).toBeGreaterThan(0);
+  });
+});
+
+describe('cookbookFacet', () => {
+  it('returns null for one cookbook', () => {
+    expect(cookbookFacet([{ id: 'sam', name: "Sam's" }])).toBeNull();
+    expect(cookbookFacet([])).toBeNull();
+  });
+
+  it('offers one option per cookbook, labelled Cookbook', () => {
+    const facet = cookbookFacet([
+      { id: 'sam', name: "Sam's" },
+      { id: 'Bobs', name: "Bob's" },
+    ]);
+    expect(facet).toEqual({
+      id: COOKBOOK_FACET,
+      label: 'Cookbook',
+      kind: 'cookbook',
+      options: ['sam', 'Bobs'],
+    });
   });
 });

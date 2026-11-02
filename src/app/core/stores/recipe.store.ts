@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, WritableSignal, computed, inject, signal } from '@angular/core';
 import { Recipe } from '../model/recipes.model';
 import { Facet, buildFacets, matchesSelection } from '../facets';
 import { gapKeys, gapsOf } from '../recipe-health';
@@ -84,6 +84,8 @@ export class RecipeStore {
    * cannot be matched by the tag rules.
    */
   readonly selectedGaps = signal<ReadonlySet<string>>(new Set());
+  /** Selected cookbook ids. Compared as-is: ids are not lowercased like tags. */
+  readonly selectedCookbooks = signal<ReadonlySet<string>>(new Set());
 
   /**
    * Tag list derived from the data rather than hardcoded (§4.1), deduped and
@@ -98,7 +100,9 @@ export class RecipeStore {
   /** The filter controls, grouped and pruned to what the data actually has. */
   readonly facets = computed<Facet[]>(() => buildFacets(this.tags()));
 
-  readonly selectedCount = computed(() => this.selectedTags().size + this.selectedGaps().size);
+  readonly selectedCount = computed(
+    () => this.selectedTags().size + this.selectedGaps().size + this.selectedCookbooks().size,
+  );
 
   /** How many recipes carry each gap, for the counts beside the options. */
   readonly gapCounts = computed(() => {
@@ -258,12 +262,15 @@ export class RecipeStore {
     const selected = this.selectedTags();
     const favsOnly = this.favsOnly();
     const gaps = this.selectedGaps();
+    const cookbooks = this.selectedCookbooks();
 
     return this.visible().filter((r) => {
       if (!matchesSelection(r.tags, selected)) return false;
       if (favsOnly && !this.prefs.isFav(r.slug)) return false;
       // OR within the gap facet, matching how the tag facets behave.
       if (gaps.size > 0 && !gapKeys(r).some((k) => gaps.has(k))) return false;
+      // OR within the cookbook facet; a recipe filed nowhere matches no option.
+      if (cookbooks.size > 0 && !r.cookbooks.some((id) => cookbooks.has(id))) return false;
       if (!needle) return true;
       return (
         r.title.toLowerCase().includes(needle) ||
@@ -277,16 +284,32 @@ export class RecipeStore {
     this.query.set(query);
   }
 
-  /** True when the option is on, for either kind of facet. */
+  /** The selection set a facet's options live in. */
+  private selectionFor(facet: Facet): WritableSignal<ReadonlySet<string>> {
+    switch (facet.kind) {
+      case 'gap':
+        return this.selectedGaps;
+      case 'cookbook':
+        return this.selectedCookbooks;
+      default:
+        return this.selectedTags;
+    }
+  }
+
+  /** Tag and gap keys are case-blind; cookbook ids are used exactly as given. */
+  private static optionKey(facet: Facet, option: string): string {
+    return facet.kind === 'cookbook' ? option : option.toLowerCase();
+  }
+
+  /** True when the option is on, for any kind of facet. */
   isOptionSelected(facet: Facet, option: string): boolean {
-    const set = facet.kind === 'gap' ? this.selectedGaps() : this.selectedTags();
-    return set.has(option.toLowerCase());
+    return this.selectionFor(facet)().has(RecipeStore.optionKey(facet, option));
   }
 
   toggleOption(facet: Facet, option: string): void {
-    const target = facet.kind === 'gap' ? this.selectedGaps : this.selectedTags;
+    const target = this.selectionFor(facet);
     const next = new Set(target());
-    const key = option.toLowerCase();
+    const key = RecipeStore.optionKey(facet, option);
     if (!next.delete(key)) next.add(key);
     target.set(next);
   }
@@ -304,21 +327,25 @@ export class RecipeStore {
 
   /** Clears one facet's selections, leaving the others alone. */
   clearFacet(facet: Facet): void {
-    const target = facet.kind === 'gap' ? this.selectedGaps : this.selectedTags;
+    const target = this.selectionFor(facet);
     const next = new Set(target());
-    for (const option of facet.options) next.delete(option.toLowerCase());
+    for (const option of facet.options) next.delete(RecipeStore.optionKey(facet, option));
     target.set(next);
   }
 
   clearTags(): void {
     this.selectedTags.set(new Set());
     this.selectedGaps.set(new Set());
+    this.selectedCookbooks.set(new Set());
   }
 
   /** How many of a facet's options are currently on, for its button badge. */
   facetCount(facet: Facet): number {
-    const selected = facet.kind === 'gap' ? this.selectedGaps() : this.selectedTags();
-    return facet.options.reduce((n, o) => n + (selected.has(o.toLowerCase()) ? 1 : 0), 0);
+    const selected = this.selectionFor(facet)();
+    return facet.options.reduce(
+      (n, o) => n + (selected.has(RecipeStore.optionKey(facet, o)) ? 1 : 0),
+      0,
+    );
   }
 
   toggleFavsOnly(): void {
@@ -329,6 +356,7 @@ export class RecipeStore {
     this.query.set('');
     this.selectedTags.set(new Set());
     this.selectedGaps.set(new Set());
+    this.selectedCookbooks.set(new Set());
     this.favsOnly.set(false);
   }
 }

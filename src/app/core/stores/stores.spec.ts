@@ -1213,3 +1213,55 @@ describe('ListStore merging duplicates', () => {
   });
 });
 
+
+describe('RecipeStore cookbook facet', () => {
+  const facet = { id: 'cookbook', label: 'Cookbook', kind: 'cookbook' as const, options: ['a', 'b', 'Bobs'] };
+  let store: RecipeStore;
+
+  async function setup(recipes: Recipe[]) {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideFakeRecipes(new FakeRecipeRepository(recipes))],
+    });
+    store = TestBed.inject(RecipeStore);
+    await store.whenLoaded();
+  }
+
+  afterEach(() => localStorage.clear());
+
+  it('filters by cookbook, OR within the facet', async () => {
+    await setup([
+      fixture('one', { cookbooks: ['a'] }),
+      fixture('two', { cookbooks: ['a'] }),
+      fixture('three', { cookbooks: ['b'] }),
+    ]);
+    store.toggleOption(facet, 'a');
+    expect(store.results().length).toBe(2);
+    store.toggleOption(facet, 'b');
+    expect(store.results().length).toBe(3);
+    expect(store.facetCount(facet)).toBe(2);
+    expect(store.selectedCount()).toBe(2);
+    store.clearFacet(facet);
+    expect(store.selectedCookbooks().size).toBe(0);
+  });
+
+  it('ANDs the cookbook facet with tags', async () => {
+    await setup([
+      fixture('one', { cookbooks: ['a'], tags: ['dinner'] }),
+      fixture('two', { cookbooks: ['a'], tags: ['lunch'] }),
+      fixture('three', { cookbooks: ['b'], tags: ['dinner'] }),
+    ]);
+    store.toggleOption(facet, 'a');
+    store.toggleTag('dinner');
+    expect(store.results().map((r) => r.slug)).toEqual(['one']);
+    store.reset();
+    expect(store.selectedCookbooks().size).toBe(0);
+  });
+
+  it('does not lowercase cookbook ids', async () => {
+    await setup([fixture('one', { cookbooks: ['Bobs'] }), fixture('two', { cookbooks: ['a'] })]);
+    store.toggleOption(facet, 'Bobs');
+    expect(store.isOptionSelected(facet, 'Bobs')).toBe(true);
+    expect(store.results().map((r) => r.slug)).toEqual(['one']);
+  });
+});

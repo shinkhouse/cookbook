@@ -2,9 +2,10 @@ import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { Facet, GAP_FACET, GAP_LABELS, GapKey } from '../../core/facets';
+import { Facet, GAP_FACET, cookbookFacet, GAP_LABELS, GapKey } from '../../core/facets';
 import { gapLabel, gapsOf } from '../../core/recipe-health';
 import { Recipe } from '../../core/model/recipes.model';
+import { CookbookStore } from '../../core/stores/cookbook.store';
 import { ListStore } from '../../core/stores/list.store';
 import { PrefsStore } from '../../core/stores/prefs.store';
 import { RecipeStore, tagLabel } from '../../core/stores/recipe.store';
@@ -28,6 +29,7 @@ export class LibraryComponent {
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly recipes = inject(RecipeStore);
+  protected readonly cookbooks = inject(CookbookStore);
   protected readonly list = inject(ListStore);
   protected readonly prefs = inject(PrefsStore);
 
@@ -42,8 +44,9 @@ export class LibraryComponent {
   /** Placeholder cards shown while the collection is being fetched. */
   protected readonly skeletons = [0, 1, 2, 3, 4, 5];
 
-  /** Option labels differ by facet: tags are title-cased, gaps have names. */
+  /** Option labels differ by facet: tags are title-cased, gaps have names, cookbooks show their name. */
   protected optionLabel(facet: Facet, option: string): string {
+    if (facet.kind === 'cookbook') return this.cookbooks.byId(option)?.name ?? option;
     return facet.kind === 'gap' ? GAP_LABELS[option as GapKey] : tagLabel(option);
   }
 
@@ -68,7 +71,11 @@ export class LibraryComponent {
   private debounce?: ReturnType<typeof setTimeout>;
 
   protected readonly results = computed(() => this.recipes.results());
-  protected readonly facets = computed(() => this.recipes.facets());
+  /** The cookbook facet leads when there is more than one cookbook to choose. */
+  protected readonly facets = computed(() => {
+    const cookbook = cookbookFacet(this.cookbooks.cookbooks());
+    return cookbook ? [cookbook, ...this.recipes.facets()] : this.recipes.facets();
+  });
   protected readonly mostCooked = computed(() => this.recipes.mostCooked());
 
   /** Which facet menu is open, if any. Only one at a time. */

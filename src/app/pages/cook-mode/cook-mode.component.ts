@@ -300,12 +300,13 @@ export class CookModeComponent {
     this.cookedError.set('');
     try {
       await this.recipes.markCooked(this.slug());
-      void this.router.navigate(['/recipes', this.slug()]);
     } catch (err) {
       this.cookedError.set(describeDeviceError(err, this.device.lockoutMinutes()));
-    } finally {
       this.cookedSaving.set(false);
+      return;
     }
+    // Saving stays true through the navigation, so a second tap cannot count twice.
+    void this.router.navigate(['/recipes', this.slug()]);
   }
 
   protected skipCooked(): void {

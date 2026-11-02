@@ -847,6 +847,19 @@ describe('cook mode mark as cooked', () => {
     expect(navigate).toHaveBeenCalledWith(['/recipes', RECIPE.slug]);
   });
 
+  it('counts once when Mark as cooked is tapped twice', async () => {
+    await setup(true);
+    const spy = spyOn(fake, 'markCooked').and.callThrough();
+    button('Finished')!.click();
+    fixture.detectChanges();
+    const yes = button('Mark as cooked')!;
+    yes.click();
+    yes.click();
+    await settle();
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledTimes(1);
+  });
+
   it('Not this time leaves without writing', async () => {
     await setup(true);
     const spy = spyOn(fake, 'markCooked').and.callThrough();

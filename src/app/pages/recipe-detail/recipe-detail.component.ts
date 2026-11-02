@@ -137,6 +137,8 @@ export class RecipeDetailComponent {
       else this.cookedError.set('That recipe no longer exists.');
     } catch (err) {
       this.cookedError.set(describeDeviceError(err, this.device.lockoutMinutes()));
+      // A lost unlock must not leave the confirm armed for the next unlock.
+      if ((err as { status?: unknown } | null)?.status === 403) this.confirmingCooked.set(false);
     } finally {
       this.cookedSaving.set(false);
     }

@@ -201,31 +201,29 @@ export class RecipeStore {
    */
   async addNote(slug: string, note: string): Promise<boolean> {
     const text = note.trim();
-    if (!text || !this._recipes().some((r) => r.slug === slug)) return false;
-    let stored: Recipe | null;
-    try {
-      stored = await this.repo.addNote(slug, text);
-    } catch (err) {
-      const status = (err as { status?: unknown } | null)?.status;
-      if (status === 403) this.device.lock();
-      if (status === 429) this.device.recordLockout(err);
-      throw err;
-    }
-    if (!stored) return false;
-    this._recipes.update((list) => list.map((r) => (r.slug === stored.slug ? stored : r)));
-    return true;
+    if (!text) return false;
+    return this.deviceWrite(slug, () => this.repo.addNote(slug, text));
   }
 
   /**
-   * Counts a recipe as cooked, with `addNote`'s rules: the server's copy
-   * replaces ours, a 403 locks the device and is rethrown, a 429 records the
-   * wait and is rethrown. Returns false when the slug is unknown, here or there.
+   * Counts a recipe as cooked, by the same rules as `addNote`. Returns false
+   * when the slug is unknown, here or on the server.
    */
   async markCooked(slug: string): Promise<boolean> {
+    return this.deviceWrite(slug, () => this.repo.markCooked(slug));
+  }
+
+  /**
+   * The one path for the narrow writes a device makes: false (with no request)
+   * when the slug is unknown here, the server's copy replaces ours on success,
+   * a 403 locks the device and a 429 records the wait, both rethrown. False
+   * too when the server no longer has the recipe.
+   */
+  private async deviceWrite(slug: string, write: () => Promise<Recipe | null>): Promise<boolean> {
     if (!this._recipes().some((r) => r.slug === slug)) return false;
     let stored: Recipe | null;
     try {
-      stored = await this.repo.markCooked(slug);
+      stored = await write();
     } catch (err) {
       const status = (err as { status?: unknown } | null)?.status;
       if (status === 403) this.device.lock();

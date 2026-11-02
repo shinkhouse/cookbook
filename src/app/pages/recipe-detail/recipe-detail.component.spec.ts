@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -534,7 +535,21 @@ describe('RecipeDetailComponent mark as cooked', () => {
     fixture.detectChanges();
     expect(rail()).toContain(`Times cooked${before + 1}`);
     expect(rail()).toContain('Last cooked');
+    const stamp = TestBed.inject(RecipeStore).bySlug(SLUG)!.lastCooked!;
+    expect(rail()).toContain(new DatePipe('en-US').transform(stamp, 'mediumDate')!);
     expect(el().textContent).not.toContain('Cooked it today?');
+  });
+
+  it('counts once when Yes is tapped twice', async () => {
+    await setup(true);
+    const spy = spyOn(fake, 'markCooked').and.callThrough();
+    button('Mark as cooked')!.click();
+    fixture.detectChanges();
+    const yes = button('Yes')!;
+    yes.click();
+    yes.click();
+    await fixture.whenStable();
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it('Cancel closes the confirm without writing', async () => {
@@ -562,6 +577,8 @@ describe('RecipeDetailComponent mark as cooked', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(button('Mark as cooked')).toBeUndefined();
+    // Not left armed for a later re-unlock.
+    expect((fixture.componentInstance as unknown as { confirmingCooked(): boolean }).confirmingCooked()).toBeFalse();
     expect(el().querySelector('.cooked-error')?.textContent).toContain('Unlock it again from the footer.');
   });
 });

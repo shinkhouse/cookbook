@@ -233,6 +233,28 @@ textarea {
     }
 }
 
+.photo-row {
+    margin-top: 12px;
+}
+
+.bookmarklet {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 8px 14px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--navy);
+    font-size: var(--text-small);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: grab;
+}
+
+.url-fallback {
+    margin-top: 24px;
+}
+
 .import-row {
     align-items: center;
     margin-bottom: 20px;

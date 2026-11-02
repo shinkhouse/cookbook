@@ -4,7 +4,7 @@ import { FakeRecipeRepository, provideFakeRecipes } from '../../core/testing/fak
 import { ImportClient, ImportPreview } from '../../core/import-client';
 import { Recipe } from '../../core/model/recipes.model';
 import { RecipeStore } from '../../core/stores/recipe.store';
-import { CreateRecipeComponent } from './create-recipe.component';
+import { BOOKMARKLET_HREF, CreateRecipeComponent } from './create-recipe.component';
 
 const CONFLICT = 'A recipe with that name already exists. Change the title and try again.';
 
@@ -477,9 +477,10 @@ describe('CreateRecipeComponent import and sections', () => {
   let navigate: jasmine.Spy;
   let page: Full;
 
-  async function setup(slug?: string, seed: Recipe[] = []): Promise<void> {
+  async function setup(slug?: string, seed: Recipe[] = [], url?: string): Promise<void> {
     fake = new FakeRecipeRepository(seed);
     importer = fakeImport();
+    (importer.previewRecipe as jasmine.Spy).and.resolveTo(PREVIEW);
     TestBed.configureTestingModule({
       imports: [CreateRecipeComponent],
       providers: [
@@ -491,6 +492,7 @@ describe('CreateRecipeComponent import and sections', () => {
     navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     fixture = TestBed.createComponent(CreateRecipeComponent);
     if (slug !== undefined) fixture.componentRef.setInput('slug', slug);
+    if (url !== undefined) fixture.componentRef.setInput('url', url);
     page = fixture.componentInstance as unknown as Full;
     fixture.detectChanges();
     await TestBed.inject(RecipeStore).whenLoaded();
@@ -964,6 +966,52 @@ describe('CreateRecipeComponent import and sections', () => {
     page.onPaste('Toast\n\nIngredients\n1 slice bread\n\nSteps\nToast it.');
     expect(page.sections().map((x) => x.title)).toEqual(['Croutons', 'For the cream']);
     expect(page.draft().sourceUrl).toBeUndefined();
+  });
+
+  it('imports once from ?url= and clears it from the address', async () => {
+    await setup(undefined, [], 'https://example.com/soup');
+    expect(preview()).toHaveBeenCalledOnceWith('https://example.com/soup');
+    expect(page.tab()).toBe('manual');
+    expect(navigate).toHaveBeenCalledOnceWith([], {
+      queryParams: { url: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(preview()).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a non-http ?url=', async () => {
+    await setup(undefined, [], 'javascript:alert(1)');
+    expect(preview()).not.toHaveBeenCalled();
+    expect(page.tab()).toBe('paste');
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('ignores ?url= in edit mode', async () => {
+    await setup('old-soup', [], 'https://example.com/soup');
+    expect(preview()).not.toHaveBeenCalled();
+  });
+
+  it('renders a bookmarklet link that is not made unsafe', async () => {
+    await setup();
+    page.setTab('url');
+    fixture.detectChanges();
+    const link = el().querySelector('a.bookmarklet') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe("Add to Sam's Recipes");
+    expect(link.getAttribute('href')).toBe(BOOKMARKLET_HREF);
+    expect(link.getAttribute('href')).toMatch(/^javascript:location\.href=/);
+  });
+
+  it('clicking the bookmarklet in the app does nothing', async () => {
+    await setup();
+    page.setTab('url');
+    fixture.detectChanges();
+    const link = el().querySelector('a.bookmarklet') as HTMLAnchorElement;
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+    expect(click.defaultPrevented).toBeTrue();
   });
 
   it('sends no components when a recipe has no sections', async () => {

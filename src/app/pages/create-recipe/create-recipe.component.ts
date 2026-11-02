@@ -9,6 +9,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { AISLE_ORDER, Aisle } from '../../core/aisle';
@@ -21,6 +22,13 @@ import { RecipeStore } from '../../core/stores/recipe.store';
 import { describePhotoError, describeWriteError } from '../../core/write-error';
 
 type Tab = 'paste' | 'file' | 'url' | 'photo' | 'manual';
+
+/**
+ * The bookmarklet: opens the local app's create page with the current page's
+ * address as `?url=`. Local only, so it points at the dev server.
+ */
+export const BOOKMARKLET_HREF =
+  "javascript:location.href='http://localhost:4200/cookbook/recipes/new?url='+encodeURIComponent(location.href)";
 
 /** The badge above the preview, per §6.4. */
 type Status = 'waiting' | 'check' | 'clean';
@@ -79,8 +87,14 @@ export class CreateRecipeComponent {
   /** Bound from the route on `recipes/:slug/edit`; absent when adding. */
   readonly slug_ = input<string | undefined>(undefined, { alias: 'slug' });
 
+  /** An address to import on arrival, from the bookmarklet's `?url=`. */
+  readonly url = input<string | undefined>(undefined);
+
   protected readonly recipes = inject(RecipeStore);
   private readonly router = inject(Router);
+  /** Angular strips `javascript:` hrefs as unsafe; this one is a constant of ours. */
+  protected readonly bookmarklet = inject(DomSanitizer).bypassSecurityTrustUrl(BOOKMARKLET_HREF);
+  private handledUrl: string | undefined;
   private readonly importer = inject(ImportClient);
 
   protected readonly aisles = AISLE_ORDER;
@@ -200,6 +214,25 @@ export class CreateRecipeComponent {
       const slug = this.slug_();
       if (slug === undefined) return;
       untracked(() => void this.loadForEdit(slug));
+    });
+    effect(() => {
+      const url = this.url();
+      if (this.slug_() !== undefined || !url || url === this.handledUrl) return;
+      if (!/^https?:\/\//i.test(url)) return;
+      this.handledUrl = url;
+      untracked(() => void this.importFromAddress(url));
+    });
+  }
+
+  /** Imports an address handed over in `?url=`, then drops it so a reload doesn't repeat it. */
+  private async importFromAddress(url: string): Promise<void> {
+    this.tab.set('url');
+    this.importUrl.set(url);
+    await this.importFromUrl();
+    await this.router.navigate([], {
+      queryParams: { url: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
   }
 

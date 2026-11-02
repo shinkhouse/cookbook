@@ -103,7 +103,7 @@
               Handwritten cards work. The photo is read by Claude on the local
               recipe server; nothing is saved until you press Save.
             </p>
-            <div class="editor-row import-row">
+            <div class="editor-row import-row photo-row">
               <input
                 id="import-photo"
                 type="file"
@@ -143,6 +143,17 @@
                 {{ importing() ? 'Importing…' : 'Import' }}
               </button>
             </div>
+
+            <a
+              class="bookmarklet"
+              [href]="bookmarklet"
+              (click)="$event.preventDefault()"
+              >Add to Sam's Recipes</a
+            >
+            <p class="hint">
+              Drag this to your bookmarks bar. On any recipe page, click it to
+              import that page here.
+            </p>
 
             <label class="field-label url-fallback" for="url-area">Or paste the page source</label>
             <p class="hint">

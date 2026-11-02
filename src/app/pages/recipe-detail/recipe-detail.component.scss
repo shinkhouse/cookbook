@@ -587,6 +587,7 @@ h1 {
     .stepper button,
     .rail-note .link-button,
     .gap-note,
+    .note-form,
     .unit-toggle,
     .checked-count,
     .ingredient-list mat-checkbox ::ng-deep .mdc-checkbox {
@@ -607,9 +608,6 @@ h1 {
         max-width: none;
     }
 
-    .steps h2,
-    .steps .section-title,
-    .ingredients-card h2,
     .section-title {
         font-size: 1.25rem;
     }
@@ -626,15 +624,6 @@ h1 {
 
     .step-list li {
         gap: 12px;
-    }
-
-    .notes {
-        margin-top: 14px;
-        padding: 10px 14px;
-    }
-
-    .ingredient-list li {
-        padding: 1px 0;
     }
 
     .detail-body {
@@ -661,7 +650,17 @@ h1 {
 
     .ingredient-list li {
         min-height: 0;
+        padding: 1px 0;
         break-inside: avoid;
+    }
+
+    // A ticked ingredient is still an ingredient on paper.
+    .ingredient-list li.is-checked {
+        .ing-name,
+        .ing-amount {
+            color: inherit;
+            text-decoration: none;
+        }
     }
 
     .step-list li {
@@ -670,6 +669,8 @@ h1 {
     }
 
     .notes {
+        margin-top: 14px;
+        padding: 10px 14px;
         break-inside: avoid;
     }
 

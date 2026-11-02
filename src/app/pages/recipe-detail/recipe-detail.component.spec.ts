@@ -1,3 +1,4 @@
+import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RecipeStore } from '../../core/stores/recipe.store';
@@ -455,5 +456,15 @@ describe('RecipeDetailComponent notes', () => {
     expect(el().querySelector('.note-error')?.textContent).toContain('This recipe has too many notes.');
     expect(field()!.value).toBe('more cumin');
     expect(el().querySelector('.notes')?.textContent).not.toContain('more cumin');
+  });
+
+  it('uses the lockout minutes from the device store on a 429', async () => {
+    await setup(true);
+    type('x');
+    fake.failNext(new HttpErrorResponse({ status: 429, headers: new HttpHeaders({ 'Retry-After': '60' }) }));
+    addButton()!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el().querySelector('.note-error')?.textContent).toContain('Try again in 1 minute.');
   });
 });

@@ -98,6 +98,20 @@ describe('DeviceUnlockComponent', () => {
     expect(el(f).textContent).toContain('Too many tries. Wait 15 minutes and try again.');
   });
 
+  it('says "1 minute" for a one-minute lockout', async () => {
+    const f = render(false);
+    button(f, 'Unlock this device')!.click();
+    f.detectChanges();
+    await f.whenStable();
+    const input = el(f).querySelector('input') as HTMLInputElement;
+    input.value = 'x';
+    input.dispatchEvent(new Event('input'));
+    button(f, 'Unlock')!.click();
+    http.expectOne(endpoint).flush({}, { status: 429, statusText: 'x', headers: { 'Retry-After': '30' } });
+    await settle(f);
+    expect(el(f).textContent).toContain('Wait 1 minute and try again.');
+  });
+
   it('uses Retry-After minutes when the server sends them', async () => {
     const f = render(false);
     button(f, 'Unlock this device')!.click();

@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DeviceStore } from '../core/stores/device.store';
 import { RecipeStore } from '../core/stores/recipe.store';
+import { minutesText } from '../core/write-error';
 
 type Message = '' | 'wrong' | 'locked-out' | 'unreachable';
 
@@ -30,7 +31,7 @@ export class DeviceUnlockComponent {
       case 'wrong':
         return "That passcode didn't work.";
       case 'locked-out':
-        return `Too many tries. Wait ${this.device.lockoutMinutes()} minutes and try again.`;
+        return `Too many tries. Wait ${minutesText(this.device.lockoutMinutes())} and try again.`;
       case 'unreachable':
         return "Couldn't reach the recipe server.";
       default:

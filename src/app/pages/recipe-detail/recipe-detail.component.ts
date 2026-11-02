@@ -7,6 +7,7 @@ import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { gapSentence, gapsOf } from '../../core/recipe-health';
 import { scaleFactor, scaleLabel } from '../../core/scale';
+import { DeviceStore } from '../../core/stores/device.store';
 import { ListStore } from '../../core/stores/list.store';
 import { PrefsStore } from '../../core/stores/prefs.store';
 import { RecipeStore, tagLabel } from '../../core/stores/recipe.store';
@@ -69,6 +70,7 @@ export class RecipeDetailComponent {
 
   /** A quick note is one of the narrow writes: a writable build or an unlocked device. */
   protected readonly canSave = this.recipes.canSave;
+  private readonly device = inject(DeviceStore);
   protected noteText = '';
   protected readonly noteSaving = signal(false);
   protected readonly noteError = signal('');
@@ -119,7 +121,7 @@ export class RecipeDetailComponent {
       await this.recipes.addNote(this.slug(), this.noteText);
       this.noteText = '';
     } catch (err) {
-      this.noteError.set(describeDeviceError(err));
+      this.noteError.set(describeDeviceError(err, this.device.lockoutMinutes()));
     } finally {
       this.noteSaving.set(false);
     }

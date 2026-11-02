@@ -49,15 +49,20 @@ export function describePhotoError(err: unknown): string {
  * dev-only wording there (RECIPES_WRITE_KEY, localhost) means nothing on a phone,
  * so a 403 here is "unlock again" and a 429 is the lockout.
  */
-export function describeDeviceError(err: unknown): string {
+export function describeDeviceError(err: unknown, lockoutMinutes = 15): string {
   const { status, error } = (err ?? {}) as { status?: unknown; error?: { message?: unknown } };
   if (status === 403) return "This device isn't unlocked any more. Unlock it again from the footer.";
   if (status === 429) {
-    return `Too many wrong passcodes. Try again in 15 minutes.`;
+    return `Too many wrong passcodes. Try again in ${minutesText(lockoutMinutes)}.`;
   }
   if (status === 409 && typeof error?.message === 'string' && error.message) return error.message;
   if (status === 0 || status === 502 || status === 503 || status === 504) {
     return "Couldn't reach the recipe server.";
   }
   return 'Saving failed. Nothing was changed.';
+}
+
+/** "1 minute", "15 minutes". */
+export function minutesText(minutes: number): string {
+  return minutes === 1 ? '1 minute' : `${minutes} minutes`;
 }

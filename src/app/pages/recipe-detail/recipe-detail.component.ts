@@ -16,7 +16,6 @@ import { describeWriteError } from '../../core/write-error';
 interface DetailIngredient {
   index: number;
   name: string;
-  unit: string;
   amount: string;
   checked: boolean;
   group?: string;
@@ -174,7 +173,6 @@ export class RecipeDetailComponent {
     return list.map((ingredient, i) => ({
       index: offset + i,
       name: ingredient.name,
-      unit: ingredient.unit,
       group: ingredient.group,
       amount: amountText(ingredient.qty, ingredient.unit, factor, units),
       checked: checked.has(offset + i),

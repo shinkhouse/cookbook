@@ -472,14 +472,21 @@ describe('cook mode ingredients panel', () => {
 
   describe('layout', () => {
     const cols = () => getComputedStyle(el.querySelector('.cook-body')!).gridTemplateColumns.split(' ').map(parseFloat);
-    const settle = () => new Promise((r) => setTimeout(r, 450));
+    // With transitions off the layout lands on the next frame, so nothing waits on a timer.
+    const settle = () => new Promise((r) => requestAnimationFrame(() => r(undefined)));
+    let noMotion: HTMLStyleElement;
 
     beforeEach(() => {
       jasmine.clock().uninstall();
+      noMotion = document.createElement('style');
+      noMotion.textContent = '*, *::before, *::after { transition: none !important; }';
+      document.head.appendChild(noMotion);
       el.style.display = 'block';
       el.style.width = '1200px';
       refresh();
     });
+
+    afterEach(() => noMotion.remove());
 
     it('gives the ingredients column about 41% of the row, the step column the rest', () => {
       const [stage, side] = cols();

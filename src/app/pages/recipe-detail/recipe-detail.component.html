@@ -77,6 +77,13 @@
           <p class="label">Times cooked</p>
           <p class="rail-value">{{ r.cooked }}</p>
         </div>
+
+        @if (r.lastCooked) {
+          <div class="rail-item">
+            <p class="label">Last cooked</p>
+            <p class="rail-value">{{ r.lastCooked | date: 'mediumDate' }}</p>
+          </div>
+        }
       </div>
 
       @if (gapNote()) {
@@ -117,6 +124,13 @@
           {{ prefs.isFav(r.slug) ? 'Favorite' : 'Add to favorites' }}
         </button>
 
+        @if (canSave() && !confirmingCooked()) {
+          <button type="button" class="btn-ghost" (click)="askCooked()">
+            <mat-icon fontIcon="done_all" aria-hidden="true" />
+            Mark as cooked
+          </button>
+        }
+
         <button type="button" class="btn-ghost" (click)="print()">
           <mat-icon fontIcon="print" aria-hidden="true" />
           Print
@@ -131,6 +145,24 @@
             <mat-icon fontIcon="archive" aria-hidden="true" />
             Archive
           </button>
+        }
+
+        @if (canSave() && confirmingCooked()) {
+          <div class="archive-confirm cooked-confirm">
+            <p>Cooked it today?</p>
+            <div class="archive-buttons">
+              <button type="button" class="btn-ghost" [disabled]="cookedSaving()" (click)="cancelCooked()">
+                Cancel
+              </button>
+              <button type="button" class="btn-outline" [disabled]="cookedSaving()" (click)="markCooked()">
+                {{ cookedSaving() ? 'Saving…' : 'Yes' }}
+              </button>
+            </div>
+          </div>
+        }
+        <!-- Outside the confirm: a 403 locks the device, which removes the controls. -->
+        @if (cookedError()) {
+          <p class="cooked-error" role="alert">{{ cookedError() }}</p>
         }
 
         @if (confirmingArchive()) {

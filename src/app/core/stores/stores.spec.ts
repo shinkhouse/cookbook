@@ -510,6 +510,52 @@ describe('RecipeStore notes', () => {
   });
 });
 
+describe('RecipeStore markCooked', () => {
+  function setup(fake = new FakeRecipeRepository()): RecipeStore {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes(fake)] });
+    return TestBed.inject(RecipeStore);
+  }
+  const SLUG = Recipes[0].slug;
+
+  it('replaces the record with the server copy', async () => {
+    const store = setup();
+    await store.whenLoaded();
+    const before = store.bySlug(SLUG)!.cooked;
+    expect(await store.markCooked(SLUG)).toBeTrue();
+    expect(store.bySlug(SLUG)!.cooked).toBe(before + 1);
+    expect(store.bySlug(SLUG)!.lastCooked).toBeTruthy();
+  });
+
+  it('is false when the recipe is gone', async () => {
+    const store = setup();
+    await store.whenLoaded();
+    expect(await store.markCooked('nope')).toBeFalse();
+  });
+
+  it('locks the device on 403 and rethrows', async () => {
+    const fake = new FakeRecipeRepository();
+    const store = setup(fake);
+    await store.whenLoaded();
+    const lock = spyOn(TestBed.inject(DeviceStore), 'lock');
+    const error = { status: 403 };
+    fake.failNext(error);
+    await expectAsync(store.markCooked(SLUG)).toBeRejectedWith(error);
+    expect(lock).toHaveBeenCalled();
+  });
+
+  it('records the lockout wait on 429 and rethrows', async () => {
+    const fake = new FakeRecipeRepository();
+    const store = setup(fake);
+    await store.whenLoaded();
+    const record = spyOn(TestBed.inject(DeviceStore), 'recordLockout');
+    const error = { status: 429 };
+    fake.failNext(error);
+    await expectAsync(store.markCooked(SLUG)).toBeRejectedWith(error);
+    expect(record).toHaveBeenCalledWith(error);
+  });
+});
+
 describe('RecipeStore cookbook membership', () => {
   let store: RecipeStore;
   let fake: FakeRecipeRepository;

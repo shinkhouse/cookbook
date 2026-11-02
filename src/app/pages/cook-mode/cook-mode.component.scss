@@ -715,3 +715,25 @@
         font-size: 1.0625rem;
     }
 }
+
+// Finished on a device that can save: the question takes the nav's place.
+.cooked-confirm {
+    margin-top: 30px;
+
+    .stage-nav {
+        margin-top: 14px;
+    }
+}
+
+.cooked-title {
+    margin: 0;
+    font-size: var(--text-body);
+    font-weight: 600;
+    color: var(--cook-text);
+}
+
+.cooked-error {
+    margin: 10px 0 0;
+    color: var(--cook-ember); // --mat-sys-error is too dark on this navy
+    font-size: var(--text-small);
+}

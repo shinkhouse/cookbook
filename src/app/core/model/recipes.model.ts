@@ -32,6 +32,8 @@ export interface Recipe {
   servings: number;
   /** Times-cooked counter, shown on the card and the detail rail. */
   cooked: number;
+  /** ISO timestamp of the last time it was cooked, stamped by the server. */
+  lastCooked?: string;
   /** Short card copy. */
   blurb: string;
   /** Longer detail-page copy. */

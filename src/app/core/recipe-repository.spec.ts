@@ -213,4 +213,30 @@ describe('HttpRecipeRepository', () => {
       expect(await result).toBeNull();
     });
   });
+
+  describe('markCooked', () => {
+    it('posts an empty body with the device header', async () => {
+      localStorage.setItem('cookbook.deviceKey', JSON.stringify('sesame'));
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [provideHttpClient(), provideHttpClientTesting(), provideHttpRecipes()],
+      });
+      const r = TestBed.inject(RecipeRepository);
+      const mock = TestBed.inject(HttpTestingController);
+      const result = r.markCooked('a b');
+      const req = mock.expectOne({ method: 'POST', url: `${URL}/a%20b/cooked` });
+      expect(req.request.body).toEqual({});
+      expect(req.request.headers.get('x-device-key')).toBe('sesame');
+      req.flush({ ...draft('a b'), cooked: 3, lastCooked: '2026-11-02T10:00:00.000Z' });
+      expect((await result)?.cooked).toBe(3);
+      mock.verify();
+      localStorage.removeItem('cookbook.deviceKey');
+    });
+
+    it('gives null on a 404', async () => {
+      const result = repo.markCooked('gone');
+      httpMock.expectOne(`${URL}/gone/cooked`).flush({}, { status: 404, statusText: 'Not Found' });
+      expect(await result).toBeNull();
+    });
+  });
 });

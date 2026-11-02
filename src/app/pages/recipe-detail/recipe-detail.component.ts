@@ -1,4 +1,4 @@
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -37,7 +37,7 @@ function groupRows(rows: DetailIngredient[]): { name: string | null; items: Deta
 
 @Component({
   selector: 'app-recipe-detail',
-  imports: [RouterLink, FormsModule, MatIconModule, MatCheckboxModule],
+  imports: [RouterLink, FormsModule, MatIconModule, MatCheckboxModule, DatePipe],
   templateUrl: './recipe-detail.component.html',
   styleUrl: './recipe-detail.component.scss',
 })
@@ -75,6 +75,10 @@ export class RecipeDetailComponent {
   protected readonly noteSaving = signal(false);
   protected readonly noteError = signal('');
 
+  protected readonly confirmingCooked = signal(false);
+  protected readonly cookedSaving = signal(false);
+  protected readonly cookedError = signal('');
+
   protected readonly confirmingArchive = signal(false);
   protected readonly archiving = signal(false);
   protected readonly archiveError = signal('');
@@ -110,6 +114,31 @@ export class RecipeDetailComponent {
       this.archiveError.set(describeWriteError(err));
     } finally {
       this.archiving.set(false);
+    }
+  }
+
+  protected askCooked(): void {
+    this.cookedError.set('');
+    this.confirmingCooked.set(true);
+  }
+
+  protected cancelCooked(): void {
+    this.confirmingCooked.set(false);
+    this.cookedError.set('');
+  }
+
+  /** Confirms rather than undoes: the server has no decrement. */
+  protected async markCooked(): Promise<void> {
+    if (this.cookedSaving()) return;
+    this.cookedSaving.set(true);
+    this.cookedError.set('');
+    try {
+      if (await this.recipes.markCooked(this.slug())) this.confirmingCooked.set(false);
+      else this.cookedError.set('That recipe no longer exists.');
+    } catch (err) {
+      this.cookedError.set(describeDeviceError(err, this.device.lockoutMinutes()));
+    } finally {
+      this.cookedSaving.set(false);
     }
   }
 

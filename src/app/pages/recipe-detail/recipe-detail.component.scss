@@ -298,6 +298,13 @@ h1 {
     }
 }
 
+.cooked-error {
+    flex: 1 0 100%;
+    margin: 0;
+    color: var(--mat-sys-error);
+    font-size: var(--text-small);
+}
+
 .archive-buttons {
     display: flex;
     flex-wrap: wrap;
@@ -589,6 +596,7 @@ h1 {
     .gap-note,
     .note-form,
     .note-error,
+    .cooked-error,
     .unit-toggle,
     .checked-count,
     .ingredient-list mat-checkbox ::ng-deep .mdc-checkbox {

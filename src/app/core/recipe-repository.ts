@@ -38,6 +38,12 @@ export abstract class RecipeRepository {
    */
   abstract addNote(slug: string, note: string): Promise<Recipe | null>;
 
+  /**
+   * Counts one more time cooked and resolves to the updated recipe; the server
+   * stamps `lastCooked`. Null when the slug is unknown (404).
+   */
+  abstract markCooked(slug: string): Promise<Recipe | null>;
+
   /** True when this build is allowed to write; screens hide editing otherwise. */
   abstract readonly writable: boolean;
 }
@@ -89,6 +95,21 @@ export class HttpRecipeRepository extends RecipeRepository {
         this.http.post<Recipe>(
           `${this.url}/${encodeURIComponent(slug)}/notes`,
           { note },
+          { headers: this.device.headers() },
+        ),
+      );
+    } catch (error) {
+      if (isNotFound(error)) return null;
+      throw error;
+    }
+  }
+
+  override async markCooked(slug: string): Promise<Recipe | null> {
+    try {
+      return await firstValueFrom(
+        this.http.post<Recipe>(
+          `${this.url}/${encodeURIComponent(slug)}/cooked`,
+          {},
           { headers: this.device.headers() },
         ),
       );

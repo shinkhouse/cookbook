@@ -494,3 +494,74 @@ describe('RecipeDetailComponent notes', () => {
     expect(el().querySelector('.note-error')?.textContent).toContain('Try again in 1 minute.');
   });
 });
+
+describe('RecipeDetailComponent mark as cooked', () => {
+  afterEach(() => localStorage.removeItem('cookbook.deviceKey'));
+
+  let fake: FakeRecipeRepository;
+  let fixture: ComponentFixture<RecipeDetailComponent>;
+  const SLUG = Recipes[0].slug;
+
+  async function setup(unlocked: boolean): Promise<void> {
+    if (unlocked) localStorage.setItem('cookbook.deviceKey', JSON.stringify('sesame'));
+    else localStorage.removeItem('cookbook.deviceKey');
+    fake = new FakeRecipeRepository();
+    fake.writable = false;
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake)],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+  }
+
+  const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+  const button = (label: string): HTMLButtonElement | undefined =>
+    Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.trim() === label);
+  const rail = (): string => (el().querySelector('.rail')?.textContent ?? '').replace(/\s+/g, ' ');
+
+  it('marks cooked after Yes and shows the new count and date', async () => {
+    await setup(true);
+    const before = Recipes[0].cooked;
+    expect(rail()).not.toContain('Last cooked');
+    button('Mark as cooked')!.click();
+    fixture.detectChanges();
+    expect(el().textContent).toContain('Cooked it today?');
+    button('Yes')!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(rail()).toContain(`Times cooked${before + 1}`);
+    expect(rail()).toContain('Last cooked');
+    expect(el().textContent).not.toContain('Cooked it today?');
+  });
+
+  it('Cancel closes the confirm without writing', async () => {
+    await setup(true);
+    const spy = spyOn(fake, 'markCooked').and.callThrough();
+    button('Mark as cooked')!.click();
+    fixture.detectChanges();
+    button('Cancel')!.click();
+    fixture.detectChanges();
+    expect(spy).not.toHaveBeenCalled();
+    expect(el().textContent).not.toContain('Cooked it today?');
+  });
+
+  it('hides Mark as cooked when the device cannot save', async () => {
+    await setup(false);
+    expect(button('Mark as cooked')).toBeUndefined();
+  });
+
+  it('explains a lost unlock after the controls hide on a 403', async () => {
+    await setup(true);
+    button('Mark as cooked')!.click();
+    fixture.detectChanges();
+    fake.failNext({ status: 403 });
+    button('Yes')!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(button('Mark as cooked')).toBeUndefined();
+    expect(el().querySelector('.cooked-error')?.textContent).toContain('Unlock it again from the footer.');
+  });
+});

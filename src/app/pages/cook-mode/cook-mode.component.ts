@@ -20,6 +20,8 @@ import { Router, RouterLink } from '@angular/router';
 import { stripDescriptors, ingredientHead } from '../../core/ingredient-key';
 import { Ingredient, Recipe } from '../../core/model/recipes.model';
 import { ingredientsInStep } from '../../core/step-ingredients';
+import { DeviceStore } from '../../core/stores/device.store';
+import { describeDeviceError } from '../../core/write-error';
 import { PrefsStore } from '../../core/stores/prefs.store';
 import { UnitSystem, amountText } from '../../core/units';
 import { RecipeStore } from '../../core/stores/recipe.store';
@@ -61,6 +63,13 @@ export class CookModeComponent {
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly prefs = inject(PrefsStore);
+  private readonly device = inject(DeviceStore);
+
+  /** Finished on a device that can save asks whether to count the cook. */
+  protected readonly recipesCanSave = this.recipes.canSave;
+  protected readonly confirmingCooked = signal(false);
+  protected readonly cookedSaving = signal(false);
+  protected readonly cookedError = signal('');
   private readonly exitLink = viewChild<ElementRef<HTMLElement>>('exitLink');
 
   protected readonly recipe = computed(() => this.recipes.bySlug(this.slug()));
@@ -273,11 +282,34 @@ export class CookModeComponent {
 
   protected next(): void {
     if (this.isLastStep()) {
-      // The last step's button reads "Finished" and returns to the recipe.
-      this.router.navigate(['/recipes', this.slug()]);
+      // The last step's button reads "Finished": ask first when a cook can be saved.
+      if (this.recipes.canSave()) this.confirmingCooked.set(true);
+      else void this.router.navigate(['/recipes', this.slug()]);
       return;
     }
     this.stepIndex.update((i) => i + 1);
+  }
+
+  /**
+   * Counts the cook, then returns to the recipe. A failure stays on the panel
+   * with the reason, and "Leave anyway" takes over from the retry.
+   */
+  protected async confirmCooked(): Promise<void> {
+    if (this.cookedSaving()) return;
+    this.cookedSaving.set(true);
+    this.cookedError.set('');
+    try {
+      await this.recipes.markCooked(this.slug());
+      void this.router.navigate(['/recipes', this.slug()]);
+    } catch (err) {
+      this.cookedError.set(describeDeviceError(err, this.device.lockoutMinutes()));
+    } finally {
+      this.cookedSaving.set(false);
+    }
+  }
+
+  protected skipCooked(): void {
+    void this.router.navigate(['/recipes', this.slug()]);
   }
 
   protected back(): void {

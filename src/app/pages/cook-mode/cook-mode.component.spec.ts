@@ -1,5 +1,5 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { Recipe } from '../../core/model/recipes.model';
 import { PrefsStore } from '../../core/stores/prefs.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
@@ -792,5 +792,91 @@ describe('cook mode wake lock', () => {
     await Promise.resolve();
     fixture.destroy();
     expect(sentinel.release).toHaveBeenCalled();
+  });
+});
+
+describe('cook mode mark as cooked', () => {
+  afterEach(() => localStorage.removeItem('cookbook.deviceKey'));
+
+  let fake: FakeRecipeRepository;
+  let fixture: ComponentFixture<CookModeComponent>;
+  let navigate: jasmine.Spy;
+
+  async function setup(unlocked: boolean): Promise<void> {
+    if (unlocked) localStorage.setItem('cookbook.deviceKey', JSON.stringify('sesame'));
+    else localStorage.removeItem('cookbook.deviceKey');
+    fake = new FakeRecipeRepository([{ ...RECIPE, steps: ['Only step.'] }]);
+    fake.writable = false;
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        ...provideFakeRecipes(fake),
+        ...provideFakeCookbooks(new FakeCookbookRepository([])),
+      ],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fixture = TestBed.createComponent(CookModeComponent);
+    fixture.componentRef.setInput('slug', RECIPE.slug);
+    fixture.detectChanges();
+  }
+
+  const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+  const button = (label: string): HTMLButtonElement | undefined =>
+    Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.trim() === label);
+  const settle = async (): Promise<void> => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
+
+  it('asks before marking when Finished is pressed on an unlocked device', async () => {
+    await setup(true);
+    button('Finished')!.click();
+    fixture.detectChanges();
+    expect(el().textContent).toContain('Mark as cooked?');
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('marks cooked and returns to the recipe', async () => {
+    await setup(true);
+    button('Finished')!.click();
+    fixture.detectChanges();
+    button('Mark as cooked')!.click();
+    await settle();
+    expect(TestBed.inject(RecipeStore).bySlug(RECIPE.slug)!.cooked).toBe(RECIPE.cooked + 1);
+    expect(navigate).toHaveBeenCalledWith(['/recipes', RECIPE.slug]);
+  });
+
+  it('Not this time leaves without writing', async () => {
+    await setup(true);
+    const spy = spyOn(fake, 'markCooked').and.callThrough();
+    button('Finished')!.click();
+    fixture.detectChanges();
+    button('Not this time')!.click();
+    await settle();
+    expect(spy).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(['/recipes', RECIPE.slug]);
+  });
+
+  it('Finished leaves straight away when the device cannot save', async () => {
+    await setup(false);
+    button('Finished')!.click();
+    fixture.detectChanges();
+    expect(el().textContent).not.toContain('Mark as cooked?');
+    expect(navigate).toHaveBeenCalledWith(['/recipes', RECIPE.slug]);
+  });
+
+  it('stays on the confirm with the reason when the write fails', async () => {
+    await setup(true);
+    button('Finished')!.click();
+    fixture.detectChanges();
+    fake.failNext({ status: 403 });
+    button('Mark as cooked')!.click();
+    await settle();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(el().querySelector('.cooked-error')?.textContent).toContain('Unlock it again from the footer.');
+    button('Leave anyway')!.click();
+    await settle();
+    expect(navigate).toHaveBeenCalledWith(['/recipes', RECIPE.slug]);
   });
 });

@@ -113,6 +113,26 @@
             }
           }
 
+          @if (confirmingCooked()) {
+            <div class="cooked-confirm" role="group" aria-labelledby="cooked-title">
+              <p id="cooked-title" class="cooked-title">Mark as cooked?</p>
+              @if (cookedError()) {
+                <p class="cooked-error" role="alert">{{ cookedError() }}</p>
+              }
+              <div class="stage-nav">
+                @if (cookedError() && !recipesCanSave()) {
+                  <button type="button" class="btn-accent" (click)="skipCooked()">Leave anyway</button>
+                } @else {
+                  <button type="button" class="btn-accent" [disabled]="cookedSaving()" (click)="confirmCooked()">
+                    {{ cookedSaving() ? 'Saving…' : 'Mark as cooked' }}
+                  </button>
+                  <button type="button" class="btn-outline-dark" [disabled]="cookedSaving()" (click)="skipCooked()">
+                    {{ cookedError() ? 'Leave anyway' : 'Not this time' }}
+                  </button>
+                }
+              </div>
+            </div>
+          } @else {
           <div class="stage-nav">
             <button
               type="button"
@@ -130,6 +150,7 @@
               }
             </button>
           </div>
+          }
         </section>
 
         <aside class="sidebar" [class.is-closed]="!ingredientsOpen()">

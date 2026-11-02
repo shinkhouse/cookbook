@@ -124,6 +124,18 @@ export class FakeRecipeRepository extends RecipeRepository {
     return { ...this.items[i] };
   }
 
+  override async markCooked(slug: string): Promise<Recipe | null> {
+    this.maybeFail();
+    const i = this.items.findIndex((r) => r.slug === slug);
+    if (i < 0) return null;
+    this.items[i] = {
+      ...this.items[i],
+      cooked: this.items[i].cooked + 1,
+      lastCooked: new Date().toISOString(),
+    };
+    return { ...this.items[i] };
+  }
+
   override async remove(slug: string): Promise<boolean> {
     this.maybeFail();
     const before = this.items.length;

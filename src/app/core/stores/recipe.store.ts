@@ -217,6 +217,27 @@ export class RecipeStore {
   }
 
   /**
+   * Counts a recipe as cooked, with `addNote`'s rules: the server's copy
+   * replaces ours, a 403 locks the device and is rethrown, a 429 records the
+   * wait and is rethrown. Returns false when the slug is unknown, here or there.
+   */
+  async markCooked(slug: string): Promise<boolean> {
+    if (!this._recipes().some((r) => r.slug === slug)) return false;
+    let stored: Recipe | null;
+    try {
+      stored = await this.repo.markCooked(slug);
+    } catch (err) {
+      const status = (err as { status?: unknown } | null)?.status;
+      if (status === 403) this.device.lock();
+      if (status === 429) this.device.recordLockout(err);
+      throw err;
+    }
+    if (!stored) return false;
+    this._recipes.update((list) => list.map((r) => (r.slug === stored.slug ? stored : r)));
+    return true;
+  }
+
+  /**
    * Soft-deletes a recipe: sets `archived` and sends the whole record, so it
    * disappears from every screen but stays stored. Favorites and list entries
    * are kept; they just stop resolving while it is archived.

@@ -6,6 +6,9 @@ function source(owner: string, index: number, ingredient: Ingredient, recipeTitl
 }
 
 describe('sumAmounts', () => {
+  it('merges a plural unit with its singular', () =>
+    expect(sumAmounts([{ qty: 1, unit: 'cups' }, { qty: 1, unit: 'cup' }])).toBe('2 cups'));
+
   it('never prints a non-canonical unit case', () => {
     expect(sumAmounts([{ qty: 1, unit: 'Cup' }])).toBe('1 cup');
     expect(sumAmounts([{ qty: 1, unit: 'Cup' }, { qty: 1, unit: 'cup' }])).toBe('2 cups');

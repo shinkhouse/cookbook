@@ -616,14 +616,14 @@
 }
 
 .btn-ghost {
+    border: 1px solid var(--rule-strong);
+    background: transparent;
+    color: var(--ink-3);
+
     &:disabled {
         opacity: 0.5;
         cursor: default;
     }
-
-    border: 1px solid var(--rule-strong);
-    background: transparent;
-    color: var(--ink-3);
 
     &:hover {
         border-color: var(--ink-4);

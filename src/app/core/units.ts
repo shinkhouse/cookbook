@@ -37,10 +37,44 @@ const UNITS: Readonly<Record<string, Omit<UnitInfo, 'unit'>>> = {
   kg: { dimension: 'weight', system: 'metric', base: 1000 },
 };
 
+/**
+ * Plural and spelled-out names for the table's units, so a stored "cups" or
+ * "tablespoons" converts and merges like "cup" and "tbsp". Whole names only:
+ * a qualified unit ("heaping tablespoons") still does not match.
+ */
+const ALIASES: Readonly<Record<string, string>> = {
+  cups: 'cup',
+  tablespoon: 'tbsp',
+  tablespoons: 'tbsp',
+  tbsps: 'tbsp',
+  teaspoon: 'tsp',
+  teaspoons: 'tsp',
+  tsps: 'tsp',
+  ounce: 'oz',
+  ounces: 'oz',
+  pound: 'lb',
+  pounds: 'lb',
+  lbs: 'lb',
+  gram: 'g',
+  grams: 'g',
+  kilogram: 'kg',
+  kilograms: 'kg',
+  milliliter: 'ml',
+  milliliters: 'ml',
+  millilitre: 'ml',
+  millilitres: 'ml',
+  liter: 'l',
+  liters: 'l',
+  litre: 'l',
+  litres: 'l',
+};
+
 const US_FRACTIONS = [0, 1 / 8, 1 / 4, 1 / 3, 3 / 8, 1 / 2, 5 / 8, 2 / 3, 3 / 4, 7 / 8, 1];
 
+/** The unit's table entry, if it has one. `unit` in the result is the canonical key. */
 export function measurable(unit: string): UnitInfo | null {
-  const key = unit.toLowerCase();
+  const lower = unit.toLowerCase();
+  const key = Object.prototype.hasOwnProperty.call(ALIASES, lower) ? ALIASES[lower] : lower;
   return Object.prototype.hasOwnProperty.call(UNITS, key) ? { ...UNITS[key], unit: key } : null;
 }
 

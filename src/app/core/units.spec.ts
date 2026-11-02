@@ -1,6 +1,37 @@
 import { bestUnit, convertMeasure, formatMeasure, measurable } from './units';
 
 describe('measurable', () => {
+  it('maps plural and long spellings to the canonical unit', () => {
+    const aliases: Record<string, string[]> = {
+      cup: ['cups'],
+      tbsp: ['tablespoon', 'tablespoons', 'tbsps'],
+      tsp: ['teaspoon', 'teaspoons', 'tsps'],
+      oz: ['ounce', 'ounces'],
+      lb: ['pound', 'pounds', 'lbs'],
+      g: ['gram', 'grams'],
+      kg: ['kilogram', 'kilograms'],
+      ml: ['milliliter', 'milliliters', 'millilitre', 'millilitres'],
+      l: ['liter', 'liters', 'litre', 'litres'],
+    };
+    for (const [canonical, spellings] of Object.entries(aliases)) {
+      for (const spelling of spellings) {
+        expect(measurable(spelling)).withContext(spelling).toEqual(measurable(canonical));
+        expect(measurable(spelling.toUpperCase())?.unit).withContext(spelling).toBe(canonical);
+      }
+    }
+  });
+
+  it('does not alias a qualified unit', () => {
+    expect(measurable('heaping tbsp')).toBeNull();
+    expect(measurable('heaping tablespoons')).toBeNull();
+    expect(measurable('large cups')).toBeNull();
+  });
+
+  it('converts and formats an aliased unit', () => {
+    expect(convertMeasure({ qty: 2, unit: 'tablespoons' }, 'metric')).toEqual({ qty: 30, unit: 'ml' });
+    expect(formatMeasure({ qty: 2, unit: 'Pounds' })).toBe('2 lb');
+  });
+
   it('looks units up case-insensitively', () => {
     expect(measurable('Cup')).toEqual(measurable('cup'));
     expect(measurable('Cup')?.unit).toBe('cup');

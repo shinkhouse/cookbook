@@ -183,6 +183,22 @@ describe('CreateRecipeComponent', () => {
     );
   });
 
+  it('shows each row\'s own aisle in its select, not the first option', async () => {
+    await setup();
+    page.ingredients.set([
+      { qty: 1, unit: '', name: 'leek', aisle: 'produce' },
+      { qty: 2, unit: '', name: 'peaches', aisle: 'pantry' },
+    ]);
+    const el = fixture.nativeElement as HTMLElement;
+    const manual = [...el.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Manual')!;
+    manual.click();
+    fixture.detectChanges();
+    const values = [...el.querySelectorAll<HTMLSelectElement>('select[aria-label="Aisle"]')].map(
+      (s) => s.value,
+    );
+    expect(values).toEqual(['produce', 'pantry']);
+  });
+
   describe('while the collection is not ready', () => {
     const text = (): string => fixture.nativeElement.textContent as string;
     const tryAgain = (): HTMLButtonElement | undefined =>

@@ -219,13 +219,16 @@
                       placeholder="2 tbsp olive oil"
                     />
                     <!-- §6.4 — the aisle is inferred, with a manual override. -->
+                    <!--
+                      Selected per option: a [value] on the select lands before its
+                      options exist, so the box showed the first aisle instead.
+                    -->
                     <select
-                      [value]="ing.aisle"
                       (change)="setAisle($index, $any($event.target).value, owner)"
                       aria-label="Aisle"
                     >
                       @for (aisle of aisles; track aisle) {
-                        <option [value]="aisle">{{ aisle }}</option>
+                        <option [value]="aisle" [selected]="aisle === ing.aisle">{{ aisle }}</option>
                       }
                     </select>
                     <button

@@ -1,12 +1,13 @@
 import { DOCUMENT, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Component, computed, inject, input, signal } from '@angular/core';
-import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { gapSentence, gapsOf } from '../../core/recipe-health';
 import { scaleFactor, scaleLabel } from '../../core/scale';
+import { CookbookStore } from '../../core/stores/cookbook.store';
 import { DeviceStore } from '../../core/stores/device.store';
 import { ListStore } from '../../core/stores/list.store';
 import { PrefsStore } from '../../core/stores/prefs.store';
@@ -74,6 +75,36 @@ export class RecipeDetailComponent {
   protected noteText = '';
   protected readonly noteSaving = signal(false);
   protected readonly noteError = signal('');
+
+  protected readonly cookbooks = inject(CookbookStore);
+  /** The id of the cookbook whose checkbox is mid-write; one at a time. */
+  protected readonly cookbookSaving = signal<string | null>(null);
+  protected readonly cookbookError = signal('');
+  private readonly cookbookRevision = signal(0);
+  protected readonly cookbookRows = computed(() =>
+    this.cookbooks.cookbooks().map((book) => ({ book, key: `${book.id}/${this.cookbookRevision()}` })),
+  );
+
+  /**
+   * Files the recipe into or out of a cookbook. The checkbox flips itself on
+   * click, so a failure sets it back to what is stored.
+   */
+  protected async toggleCookbook(id: string, change: MatCheckboxChange): Promise<void> {
+    const slug = this.slug();
+    const on = change.checked;
+    this.cookbookSaving.set(id);
+    this.cookbookError.set('');
+    try {
+      if (on) await this.recipes.addToCookbook(slug, id);
+      else await this.recipes.removeFromCookbook(slug, id);
+    } catch (err) {
+      this.cookbookError.set(describeWriteError(err));
+      // The box has already flipped itself; remaking the rows puts it back to what is stored.
+      this.cookbookRevision.update((n) => n + 1);
+    } finally {
+      this.cookbookSaving.set(null);
+    }
+  }
 
   protected readonly isFav = computed(() => this.recipe()?.favorite === true);
   protected readonly favSaving = signal(false);

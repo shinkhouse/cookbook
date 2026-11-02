@@ -3,7 +3,13 @@ import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RecipeStore } from '../../core/stores/recipe.store';
-import { FakeRecipeRepository, provideFakeRecipes } from '../../core/testing/fake-repositories';
+import {
+  FakeCookbookRepository,
+  FakeRecipeRepository,
+  provideFakeCookbooks,
+  provideFakeRecipes,
+} from '../../core/testing/fake-repositories';
+import { CookbookStore } from '../../core/stores/cookbook.store';
 import { Recipes } from '../../core/mock/recipes.mock';
 import { RecipeDetailComponent } from './recipe-detail.component';
 
@@ -19,7 +25,7 @@ describe('RecipeDetailComponent archive', () => {
     fake.writable = writable;
     TestBed.configureTestingModule({
       imports: [RecipeDetailComponent],
-      providers: [provideRouter([]), ...provideFakeRecipes(fake)],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake), ...provideFakeCookbooks()],
     });
     navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     await TestBed.inject(RecipeStore).whenLoaded();
@@ -117,7 +123,7 @@ describe('RecipeDetailComponent list and layout controls', () => {
   async function setup(): Promise<void> {
     TestBed.configureTestingModule({
       imports: [RecipeDetailComponent],
-      providers: [provideRouter([]), ...provideFakeRecipes(new FakeRecipeRepository())],
+      providers: [provideRouter([]), ...provideFakeRecipes(new FakeRecipeRepository()), ...provideFakeCookbooks()],
     });
     await TestBed.inject(RecipeStore).whenLoaded();
     fixture = TestBed.createComponent(RecipeDetailComponent);
@@ -162,7 +168,7 @@ describe('RecipeDetailComponent edit link', () => {
     fake.writable = writable;
     TestBed.configureTestingModule({
       imports: [RecipeDetailComponent],
-      providers: [provideRouter([]), ...provideFakeRecipes(fake)],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake), ...provideFakeCookbooks()],
     });
     await TestBed.inject(RecipeStore).whenLoaded();
     const fixture = TestBed.createComponent(RecipeDetailComponent);
@@ -188,7 +194,7 @@ describe('RecipeDetailComponent source link', () => {
     const fake = new FakeRecipeRepository([{ ...base, ...(sourceUrl ? { sourceUrl } : {}) }]);
     TestBed.configureTestingModule({
       imports: [RecipeDetailComponent],
-      providers: [provideRouter([]), ...provideFakeRecipes(fake)],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake), ...provideFakeCookbooks()],
     });
     await TestBed.inject(RecipeStore).whenLoaded();
     const fixture = TestBed.createComponent(RecipeDetailComponent);
@@ -236,7 +242,7 @@ describe('RecipeDetailComponent embedded recipes', () => {
   beforeEach(async () => {
     TestBed.configureTestingModule({
       imports: [RecipeDetailComponent],
-      providers: [provideRouter([]), ...provideFakeRecipes(new FakeRecipeRepository([PARENT, SAUCE]))],
+      providers: [provideRouter([]), ...provideFakeRecipes(new FakeRecipeRepository([PARENT, SAUCE])), ...provideFakeCookbooks()],
     });
     await TestBed.inject(RecipeStore).whenLoaded();
     fixture = TestBed.createComponent(RecipeDetailComponent);
@@ -307,7 +313,7 @@ describe('RecipeDetailComponent units', () => {
   async function setup(): Promise<void> {
     TestBed.configureTestingModule({
       imports: [RecipeDetailComponent],
-      providers: [provideRouter([]), ...provideFakeRecipes(new FakeRecipeRepository([UNITS_RECIPE]))],
+      providers: [provideRouter([]), ...provideFakeRecipes(new FakeRecipeRepository([UNITS_RECIPE])), ...provideFakeCookbooks()],
     });
     await TestBed.inject(RecipeStore).whenLoaded();
     fixture = TestBed.createComponent(RecipeDetailComponent);
@@ -366,7 +372,7 @@ describe('RecipeDetailComponent print', () => {
   it('calls window.print from the Print button', async () => {
     TestBed.configureTestingModule({
       imports: [RecipeDetailComponent],
-      providers: [provideRouter([]), ...provideFakeRecipes(new FakeRecipeRepository())],
+      providers: [provideRouter([]), ...provideFakeRecipes(new FakeRecipeRepository()), ...provideFakeCookbooks()],
     });
     await TestBed.inject(RecipeStore).whenLoaded();
     const fixture = TestBed.createComponent(RecipeDetailComponent);
@@ -394,7 +400,7 @@ describe('RecipeDetailComponent notes', () => {
     fake.writable = writable;
     TestBed.configureTestingModule({
       imports: [RecipeDetailComponent],
-      providers: [provideRouter([]), ...provideFakeRecipes(fake)],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake), ...provideFakeCookbooks()],
     });
     await TestBed.inject(RecipeStore).whenLoaded();
     fixture = TestBed.createComponent(RecipeDetailComponent);
@@ -510,7 +516,7 @@ describe('RecipeDetailComponent mark as cooked', () => {
     fake.writable = false;
     TestBed.configureTestingModule({
       imports: [RecipeDetailComponent],
-      providers: [provideRouter([]), ...provideFakeRecipes(fake)],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake), ...provideFakeCookbooks()],
     });
     await TestBed.inject(RecipeStore).whenLoaded();
     fixture = TestBed.createComponent(RecipeDetailComponent);
@@ -597,7 +603,7 @@ describe('RecipeDetailComponent favorite', () => {
     fake.writable = false;
     TestBed.configureTestingModule({
       imports: [RecipeDetailComponent],
-      providers: [provideRouter([]), ...provideFakeRecipes(fake)],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake), ...provideFakeCookbooks()],
     });
     await TestBed.inject(RecipeStore).whenLoaded();
     fixture = TestBed.createComponent(RecipeDetailComponent);
@@ -640,5 +646,109 @@ describe('RecipeDetailComponent favorite', () => {
     await setup(false, false);
     expect(el().querySelector('.fav-static')).toBeNull();
     expect(button('favorites')).toBeUndefined();
+  });
+});
+
+describe('RecipeDetailComponent cookbooks panel', () => {
+  const SLUG = Recipes[0].slug;
+  let fake: FakeRecipeRepository;
+  let fixture: ComponentFixture<RecipeDetailComponent>;
+
+  async function setup(
+    writable: boolean,
+    books = [
+      { id: 'sams', name: "Sam's" },
+      { id: 'bobs', name: "Bob's" },
+    ],
+  ): Promise<void> {
+    fake = new FakeRecipeRepository([{ ...Recipes[0], cookbooks: ['sams'] }]);
+    fake.writable = writable;
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [
+        provideRouter([]),
+        ...provideFakeRecipes(fake),
+        ...provideFakeCookbooks(new FakeCookbookRepository(books)),
+      ],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    await TestBed.inject(CookbookStore).whenLoaded();
+    fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+  }
+
+  const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+  const panel = (): HTMLElement | null => el().querySelector('.cookbooks-panel');
+  const boxes = (): HTMLInputElement[] =>
+    Array.from(el().querySelectorAll('.cookbooks-panel input[type="checkbox"]'));
+  const settle = async (): Promise<void> => {
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+  };
+
+  it('lists every cookbook, checked where the recipe belongs', async () => {
+    await setup(true);
+    expect(panel()?.textContent).toContain('Cookbooks');
+    expect(boxes().map((b) => b.checked)).toEqual([true, false]);
+    expect(panel()?.textContent).toContain("Bob's");
+  });
+
+  it('files the recipe into a cookbook when ticked', async () => {
+    await setup(true);
+    const add = spyOn(TestBed.inject(RecipeStore), 'addToCookbook').and.callThrough();
+    boxes()[1].click();
+    await settle();
+    expect(add).toHaveBeenCalledOnceWith(SLUG, 'bobs');
+    expect(boxes().map((b) => b.checked)).toEqual([true, true]);
+  });
+
+  it('takes the recipe out when unticked', async () => {
+    await setup(true);
+    const remove = spyOn(TestBed.inject(RecipeStore), 'removeFromCookbook').and.callThrough();
+    boxes()[0].click();
+    await settle();
+    expect(remove).toHaveBeenCalledOnceWith(SLUG, 'sams');
+    expect(boxes().map((b) => b.checked)).toEqual([false, false]);
+  });
+
+  it('disables the checkbox while its toggle is saving', async () => {
+    await setup(true);
+    let release!: (v: boolean) => void;
+    spyOn(TestBed.inject(RecipeStore), 'addToCookbook').and.returnValue(
+      new Promise<boolean>((r) => (release = r)),
+    );
+    boxes()[1].click();
+    fixture.detectChanges();
+    expect(boxes()[1].disabled).toBeTrue();
+    expect(boxes()[0].disabled).toBeFalse();
+    release(true);
+    await settle();
+    expect(boxes()[1].disabled).toBeFalse();
+  });
+
+  it('reverts and explains a failed toggle', async () => {
+    await setup(true);
+    fake.failNext({ status: 0 });
+    boxes()[1].click();
+    await settle();
+    expect(boxes().map((b) => b.checked)).toEqual([true, false]);
+    expect(panel()?.querySelector('[role="alert"]')?.textContent).toContain(
+      "Couldn't reach the recipe server",
+    );
+  });
+
+  it('links to Add a cookbook when there are none', async () => {
+    await setup(true, []);
+    const link = panel()?.querySelector('a');
+    expect(link?.textContent?.trim()).toBe('Add a cookbook');
+    expect(link?.getAttribute('href')).toMatch(/\/cookbooks\/new$/);
+    expect(boxes().length).toBe(0);
+  });
+
+  it('is not rendered when read-only', async () => {
+    await setup(false);
+    expect(panel()).toBeNull();
   });
 });

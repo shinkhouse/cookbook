@@ -192,6 +192,32 @@
         }
       </div>
 
+      @if (writable) {
+        <section class="cookbooks-panel" aria-labelledby="cookbooks-title">
+          <h2 id="cookbooks-title" class="label">Cookbooks</h2>
+          @if (cookbooks.cookbooks().length === 0) {
+            <a class="link-button" routerLink="/cookbooks/new">Add a cookbook</a>
+          } @else {
+            <ul>
+              @for (row of cookbookRows(); track row.key) {
+                <li>
+                  <mat-checkbox
+                    [checked]="r.cookbooks.includes(row.book.id)"
+                    [disabled]="cookbookSaving() === row.book.id"
+                    (change)="toggleCookbook(row.book.id, $event)"
+                  >
+                    {{ row.book.name }}
+                  </mat-checkbox>
+                </li>
+              }
+            </ul>
+          }
+          @if (cookbookError()) {
+            <p class="cooked-error" role="alert">{{ cookbookError() }}</p>
+          }
+        </section>
+      }
+
       @for (part of componentSections(); track $index) {
         <section class="component-section">
           <div class="section-head">

@@ -339,7 +339,7 @@ describe('RecipeDetailComponent units', () => {
 
   it("shows a recipe's cups as ml after switching to Metric", async () => {
     await setup();
-    expect(amounts()[0]).toBe('2 cup');
+    expect(amounts()[0]).toBe('2 cups');
     choose('Metric');
     expect(amounts()[0]).toBe('470 ml');
   });

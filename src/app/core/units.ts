@@ -71,7 +71,9 @@ export function convertMeasure(m: Measure, system: UnitSystem): Measure {
 export function formatMeasure(m: Measure): string {
   const info = measurable(m.unit);
   const qty = info?.system === 'metric' ? trimDecimals(m.qty) : formatQty(m.qty);
-  const unit = info?.unit ?? m.unit;
+  let unit = info?.unit ?? m.unit;
+  // Only the spelled-out unit takes an s; tbsp, oz and the rest are abbreviations.
+  if (unit === 'cup' && m.qty > 1) unit = 'cups';
   return unit ? `${qty} ${unit}` : qty;
 }
 

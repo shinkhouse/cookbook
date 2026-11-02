@@ -8,11 +8,11 @@ function source(owner: string, index: number, ingredient: Ingredient, recipeTitl
 describe('sumAmounts', () => {
   it('never prints a non-canonical unit case', () => {
     expect(sumAmounts([{ qty: 1, unit: 'Cup' }])).toBe('1 cup');
-    expect(sumAmounts([{ qty: 1, unit: 'Cup' }, { qty: 1, unit: 'cup' }])).toBe('2 cup');
+    expect(sumAmounts([{ qty: 1, unit: 'Cup' }, { qty: 1, unit: 'cup' }])).toBe('2 cups');
     expect(sumAmounts([{ qty: 1, unit: 'Cup' }, { qty: 1, unit: 'Tbsp' }])).not.toMatch(/[A-Z]/);
   });
   it('sums the same unit without converting', () =>
-    expect(sumAmounts([{ qty: 1, unit: 'cup' }, { qty: 1, unit: 'cup' }])).toBe('2 cup'));
+    expect(sumAmounts([{ qty: 1, unit: 'cup' }, { qty: 1, unit: 'cup' }])).toBe('2 cups'));
   it('converts mixed US volume into one unit', () =>
     expect(sumAmounts([{ qty: 2, unit: 'tbsp' }, { qty: 0.25, unit: 'cup' }])).toBe('⅜ cup'));
   it('keeps incompatible amounts side by side', () =>
@@ -72,7 +72,7 @@ describe('mergeSources', () => {
       source('a', 0, { qty: 1, unit: 'Cup', name: 'rice', aisle: 'pantry' }),
       source('b', 0, { qty: 1, unit: 'cup', name: 'rice', aisle: 'pantry' }),
     ]);
-    expect(line.amount).toBe('2 cup');
+    expect(line.amount).toBe('2 cups');
   });
 
   it('falls back to the source position when the name has no key', () => {

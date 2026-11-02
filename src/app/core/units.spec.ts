@@ -4,7 +4,7 @@ describe('measurable', () => {
   it('looks units up case-insensitively', () => {
     expect(measurable('Cup')).toEqual(measurable('cup'));
     expect(measurable('Cup')?.unit).toBe('cup');
-    expect(formatMeasure({ qty: 2, unit: 'Cup' })).toBe('2 cup');
+    expect(formatMeasure({ qty: 2, unit: 'Cup' })).toBe('2 cups');
     expect(measurable('KG')).toEqual(measurable('kg'));
     expect(measurable('Small Can')).toBeNull();
   });
@@ -60,7 +60,16 @@ describe('convertMeasure', () => {
 describe('formatMeasure', () => {
   it('formats metric as decimals and US as fractions', () => {
     expect(formatMeasure({ qty: 1.15, unit: 'kg' })).toBe('1.15 kg');
-    expect(formatMeasure({ qty: 1.5, unit: 'cup' })).toBe('1½ cup');
+    expect(formatMeasure({ qty: 1.5, unit: 'cup' })).toBe('1½ cups');
     expect(formatMeasure({ qty: 3, unit: '' })).toBe('3');
+  });
+
+  it('pluralises cup above one, and only cup', () => {
+    expect(formatMeasure({ qty: 1, unit: 'cup' })).toBe('1 cup');
+    expect(formatMeasure({ qty: 0.5, unit: 'cup' })).toBe('½ cup');
+    expect(formatMeasure({ qty: 2, unit: 'cup' })).toBe('2 cups');
+    expect(formatMeasure({ qty: 1.5, unit: 'cup' })).toBe('1½ cups');
+    expect(formatMeasure({ qty: 2, unit: 'tbsp' })).toBe('2 tbsp');
+    expect(formatMeasure({ qty: 3, unit: 'oz' })).toBe('3 oz');
   });
 });

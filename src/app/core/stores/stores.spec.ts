@@ -1219,7 +1219,7 @@ describe('ListStore merging duplicates', () => {
     const rows = list.groups().find((g) => g.aisle === 'produce')!.rows;
     expect(rows.length).toBe(1);
     expect(rows[0].sources.map((s) => s.owner)).toEqual(['a>sauce', 'b>sauce']);
-    expect(rows[0].amount).toBe('4 cup');
+    expect(rows[0].amount).toBe('4 cups');
   });
 });
 

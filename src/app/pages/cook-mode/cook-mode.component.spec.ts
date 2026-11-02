@@ -521,7 +521,7 @@ describe('cook mode step ingredients', () => {
   it('shows a Uses list under a step that names an ingredient', async () => {
     fixture = await setup();
     el = fixture.nativeElement;
-    expect(chips()).toEqual(['2 cup stock']);
+    expect(chips()).toEqual(['2 cups stock']);
     expect(el.querySelector('.step-uses')!.getAttribute('aria-label')).toBe('Uses');
   });
 
@@ -749,7 +749,7 @@ describe('cook mode units', () => {
   it('converts the ingredients panel when Metric is chosen', async () => {
     fixture = await setup();
     el = fixture.nativeElement;
-    expect(amounts()).toEqual(['2 cup', '1']);
+    expect(amounts()).toEqual(['2 cups', '1']);
     expect(unitButton('US').getAttribute('aria-pressed')).toBe('true');
     unitButton('Metric').click();
     fixture.detectChanges();

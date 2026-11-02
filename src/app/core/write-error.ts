@@ -50,9 +50,12 @@ export function describePhotoError(err: unknown): string {
  * so a 403 here is "unlock again" and a 429 is the lockout.
  */
 export function describeDeviceError(err: unknown): string {
-  const { status } = (err ?? {}) as { status?: unknown };
+  const { status, error } = (err ?? {}) as { status?: unknown; error?: { message?: unknown } };
   if (status === 403) return "This device isn't unlocked any more. Unlock it again from the footer.";
-  if (status === 429) return 'Too many wrong passcodes. Try again in 15 minutes.';
+  if (status === 429) {
+    return `Too many wrong passcodes. Try again in 15 minutes.`;
+  }
+  if (status === 409 && typeof error?.message === 'string' && error.message) return error.message;
   if (status === 0 || status === 502 || status === 503 || status === 504) {
     return "Couldn't reach the recipe server.";
   }

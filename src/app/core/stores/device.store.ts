@@ -40,7 +40,7 @@ export class DeviceStore {
       const status = (err as { status?: unknown } | null)?.status;
       if (status === 403) return 'wrong';
       if (status === 429) {
-        this.lockoutMinutes.set(retryMinutes(err));
+        this.recordLockout(err);
         return 'locked-out';
       }
       return 'unreachable';
@@ -48,6 +48,11 @@ export class DeviceStore {
     this.storage.write(KEY, candidate);
     this.key.set(candidate);
     return 'ok';
+  }
+
+  /** Remembers how long a 429's Retry-After asks us to wait, for the message. */
+  recordLockout(err: unknown): void {
+    this.lockoutMinutes.set(retryMinutes(err));
   }
 
   lock(): void {

@@ -378,3 +378,82 @@ describe('RecipeDetailComponent print', () => {
     expect(print).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('RecipeDetailComponent notes', () => {
+  let fake: FakeRecipeRepository;
+  let fixture: ComponentFixture<RecipeDetailComponent>;
+
+  async function setup(writable: boolean): Promise<void> {
+    localStorage.removeItem('cookbook.deviceKey');
+    fake = new FakeRecipeRepository();
+    fake.writable = writable;
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake)],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+  }
+
+  const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+  const field = (): HTMLTextAreaElement | null => el().querySelector('textarea');
+  const addButton = (): HTMLButtonElement | undefined =>
+    Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Add note');
+
+  function type(text: string): void {
+    const f = field()!;
+    f.value = text;
+    f.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  }
+
+  it('hides the note field without unlock on a read-only build', async () => {
+    await setup(false);
+    expect(field()).toBeNull();
+    expect(addButton()).toBeUndefined();
+    // A recipe with no notes shows no panel at all.
+    expect(el().querySelector('.notes')).toBeNull();
+    // One that has notes still shows them, read-only.
+    const noted = Recipes.find((r) => r.notes.length > 0)!;
+    fixture.componentRef.setInput('slug', noted.slug);
+    fixture.detectChanges();
+    expect(el().querySelector('.notes')?.textContent).toContain(noted.notes[0]);
+    expect(field()).toBeNull();
+  });
+
+  it('offers a labelled field, disabled until there is text', async () => {
+    await setup(true);
+    expect(el().querySelector('label')?.textContent).toBeDefined();
+    expect(el().textContent).toContain('Add a note');
+    expect(field()!.labels?.[0]?.textContent).toContain('Add a note');
+    expect(addButton()!.disabled).toBeTrue();
+    type('   ');
+    expect(addButton()!.disabled).toBeTrue();
+    type('more cumin');
+    expect(addButton()!.disabled).toBeFalse();
+  });
+
+  it('adds a note and shows it', async () => {
+    await setup(true);
+    type('more cumin');
+    addButton()!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el().querySelector('.notes')?.textContent).toContain('more cumin');
+    expect(field()!.value).toBe('');
+  });
+
+  it('shows the error and keeps the text on failure', async () => {
+    await setup(true);
+    type('more cumin');
+    fake.failNext({ status: 409, error: { message: 'This recipe has too many notes.' } });
+    addButton()!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el().querySelector('.note-error')?.textContent).toContain('This recipe has too many notes.');
+    expect(field()!.value).toBe('more cumin');
+    expect(el().querySelector('.notes')?.textContent).not.toContain('more cumin');
+  });
+});

@@ -116,6 +116,14 @@ export class FakeRecipeRepository extends RecipeRepository {
     return { ...recipe };
   }
 
+  override async addNote(slug: string, note: string): Promise<Recipe | null> {
+    this.maybeFail();
+    const i = this.items.findIndex((r) => r.slug === slug);
+    if (i < 0) return null;
+    this.items[i] = { ...this.items[i], notes: [...this.items[i].notes, note] };
+    return { ...this.items[i] };
+  }
+
   override async remove(slug: string): Promise<boolean> {
     this.maybeFail();
     const before = this.items.length;

@@ -120,6 +120,9 @@ describe('describeDeviceError', () => {
       "This device isn't unlocked any more. Unlock it again from the footer.",
     );
     expect(describeDeviceError({ status: 429 })).toBe('Too many wrong passcodes. Try again in 15 minutes.');
+    expect(describeDeviceError({ status: 409, error: { message: 'This recipe has too many notes.' } })).toBe(
+      'This recipe has too many notes.',
+    );
     for (const status of [0, 502, 503, 504]) {
       expect(describeDeviceError({ status })).toBe("Couldn't reach the recipe server.");
     }

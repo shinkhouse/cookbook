@@ -1,4 +1,5 @@
 import { DOCUMENT } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,7 +12,7 @@ import { PrefsStore } from '../../core/stores/prefs.store';
 import { RecipeStore, tagLabel } from '../../core/stores/recipe.store';
 import { Recipe } from '../../core/model/recipes.model';
 import { UnitSystem, amountText } from '../../core/units';
-import { describeWriteError } from '../../core/write-error';
+import { describeDeviceError, describeWriteError } from '../../core/write-error';
 
 /** One row of the ingredient card, with its amount already scaled. */
 interface DetailIngredient {
@@ -35,7 +36,7 @@ function groupRows(rows: DetailIngredient[]): { name: string | null; items: Deta
 
 @Component({
   selector: 'app-recipe-detail',
-  imports: [RouterLink, MatIconModule, MatCheckboxModule],
+  imports: [RouterLink, FormsModule, MatIconModule, MatCheckboxModule],
   templateUrl: './recipe-detail.component.html',
   styleUrl: './recipe-detail.component.scss',
 })
@@ -65,6 +66,12 @@ export class RecipeDetailComponent {
 
   /** Archiving is a write, so only a writable build offers it. */
   protected readonly writable = this.recipes.writable;
+
+  /** A quick note is one of the narrow writes: a writable build or an unlocked device. */
+  protected readonly canSave = this.recipes.canSave;
+  protected noteText = '';
+  protected readonly noteSaving = signal(false);
+  protected readonly noteError = signal('');
 
   protected readonly confirmingArchive = signal(false);
   protected readonly archiving = signal(false);
@@ -101,6 +108,20 @@ export class RecipeDetailComponent {
       this.archiveError.set(describeWriteError(err));
     } finally {
       this.archiving.set(false);
+    }
+  }
+
+  protected async addNote(): Promise<void> {
+    if (this.noteSaving() || !this.noteText.trim()) return;
+    this.noteSaving.set(true);
+    this.noteError.set('');
+    try {
+      await this.recipes.addNote(this.slug(), this.noteText);
+      this.noteText = '';
+    } catch (err) {
+      this.noteError.set(describeDeviceError(err));
+    } finally {
+      this.noteSaving.set(false);
     }
   }
 

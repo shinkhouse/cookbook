@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { DEFAULT_COOKBOOK_ID } from './model/cookbooks.model';
 import { Recipe } from './model/recipes.model';
+import { DeviceStore } from './stores/device.store';
 
 /**
  * Where the recipe collection lives: the MongoDB-backed api.samuelhinkhouse.com.
@@ -31,6 +32,12 @@ export abstract class RecipeRepository {
   /** Deletes a recipe. False when the slug is unknown (404). */
   abstract remove(slug: string): Promise<boolean>;
 
+  /**
+   * Appends a note and resolves to the updated recipe. Null when the slug is
+   * unknown (404). The only write besides the dev key an unlocked device makes.
+   */
+  abstract addNote(slug: string, note: string): Promise<Recipe | null>;
+
   /** True when this build is allowed to write; screens hide editing otherwise. */
   abstract readonly writable: boolean;
 }
@@ -45,6 +52,7 @@ export abstract class RecipeRepository {
 @Injectable({ providedIn: 'root' })
 export class HttpRecipeRepository extends RecipeRepository {
   private readonly http = inject(HttpClient);
+  private readonly device = inject(DeviceStore);
   private readonly url = `${environment.apiBase}/recipes`;
 
   override readonly writable = !environment.production;
@@ -68,6 +76,21 @@ export class HttpRecipeRepository extends RecipeRepository {
     try {
       return await firstValueFrom(
         this.http.put<Recipe>(`${this.url}/${encodeURIComponent(recipe.slug)}`, recipe),
+      );
+    } catch (error) {
+      if (isNotFound(error)) return null;
+      throw error;
+    }
+  }
+
+  override async addNote(slug: string, note: string): Promise<Recipe | null> {
+    try {
+      return await firstValueFrom(
+        this.http.post<Recipe>(
+          `${this.url}/${encodeURIComponent(slug)}/notes`,
+          { note },
+          { headers: this.device.headers() },
+        ),
       );
     } catch (error) {
       if (isNotFound(error)) return null;

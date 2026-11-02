@@ -186,4 +186,31 @@ describe('HttpRecipeRepository', () => {
       .flush(null, { status: 204, statusText: 'No Content' });
     expect(await result).toBe(true);
   });
+
+  describe('addNote', () => {
+    it('sends the device header with a note', async () => {
+      localStorage.setItem('cookbook.deviceKey', JSON.stringify('sesame'));
+      // A fresh injector picks the stored key up.
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [provideHttpClient(), provideHttpClientTesting(), provideHttpRecipes()],
+      });
+      const r = TestBed.inject(RecipeRepository);
+      const mock = TestBed.inject(HttpTestingController);
+      const result = r.addNote('a b', 'less salt');
+      const req = mock.expectOne({ method: 'POST', url: `${URL}/a%20b/notes` });
+      expect(req.request.body).toEqual({ note: 'less salt' });
+      expect(req.request.headers.get('x-device-key')).toBe('sesame');
+      req.flush({ ...draft('a b'), notes: ['less salt'] });
+      expect((await result)?.notes).toEqual(['less salt']);
+      mock.verify();
+      localStorage.removeItem('cookbook.deviceKey');
+    });
+
+    it('gives null on a 404', async () => {
+      const result = repo.addNote('gone', 'x');
+      httpMock.expectOne(`${URL}/gone/notes`).flush({}, { status: 404, statusText: 'Not Found' });
+      expect(await result).toBeNull();
+    });
+  });
 });

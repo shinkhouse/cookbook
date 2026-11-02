@@ -241,17 +241,40 @@
             </ol>
           }
 
-          <!-- §6.2 — the notes panel renders only when there are notes. -->
-          @if (r.notes.length > 0) {
+          <!-- §6.2 — the notes panel renders when there are notes, or when one can be added. -->
+          @if (r.notes.length > 0 || canSave()) {
             <div class="notes">
               <div class="section-head notes-head">
                 <h3 class="section-title">Notes</h3>
               </div>
-              <ul>
-                @for (note of r.notes; track $index) {
-                  <li>{{ note }}</li>
-                }
-              </ul>
+              @if (r.notes.length > 0) {
+                <ul>
+                  @for (note of r.notes; track $index) {
+                    <li>{{ note }}</li>
+                  }
+                </ul>
+              }
+              @if (canSave()) {
+                <form class="note-form" (ngSubmit)="addNote()">
+                  <label class="note-field">
+                    <span class="label">Add a note</span>
+                    <textarea
+                      name="note"
+                      rows="2"
+                      maxlength="2000"
+                      [(ngModel)]="noteText"
+                      [attr.aria-invalid]="noteError() ? 'true' : null"
+                      [attr.aria-describedby]="noteError() ? 'note-problem' : null"
+                    ></textarea>
+                  </label>
+                  <button type="submit" class="btn-outline" [disabled]="noteSaving() || !noteText.trim()">
+                    {{ noteSaving() ? 'Adding…' : 'Add note' }}
+                  </button>
+                  @if (noteError()) {
+                    <p id="note-problem" class="note-error" role="alert">{{ noteError() }}</p>
+                  }
+                </form>
+              }
             </div>
           }
         </section>

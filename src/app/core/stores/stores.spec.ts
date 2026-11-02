@@ -9,6 +9,7 @@ import {
   provideFakeRecipes,
 } from '../testing/fake-repositories';
 import { CookbookStore } from './cookbook.store';
+import { DeviceStore } from './device.store';
 import { ListStore, OTHER_AISLE, boughtKey } from './list.store';
 import { PrefsStore } from './prefs.store';
 import { RecipeStore, tagLabel } from './recipe.store';
@@ -450,6 +451,62 @@ describe('RecipeStore lifecycle and writes', () => {
     // not in any defined group, so it belongs to the catch-all.
     expect(store.tags()).toContain('thai');
     expect(store.facets().find((f) => f.id === 'other')?.options).toContain('thai');
+  });
+});
+
+describe('RecipeStore notes', () => {
+  function setup(fake = new FakeRecipeRepository()): RecipeStore {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes(fake)] });
+    return TestBed.inject(RecipeStore);
+  }
+  const SLUG = Recipes[0].slug;
+
+  it('appends and replaces the record', async () => {
+    const store = setup();
+    await store.whenLoaded();
+    const before = store.bySlug(SLUG)!.notes.length;
+    expect(await store.addNote(SLUG, '  less salt  ')).toBeTrue();
+    const notes = store.bySlug(SLUG)!.notes;
+    expect(notes.length).toBe(before + 1);
+    expect(notes.at(-1)).toBe('less salt');
+  });
+
+  it('ignores a blank note', async () => {
+    const fake = new FakeRecipeRepository();
+    const spy = spyOn(fake, 'addNote').and.callThrough();
+    const store = setup(fake);
+    await store.whenLoaded();
+    expect(await store.addNote(SLUG, '   ')).toBeFalse();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('is false when the recipe is gone', async () => {
+    const store = setup();
+    await store.whenLoaded();
+    expect(await store.addNote('nope', 'x')).toBeFalse();
+  });
+
+  it('locks the device on 403 and rethrows', async () => {
+    const fake = new FakeRecipeRepository();
+    const store = setup(fake);
+    await store.whenLoaded();
+    const lock = spyOn(TestBed.inject(DeviceStore), 'lock');
+    const error = { status: 403 };
+    fake.failNext(error);
+    await expectAsync(store.addNote(SLUG, 'x')).toBeRejectedWith(error);
+    expect(lock).toHaveBeenCalled();
+  });
+
+  it('records the lockout wait on 429 and rethrows', async () => {
+    const fake = new FakeRecipeRepository();
+    const store = setup(fake);
+    await store.whenLoaded();
+    const record = spyOn(TestBed.inject(DeviceStore), 'recordLockout');
+    const error = { status: 429 };
+    fake.failNext(error);
+    await expectAsync(store.addNote(SLUG, 'x')).toBeRejectedWith(error);
+    expect(record).toHaveBeenCalledWith(error);
   });
 });
 

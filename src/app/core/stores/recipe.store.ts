@@ -193,6 +193,30 @@ export class RecipeStore {
   }
 
   /**
+   * Adds a quick note. Trims first; a blank note is false with no request. On
+   * success the record is replaced by the server's copy. A 403 means the stored
+   * passcode is no longer good, so the device locks itself before the error is
+   * rethrown; a 429 records the wait the server asked for. Returns false when
+   * the slug is unknown, here or on the server.
+   */
+  async addNote(slug: string, note: string): Promise<boolean> {
+    const text = note.trim();
+    if (!text || !this._recipes().some((r) => r.slug === slug)) return false;
+    let stored: Recipe | null;
+    try {
+      stored = await this.repo.addNote(slug, text);
+    } catch (err) {
+      const status = (err as { status?: unknown } | null)?.status;
+      if (status === 403) this.device.lock();
+      if (status === 429) this.device.recordLockout(err);
+      throw err;
+    }
+    if (!stored) return false;
+    this._recipes.update((list) => list.map((r) => (r.slug === stored.slug ? stored : r)));
+    return true;
+  }
+
+  /**
    * Soft-deletes a recipe: sets `archived` and sends the whole record, so it
    * disappears from every screen but stays stored. Favorites and list entries
    * are kept; they just stop resolving while it is archived.

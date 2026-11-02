@@ -462,6 +462,48 @@ h1 {
     li + li {
         margin-top: 6px;
     }
+
+    // Padding above the form only when there are notes above it.
+    ul + .note-form {
+        margin-top: 16px;
+    }
+}
+
+.note-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.note-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+
+    .label {
+        font-size: var(--text-caption);
+    }
+
+    textarea {
+        width: 100%;
+        min-height: calc(var(--touch) * 1.4);
+        padding: 10px 14px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius-card);
+        background: var(--paper);
+        color: var(--ink);
+        font: inherit;
+        font-size: 16px; // under 16px makes iOS zoom the page on focus
+        resize: vertical;
+    }
+}
+
+.note-error {
+    margin: 0;
+    color: var(--mat-sys-error);
+    font-size: var(--text-small);
 }
 
 .not-found {

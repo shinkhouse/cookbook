@@ -59,20 +59,18 @@
                 <!-- A real checkbox input, per the accessibility note in §7. -->
                 <mat-checkbox
                   [checked]="row.bought"
-                  (change)="list.toggleBought(row.recipeSlug, row.index)"
+                  (change)="list.toggleRow(row)"
                 >
                   <span class="row-text">
-                    <span class="row-amount tnum">{{
-                      amount(row.ingredient.qty, row.ingredient.unit)
-                    }}</span>
-                    <span class="row-name">{{ row.ingredient.name }}</span>
+                    <span class="row-amount tnum">{{ row.amount }}</span>
+                    <span class="row-name">{{ row.name }}</span>
                   </span>
                 </mat-checkbox>
                 <!-- The source only tells you anything when more than one
                      recipe is on the list; otherwise it repeats the chip above
                      on every single row. -->
                 @if (list.recipeCount() > 1) {
-                  <span class="row-source">{{ row.recipeTitle }}</span>
+                  <span class="row-source">{{ row.sourceTitles.join(' · ') }}</span>
                 }
               </li>
             }

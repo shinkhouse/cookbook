@@ -778,12 +778,14 @@ describe('ListStore', () => {
     expect(list.groups().find((g) => g.aisle === 'seafood')?.label).toBe('Fish counter');
   });
 
-  it('keeps a duplicate ingredient from two recipes as two rows', () => {
-    // Both of grandma's recipes call for hamburger; merging is out of scope.
+  it('merges a duplicate ingredient from two recipes into one row', () => {
+    // Both of grandma's recipes call for hamburger: one row, both sources.
     list.addRecipe('grandmas-spaghetti');
     list.addRecipe('grandmas-chili');
     const meat = list.groups().find((g) => g.aisle === 'meat')!;
-    expect(meat.rows.filter((r) => r.ingredient.name === 'hamburger').length).toBe(2);
+    expect(meat.rows.length).toBe(1);
+    expect(meat.rows[0].sources.map((s) => s.owner)).toEqual(['grandmas-spaghetti', 'grandmas-chili']);
+    expect(meat.rows[0].amount).toBe('½ + 1 lb');
   });
 
   it('checks off one recipe\'s item without touching the other\'s', () => {
@@ -974,13 +976,13 @@ describe('ListStore with embedded components', () => {
     list.addRecipe('lasagna');
     expect(list.totalItems()).toBe(2);
     const produce = list.groups().find((g) => g.aisle === 'produce')!;
-    expect(produce.rows[0].ingredient.name).toBe('tomatoes');
+    expect(produce.rows[0].name).toBe('tomatoes');
   });
 
   it('checks off component rows independently and drops their marks with the parent', () => {
     list.addRecipe('lasagna');
-    const row = list.groups().find((g) => g.aisle === 'produce')!.rows[0];
-    list.toggleBought(row.recipeSlug, row.index);
+    const [source] = list.groups().find((g) => g.aisle === 'produce')!.rows[0].sources;
+    list.toggleBought(source.owner, source.index);
     expect(list.boughtCount()).toBe(1);
     list.removeRecipe('lasagna');
     list.addRecipe('lasagna');
@@ -1015,34 +1017,108 @@ describe('ListStore with a component shared by two parents', () => {
   const tomatoes = () =>
     list.groups().find((g) => g.aisle === 'produce')!.rows;
 
-  it('gives each parent its own rows with distinct keys', () => {
-    const rows = tomatoes();
-    expect(rows.length).toBe(2);
-    expect(new Set(rows.map((r) => r.key)).size).toBe(2);
-  });
-
-  it('checks one copy without the other', () => {
-    const [first] = tomatoes();
-    list.toggleBought(first.recipeSlug, first.index);
-    expect(tomatoes().map((r) => r.bought)).toEqual([true, false]);
-    expect(list.boughtCount()).toBe(1);
-  });
-
   it('removing one parent keeps the other\'s marks', () => {
-    for (const r of tomatoes()) list.toggleBought(r.recipeSlug, r.index);
+    for (const r of tomatoes()) list.toggleRow(r);
     list.removeRecipe('lasagna');
     expect(tomatoes().length).toBe(1);
     expect(tomatoes()[0].bought).toBe(true);
   });
 
   it('removing an archived parent still clears its component marks', async () => {
-    const [first] = tomatoes();
-    list.toggleBought(first.recipeSlug, first.index);
+    const [first] = tomatoes()[0].sources;
+    list.toggleBought(first.owner, first.index);
     await recipes.archive('lasagna');
     list.removeRecipe('lasagna');
     await recipes.update({ ...recipes.bySlug('pizza')! });
     expect(list.boughtCount()).toBe(0);
-    expect(list.isBought(first.recipeSlug, first.index)).toBe(false);
+    expect(list.isBought(first.owner, first.index)).toBe(false);
+  });
+});
+
+describe('ListStore merging duplicates', () => {
+  let list: ListStore;
+  let recipes: RecipeStore;
+
+  const onion = (qty: number, unit: string, name = 'onion') => ({
+    qty,
+    unit,
+    name,
+    aisle: 'produce' as const,
+  });
+  const soup = fixture('soup', { title: 'Soup', ingredients: [onion(2, '')] });
+  const stew = fixture('stew', { title: 'Stew', ingredients: [onion(1, 'cup', 'onions')] });
+  const salsa = fixture('salsa', { title: 'Salsa', ingredients: [onion(1, '', 'onion, minced')] });
+  const sauce = fixture('sauce', {
+    component: true,
+    ingredients: [{ qty: 2, unit: 'cup', name: 'tomatoes', aisle: 'produce' }],
+  });
+  const a = fixture('a', { title: 'A', ingredients: [], components: [{ slug: 'sauce' }] });
+  const b = fixture('b', { title: 'B', ingredients: [], components: [{ slug: 'sauce' }] });
+
+  beforeEach(async () => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideFakeRecipes(new FakeRecipeRepository([soup, stew, salsa, sauce, a, b])),
+      ],
+    });
+    list = TestBed.inject(ListStore);
+    recipes = TestBed.inject(RecipeStore);
+    await recipes.whenLoaded();
+  });
+
+  afterEach(() => localStorage.clear());
+
+  const onionRow = () => list.groups().find((g) => g.aisle === 'produce')!.rows[0];
+
+  it('merges a duplicate ingredient from two recipes into one row', () => {
+    list.addRecipe('soup');
+    list.addRecipe('stew');
+    expect(list.totalItems()).toBe(1);
+    const row = onionRow();
+    expect(row.sourceTitles).toEqual(['Soup', 'Stew']);
+    expect(row.amount).toBe('2 + 1 cup');
+  });
+
+  it('checks a merged row as one item', () => {
+    list.addRecipe('soup');
+    list.addRecipe('stew');
+    list.toggleRow(onionRow());
+    expect(list.isBought('soup', 0)).toBe(true);
+    expect(list.isBought('stew', 0)).toBe(true);
+    expect(onionRow().bought).toBe(true);
+    expect(list.boughtCount()).toBe(1);
+
+    list.toggleRow(onionRow());
+    expect(list.isBought('soup', 0)).toBe(false);
+    expect(list.isBought('stew', 0)).toBe(false);
+  });
+
+  it('unchecks a merged row when a new recipe adds to it', () => {
+    list.addRecipe('soup');
+    list.addRecipe('stew');
+    list.toggleRow(onionRow());
+    list.addRecipe('salsa');
+    expect(onionRow().sources.length).toBe(3);
+    expect(onionRow().bought).toBe(false);
+  });
+
+  it('rechecks it when that recipe leaves', () => {
+    list.addRecipe('soup');
+    list.addRecipe('stew');
+    list.toggleRow(onionRow());
+    list.addRecipe('salsa');
+    list.removeRecipe('salsa');
+    expect(onionRow().bought).toBe(true);
+  });
+
+  it('merges a component shared by two parents into one row with two sources', () => {
+    list.addRecipe('a');
+    list.addRecipe('b');
+    const rows = list.groups().find((g) => g.aisle === 'produce')!.rows;
+    expect(rows.length).toBe(1);
+    expect(rows[0].sources.map((s) => s.owner)).toEqual(['a>sauce', 'b>sauce']);
+    expect(rows[0].amount).toBe('4 cup');
   });
 });
 

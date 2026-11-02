@@ -1,21 +1,29 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AISLE_LABELS, AISLE_ORDER, Aisle } from '../aisle';
-import { Ingredient } from '../model/recipes.model';
+import { ListSource, mergeSources } from '../list-merge';
 import { Storage } from '../storage';
 import { RecipeStore } from './recipe.store';
 
 const CART_KEY = 'cookbook.cart';
 const BOUGHT_KEY = 'cookbook.bought';
 
-/** One row on the shopping list: an ingredient plus where it came from. */
+/**
+ * One row on the shopping list: an ingredient merged across every recipe that
+ * needs it, plus where it came from.
+ */
 export interface ListRow {
   key: string;
-  /** Position within its recipe's ingredient list — half of the bought key. */
-  index: number;
-  ingredient: Ingredient;
-  recipeSlug: string;
-  recipeTitle: string;
+  name: string;
+  /** Summed across sources: "2 + 1 cup", or '' when every source is to taste. */
+  amount: string;
+  aisle: Aisle | 'other';
+  /** Each recipe ingredient behind the row; their bought keys are the row's state. */
+  sources: ListSource[];
+  /** Distinct recipe titles, in list order. */
+  sourceTitles: string[];
+  /** True only when every source is bought. */
   bought: boolean;
+  extraId?: string;
 }
 
 export interface AisleGroup {
@@ -54,41 +62,44 @@ export class ListStore {
    * Every item from every recipe on the list, grouped by aisle in the display
    * order from §4.
    *
-   * Duplicates across recipes stay as separate rows — merging is out of scope
-   * per §1 and is why the bought key is scoped per recipe.
+   * Duplicates across recipes merge into one row, because you buy onions once
+   * however many recipes want them. The bought marks stay per source (a merged
+   * row is bought when all its sources are), so a recipe joining the list
+   * unchecks the row — it now needs more — and leaving restores it.
    */
   readonly groups = computed<AisleGroup[]>(() => {
     const bought = this._bought();
-    const byAisle = new Map<Aisle, ListRow[]>();
+    const sources: ListSource[] = [];
 
     for (const slug of this._cart()) {
       const recipe = this.recipes.bySlug(slug);
       if (!recipe) continue; // a stored slug that no longer exists
       // The parent's own ingredients, then each component's. A component row is
-      // keyed `parent>component`, so a component shared by two parents gets
-      // separate rows and separate checks under each ('>' cannot occur in a slug).
-      const sources = [
+      // keyed `parent>component`, so a component shared by two parents is two
+      // sources with separate marks under each ('>' cannot occur in a slug).
+      const owners = [
         { owner: slug, ingredients: recipe.ingredients },
         ...this.recipes
           .componentsOf(slug)
           .map((c) => ({ owner: `${slug}>${c.recipe.slug}`, ingredients: c.recipe.ingredients })),
       ];
-      for (const { owner, ingredients } of sources) {
-        ingredients.forEach((ingredient, index) => {
-          const key = boughtKey(owner, index);
-          const row: ListRow = {
-            key,
-            index,
-            ingredient,
-            recipeSlug: owner,
-            recipeTitle: recipe.title,
-            bought: bought.has(key),
-          };
-          const rows = byAisle.get(ingredient.aisle);
-          if (rows) rows.push(row);
-          else byAisle.set(ingredient.aisle, [row]);
-        });
+      for (const { owner, ingredients } of owners) {
+        ingredients.forEach((ingredient, index) =>
+          sources.push({ owner, index, ingredient, recipeTitle: recipe.title }),
+        );
       }
+    }
+
+    const byAisle = new Map<Aisle, ListRow[]>();
+    for (const line of mergeSources(sources)) {
+      const row: ListRow = {
+        ...line,
+        sourceTitles: [...new Set(line.sources.map((s) => s.recipeTitle))],
+        bought: line.sources.every((s) => bought.has(boughtKey(s.owner, s.index))),
+      };
+      const rows = byAisle.get(line.aisle);
+      if (rows) rows.push(row);
+      else byAisle.set(line.aisle, [row]);
     }
 
     return AISLE_ORDER.filter((aisle) => byAisle.has(aisle)).map((aisle) => ({
@@ -132,6 +143,17 @@ export class ListStore {
     else this.addRecipe(slug);
   }
 
+  /** A merged row checks as one item: every source's mark goes on or off together. */
+  toggleRow(row: ListRow): void {
+    const next = new Set(this._bought());
+    for (const s of row.sources) {
+      const key = boughtKey(s.owner, s.index);
+      if (row.bought) next.delete(key);
+      else next.add(key);
+    }
+    this.setBought(next);
+  }
+
   toggleBought(slug: string, index: number): void {
     const key = boughtKey(slug, index);
     const next = new Set(this._bought());
@@ -164,8 +186,9 @@ export class ListStore {
 }
 
 /**
- * Scoped per recipe, not per ingredient name: two recipes both needing garlic
- * are two separate rows, so checking one must not check the other (§2.2).
+ * Scoped per recipe, not per ingredient name: a merged garlic row is checked
+ * by marking each recipe's garlic, so adding a third recipe that needs garlic
+ * shows up unchecked rather than inheriting the earlier mark (§2.2).
  */
 export function boughtKey(slug: string, index: number): string {
   return `${slug}:${index}`;

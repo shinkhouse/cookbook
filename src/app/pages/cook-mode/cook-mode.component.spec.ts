@@ -879,6 +879,66 @@ describe('cook mode mark as cooked', () => {
     expect(navigate).toHaveBeenCalledWith(['/recipes', RECIPE.slug]);
   });
 
+  /** Two recipes, so one instance can be moved from the first to the second. */
+  async function setupPair(): Promise<void> {
+    localStorage.setItem('cookbook.deviceKey', JSON.stringify('sesame'));
+    fake = new FakeRecipeRepository([
+      { ...RECIPE, steps: ['Only step.'] },
+      { ...OTHER, steps: ['One.', 'Two.'] },
+    ]);
+    fake.writable = false;
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        ...provideFakeRecipes(fake),
+        ...provideFakeCookbooks(new FakeCookbookRepository([])),
+      ],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fixture = TestBed.createComponent(CookModeComponent);
+    fixture.componentRef.setInput('slug', RECIPE.slug);
+    fixture.detectChanges();
+  }
+  const state = () =>
+    fixture.componentInstance as unknown as {
+      confirmingCooked(): boolean;
+      cookedError(): string;
+      cookedSaving(): boolean;
+    };
+
+  it('drops the confirm and its error when the slug changes on a reused instance', async () => {
+    await setupPair();
+    button('Finished')!.click();
+    fixture.detectChanges();
+    fake.failNext({ status: 503 });
+    button('Mark as cooked')!.click();
+    await settle();
+    expect(el().querySelector('.cooked-error')).not.toBeNull();
+
+    fixture.componentRef.setInput('slug', OTHER.slug);
+    fixture.detectChanges();
+    expect(state().confirmingCooked()).toBeFalse();
+    expect(state().cookedError()).toBe('');
+    expect(el().textContent).not.toContain('Mark as cooked?');
+    expect(el().querySelector('.cooked-error')).toBeNull();
+  });
+
+  it('clears the saving flag when the slug changes on a reused instance', async () => {
+    await setupPair();
+    button('Finished')!.click();
+    fixture.detectChanges();
+    button('Mark as cooked')!.click();
+    await settle();
+    // Saving stays on through the navigation, which the spy never completes.
+    expect(state().cookedSaving()).toBeTrue();
+
+    fixture.componentRef.setInput('slug', OTHER.slug);
+    fixture.detectChanges();
+    expect(state().cookedSaving()).toBeFalse();
+    expect(state().confirmingCooked()).toBeFalse();
+  });
+
   it('stays on the confirm with the reason when the write fails', async () => {
     await setup(true);
     button('Finished')!.click();

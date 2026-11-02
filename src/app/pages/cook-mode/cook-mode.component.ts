@@ -261,13 +261,16 @@ export class CookModeComponent {
     void this.wakeLock.acquire();
 
     // A reused instance (the route param changing) must not carry one recipe's
-    // timers, position or ticks onto another recipe's steps.
+    // timers, position, ticks or "Mark as cooked?" panel onto another recipe.
     effect(() => {
       this.slug();
       untracked(() => {
         this.timers.set([]);
         this.stepIndex.set(0);
         this.checked.set(new Set());
+        this.confirmingCooked.set(false);
+        this.cookedError.set('');
+        this.cookedSaving.set(false);
       });
     });
 

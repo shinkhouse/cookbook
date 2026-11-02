@@ -359,3 +359,22 @@ describe('RecipeDetailComponent units', () => {
     expect(amounts()[1]).toBe('3');
   });
 });
+
+describe('RecipeDetailComponent print', () => {
+  it('calls window.print from the Print button', async () => {
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(new FakeRecipeRepository())],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    const fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+    const print = spyOn(window, 'print');
+    const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Print',
+    );
+    button!.click();
+    expect(print).toHaveBeenCalledTimes(1);
+  });
+});

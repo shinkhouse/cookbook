@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
@@ -44,6 +45,7 @@ export class RecipeDetailComponent {
 
   private readonly recipes = inject(RecipeStore);
   private readonly router = inject(Router);
+  private readonly document = inject(DOCUMENT);
   protected readonly list = inject(ListStore);
   protected readonly prefs = inject(PrefsStore);
 
@@ -67,6 +69,11 @@ export class RecipeDetailComponent {
   protected readonly confirmingArchive = signal(false);
   protected readonly archiving = signal(false);
   protected readonly archiveError = signal('');
+
+  /** Opens the browser's print dialog; the print stylesheet does the rest. */
+  protected print(): void {
+    this.document.defaultView?.print();
+  }
 
   protected askArchive(): void {
     this.archiveError.set('');

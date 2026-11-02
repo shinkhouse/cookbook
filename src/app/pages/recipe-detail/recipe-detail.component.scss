@@ -535,3 +535,116 @@ h1 {
         color: var(--ink-4);
     }
 }
+
+// Print: the recipe as a card. Chosen units and servings are already in the
+// DOM, so the page prints what is on screen minus the controls.
+@media print {
+    .hero,
+    .actions,
+    .back,
+    .stepper button,
+    .rail-note .link-button,
+    .gap-note,
+    .unit-toggle,
+    .checked-count,
+    .ingredient-list mat-checkbox ::ng-deep .mdc-checkbox {
+        display: none !important;
+    }
+
+    .detail {
+        padding-bottom: 0;
+        --text-body: 0.875rem;
+        --text-small: 0.8125rem;
+        line-height: 1.45;
+    }
+
+    // Tighter type so a typical recipe fits one sheet.
+    h1 {
+        margin-top: 0;
+        font-size: 2rem;
+        max-width: none;
+    }
+
+    .steps h2,
+    .steps .section-title,
+    .ingredients-card h2,
+    .section-title {
+        font-size: 1.25rem;
+    }
+
+    .rail-value,
+    .stepper-value {
+        font-size: 1.15rem;
+    }
+
+    .step-number {
+        width: 22px;
+        height: 22px;
+    }
+
+    .step-list li {
+        gap: 12px;
+    }
+
+    .notes {
+        margin-top: 14px;
+        padding: 10px 14px;
+    }
+
+    .ingredient-list li {
+        padding: 1px 0;
+    }
+
+    .detail-body {
+        max-width: none;
+        padding: 0;
+    }
+
+    .rail {
+        margin: 10px 0;
+        padding: 8px 0;
+    }
+
+    .tags {
+        margin-top: 10px;
+    }
+
+    .ingredients-card {
+        position: static;
+        box-shadow: none;
+        padding: 0;
+        border: 0;
+        background: none;
+    }
+
+    .ingredient-list li {
+        min-height: 0;
+        break-inside: avoid;
+    }
+
+    .step-list li {
+        padding: 4px 0;
+        break-inside: avoid;
+    }
+
+    .notes {
+        break-inside: avoid;
+    }
+
+    .component-section {
+        margin-top: 20px;
+        break-inside: avoid-page;
+    }
+
+    .component-section:last-of-type {
+        margin-bottom: 20px;
+    }
+}
+
+@media print and (min-width: 15cm) {
+    .columns {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+        gap: 24px;
+    }
+}

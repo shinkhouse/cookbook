@@ -9,7 +9,7 @@ import {
   provideFakeRecipes,
 } from '../testing/fake-repositories';
 import { CookbookStore } from './cookbook.store';
-import { ListStore, boughtKey } from './list.store';
+import { ListStore, OTHER_AISLE, boughtKey } from './list.store';
 import { PrefsStore } from './prefs.store';
 import { RecipeStore, tagLabel } from './recipe.store';
 
@@ -861,6 +861,77 @@ describe('ListStore', () => {
     const fresh = TestBed.inject(ListStore);
     expect(fresh.cart()).toEqual(['grandmas-chili']);
     expect(fresh.isBought('grandmas-chili', 1)).toBe(true);
+  });
+
+  it('adds a manual item to an Other group', () => {
+    expect(list.addExtra('Paper towels')).toBe(true);
+    const groups = list.groups();
+    const other = groups[groups.length - 1];
+    expect(other.aisle).toBe(OTHER_AISLE);
+    expect(other.label).toBe('Other');
+    const [row] = other.rows;
+    const [extra] = list.extras();
+    expect(row).toEqual(
+      jasmine.objectContaining({
+        key: 'extra:' + extra.id,
+        name: 'Paper towels',
+        amount: '',
+        sources: [],
+        sourceTitles: [],
+        extraId: extra.id,
+        bought: false,
+      }),
+    );
+  });
+
+  it('trims and caps a name at 200 characters', () => {
+    list.addExtra('  ' + 'x'.repeat(300) + '  ');
+    expect(list.extras()[0].name).toBe('x'.repeat(200));
+  });
+
+  it('ignores a blank or repeated name', () => {
+    expect(list.addExtra('   ')).toBe(false);
+    expect(list.addExtra('Paper towels')).toBe(true);
+    expect(list.addExtra('paper towels ')).toBe(false);
+    expect(list.extras().length).toBe(1);
+  });
+
+  it('checks and removes a manual item', () => {
+    list.addExtra('Paper towels');
+    const row = () => list.groups()[0].rows[0];
+    list.toggleRow(row());
+    expect(row().bought).toBe(true);
+    expect(list.extras()[0].bought).toBe(true);
+    list.toggleRow(row());
+    expect(row().bought).toBe(false);
+    list.removeExtra(list.extras()[0].id);
+    expect(list.extras()).toEqual([]);
+    expect(list.groups()).toEqual([]);
+  });
+
+  it('persists manual items across a fresh injection', () => {
+    list.addExtra('Paper towels');
+    list.toggleRow(list.groups()[0].rows[0]);
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes()] });
+    const fresh = TestBed.inject(ListStore);
+    expect(fresh.extras().map((e) => [e.name, e.bought])).toEqual([['Paper towels', true]]);
+  });
+
+  it('counts manual items in the totals and unchecks them with everything else', () => {
+    list.addRecipe('grandmas-chili');
+    const recipeItems = list.totalItems();
+    list.addExtra('Paper towels');
+    expect(list.totalItems()).toBe(recipeItems + 1);
+    list.toggleRow(list.groups()[list.groups().length - 1].rows[0]);
+    expect(list.boughtCount()).toBe(1);
+    list.uncheckAll();
+    expect(list.boughtCount()).toBe(0);
+    expect(list.extras()[0].bought).toBe(false);
+    list.clear();
+    expect(list.extras()).toEqual([]);
+    expect(list.totalItems()).toBe(0);
   });
 
   it('scopes the bought key per recipe', () => {

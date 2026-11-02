@@ -262,3 +262,60 @@
     margin: 0;
     color: var(--ink-3);
 }
+
+.add-item {
+    display: grid;
+    gap: 6px;
+    margin-top: 18px;
+}
+
+.add-row {
+    display: flex;
+    gap: 10px;
+
+    input {
+        flex: 1;
+        min-width: 0;
+        min-height: var(--touch-large);
+        padding: 0 14px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius-pill);
+        background: var(--surface);
+        color: var(--ink);
+        font-family: var(--font);
+        font-size: var(--text-body);
+
+        &:focus-visible {
+            outline: 2px solid var(--navy);
+            outline-offset: 1px;
+        }
+    }
+
+    .btn-outline {
+        min-height: var(--touch-large);
+    }
+}
+
+.row-remove {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: none;
+    color: var(--ink-4);
+    cursor: pointer;
+
+    &:hover {
+        background: var(--rule);
+        color: var(--ink);
+    }
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+    }
+}

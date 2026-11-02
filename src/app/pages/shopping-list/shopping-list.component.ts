@@ -16,7 +16,9 @@ export class ShoppingListComponent {
   private readonly recipes = inject(RecipeStore);
 
   protected readonly groups = computed(() => this.list.groups());
-  protected readonly isEmpty = computed(() => this.list.recipeCount() === 0);
+  protected readonly isEmpty = computed(
+    () => this.list.recipeCount() === 0 && this.list.extras().length === 0,
+  );
 
   /** Recipe chips across the top, each removable with its items (§6.5). */
   protected readonly chips = computed(() =>
@@ -25,6 +27,11 @@ export class ShoppingListComponent {
       .map((slug) => this.recipes.bySlug(slug))
       .filter((r): r is NonNullable<typeof r> => r !== undefined),
   );
+
+  /** Adds the typed item; the field clears only when it was accepted. */
+  protected addItem(input: HTMLInputElement): void {
+    if (this.list.addExtra(input.value)) input.value = '';
+  }
 
   protected readonly progress = computed(() => {
     const total = this.list.totalItems();

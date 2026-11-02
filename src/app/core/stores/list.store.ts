@@ -6,6 +6,17 @@ import { RecipeStore } from './recipe.store';
 
 const CART_KEY = 'cookbook.cart';
 const BOUGHT_KEY = 'cookbook.bought';
+const EXTRAS_KEY = 'cookbook.extras';
+const MAX_EXTRA_NAME = 200;
+
+export const OTHER_AISLE = 'other' as const;
+
+/** A one-off item typed in by hand, like paper towels. Not tied to any recipe. */
+export interface ExtraItem {
+  id: string;
+  name: string;
+  bought: boolean;
+}
 
 /**
  * One row on the shopping list: an ingredient merged across every recipe that
@@ -27,7 +38,7 @@ export interface ListRow {
 }
 
 export interface AisleGroup {
-  aisle: Aisle;
+  aisle: Aisle | typeof OTHER_AISLE;
   label: string;
   rows: ListRow[];
 }
@@ -48,6 +59,11 @@ export class ListStore {
     new Set(this.storage.read<string[]>(BOUGHT_KEY, [])),
   );
 
+  private readonly _extras = signal<readonly ExtraItem[]>(
+    this.storage.read<ExtraItem[]>(EXTRAS_KEY, []),
+  );
+
+  readonly extras = computed(() => this._extras());
   readonly cart = computed(() => this._cart());
   /**
    * Recipes on the list that still resolve. A cart entry for an archived recipe
@@ -102,11 +118,32 @@ export class ListStore {
       else byAisle.set(line.aisle, [row]);
     }
 
-    return AISLE_ORDER.filter((aisle) => byAisle.has(aisle)).map((aisle) => ({
-      aisle,
-      label: AISLE_LABELS[aisle],
-      rows: byAisle.get(aisle)!,
-    }));
+    const groups: AisleGroup[] = AISLE_ORDER.filter((aisle) => byAisle.has(aisle)).map(
+      (aisle) => ({
+        aisle,
+        label: AISLE_LABELS[aisle],
+        rows: byAisle.get(aisle)!,
+      }),
+    );
+
+    const extras = this._extras();
+    if (extras.length > 0) {
+      groups.push({
+        aisle: OTHER_AISLE,
+        label: 'Other',
+        rows: extras.map((e) => ({
+          key: 'extra:' + e.id,
+          name: e.name,
+          amount: '',
+          aisle: OTHER_AISLE,
+          sources: [],
+          sourceTitles: [],
+          bought: e.bought,
+          extraId: e.id,
+        })),
+      });
+    }
+    return groups;
   });
 
   readonly totalItems = computed(() =>
@@ -145,6 +182,12 @@ export class ListStore {
 
   /** A merged row checks as one item: every source's mark goes on or off together. */
   toggleRow(row: ListRow): void {
+    if (row.extraId !== undefined) {
+      this.setExtras(
+        this._extras().map((e) => (e.id === row.extraId ? { ...e, bought: !e.bought } : e)),
+      );
+      return;
+    }
     const next = new Set(this._bought());
     for (const s of row.sources) {
       const key = boughtKey(s.owner, s.index);
@@ -165,13 +208,34 @@ export class ListStore {
     return this._bought().has(boughtKey(slug, index));
   }
 
+  /** False when the name is blank or already on the list (ignoring case). */
+  addExtra(name: string): boolean {
+    const trimmed = name.trim().slice(0, MAX_EXTRA_NAME).trim();
+    if (trimmed === '') return false;
+    const lower = trimmed.toLowerCase();
+    if (this._extras().some((e) => e.name.toLowerCase() === lower)) return false;
+    this.setExtras([...this._extras(), { id: crypto.randomUUID(), name: trimmed, bought: false }]);
+    return true;
+  }
+
+  removeExtra(id: string): void {
+    this.setExtras(this._extras().filter((e) => e.id !== id));
+  }
+
   uncheckAll(): void {
     this.setBought(new Set());
+    this.setExtras(this._extras().map((e) => ({ ...e, bought: false })));
   }
 
   clear(): void {
     this.setCart([]);
     this.setBought(new Set());
+    this.setExtras([]);
+  }
+
+  private setExtras(extras: readonly ExtraItem[]): void {
+    this._extras.set(extras);
+    this.storage.write(EXTRAS_KEY, [...extras]);
   }
 
   private setCart(cart: readonly string[]): void {

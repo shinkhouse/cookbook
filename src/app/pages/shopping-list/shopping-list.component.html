@@ -25,6 +25,22 @@
       <p class="empty-hint">Add a recipe from the library and its ingredients land here.</p>
       <a class="btn-outline" routerLink="/">Browse recipes</a>
     </div>
+    <div class="add-item">
+      <label class="label" for="add-item">Add an item</label>
+      <div class="add-row">
+        <input
+          #addInput
+          id="add-item"
+          type="text"
+          maxlength="200"
+          autocomplete="off"
+          placeholder="Paper towels, birthday candles..."
+          (keydown.enter)="addItem(addInput)"
+        />
+        <button type="button" class="btn-outline" (click)="addItem(addInput)">Add</button>
+      </div>
+    </div>
+
   } @else {
     <div class="chips" role="group" aria-label="Recipes on this list">
       @for (recipe of chips(); track recipe.slug) {
@@ -69,7 +85,16 @@
                 <!-- The source only tells you anything when more than one
                      recipe is on the list; otherwise it repeats the chip above
                      on every single row. -->
-                @if (list.recipeCount() > 1) {
+                @if (row.extraId !== undefined) {
+                  <button
+                    type="button"
+                    class="row-remove"
+                    (click)="list.removeExtra(row.extraId)"
+                    [attr.aria-label]="'Remove ' + row.name"
+                  >
+                    <mat-icon fontIcon="close" />
+                  </button>
+                } @else if (list.recipeCount() > 1) {
                   <span class="row-source">{{ row.sourceTitles.join(' · ') }}</span>
                 }
               </li>
@@ -77,6 +102,22 @@
           </ul>
         </section>
       }
+    </div>
+
+    <div class="add-item">
+      <label class="label" for="add-item">Add an item</label>
+      <div class="add-row">
+        <input
+          #addInput
+          id="add-item"
+          type="text"
+          maxlength="200"
+          autocomplete="off"
+          placeholder="Paper towels, birthday candles..."
+          (keydown.enter)="addItem(addInput)"
+        />
+        <button type="button" class="btn-outline" (click)="addItem(addInput)">Add</button>
+      </div>
     </div>
   }
 </div>

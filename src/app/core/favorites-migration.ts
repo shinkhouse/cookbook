@@ -12,7 +12,9 @@ import { RecipeStore } from './stores/recipe.store';
  *
  * - A device that never stored a list pushes the built-in seed, but only when
  *   the server has no favorites at all. Otherwise a fresh phone would re-star
- *   the seed after someone had deliberately unstarred it elsewhere.
+ *   the seed after someone had deliberately unstarred it elsewhere. The seed
+ *   is written down as the stored list first, so a retry after a partial push
+ *   finishes it.
  * - Stars are only added, never removed: an unstar on this device that the
  *   server has not seen is not worth overriding another device's star for.
  * - A failed push stops the run with the flag unset and the old list kept, so
@@ -39,8 +41,15 @@ export class FavoritesMigration {
     await this.recipes.whenLoaded();
     if (this.recipes.status() !== 'ready') return 0;
 
-    const stored = this.prefs.legacyFavs();
-    const local = stored ?? (this.recipes.favCount() === 0 ? [...FAV_SEED] : []);
+    let stored = this.prefs.legacyFavs();
+    if (stored === null && this.recipes.favCount() === 0) {
+      // Written down before the first push: if one fails, the server then has
+      // some favorites, and a retry judging by favCount() would push no more.
+      // The stored list makes the retry finish the seed instead.
+      this.prefs.writeLegacyFavs(FAV_SEED);
+      stored = [...FAV_SEED];
+    }
+    const local = stored ?? [];
     const todo = local.filter((slug) => this.recipes.bySlug(slug) && !this.recipes.isFav(slug));
 
     let pushed = 0;

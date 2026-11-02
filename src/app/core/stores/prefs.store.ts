@@ -27,6 +27,11 @@ export class PrefsStore {
     return Array.isArray(stored) ? stored.filter((s): s is string => typeof s === 'string') : null;
   }
 
+  /** Records a list still to push, so a retry after a failed push resumes it. */
+  writeLegacyFavs(slugs: readonly string[]): void {
+    this.storage.write(FAVS_KEY, [...slugs]);
+  }
+
   clearLegacyFavs(): void {
     this.storage.remove(FAVS_KEY);
   }

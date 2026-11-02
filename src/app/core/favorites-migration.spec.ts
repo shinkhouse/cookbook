@@ -89,6 +89,29 @@ describe('FavoritesMigration', () => {
     expect(prefs().favsMigrated()).toBeTrue();
   });
 
+  it('finishes the seed on a retry after a push fails partway through it', async () => {
+    const migration = setup();
+    await store().whenLoaded();
+    const real = fake.setFavorite.bind(fake);
+    let calls = 0;
+    spyOn(fake, 'setFavorite').and.callFake(async (slug, fav) => {
+      // The second push fails: one seed star is on the server, the rest are not.
+      if (++calls === 2) throw { status: 503 };
+      return real(slug, fav);
+    });
+
+    // One star went up before the failure; the flag stays unset.
+    expect(await migration.run()).toBe(1);
+    expect(favSlugs()).toEqual([FAV_SEED[0]]);
+    expect(prefs().favsMigrated()).toBeFalse();
+
+    // The server now has a favorite, so the retry must not judge by favCount().
+    expect(await migration.run()).toBe(FAV_SEED.length - 1);
+    expect(favSlugs()).toEqual([...FAV_SEED].sort());
+    expect(prefs().favsMigrated()).toBeTrue();
+    expect(localStorage.getItem(FAVS_KEY)).toBeNull();
+  });
+
   it('does nothing on a locked read-only device', async () => {
     localStorage.setItem(FAVS_KEY, JSON.stringify(['grandmas-chili']));
     const migration = setup(Recipes, false);

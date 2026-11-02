@@ -67,6 +67,10 @@
               <button type="button" class="link-button" (click)="resetServings()">reset</button>
             }
           </p>
+        </div>
+
+        <div class="rail-item">
+          <p class="label">Units</p>
           <div class="unit-toggle" role="group" aria-label="Units">
             <button type="button" [attr.aria-pressed]="units() === 'us'" (click)="setUnits('us')">US</button>
             <button type="button" [attr.aria-pressed]="units() === 'metric'" (click)="setUnits('metric')">Metric</button>

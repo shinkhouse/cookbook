@@ -242,6 +242,35 @@
     text-wrap: pretty;
 }
 
+.step-uses {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin: 18px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.step-uses-lead {
+    color: var(--ink-4);
+    margin-right: 2px;
+}
+
+.step-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--navy-tint-edge);
+    border-radius: var(--radius-pill);
+    background: var(--navy-tint);
+    color: var(--navy-deep);
+    font-family: var(--font);
+    font-size: var(--text-small);
+    font-weight: 600;
+}
+
 .timer-start {
     margin-top: 22px;
     // Start, countdown and done share one width, so the step does not jump.

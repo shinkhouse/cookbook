@@ -134,7 +134,7 @@ export function inferAisle(name: string): Aisle {
  * Whole-word containment, so "creamy dressing" does not match "cream" and
  * "creamer" does not match "cream" either.
  */
-function containsWord(haystack: string, needle: string): boolean {
+export function containsWord(haystack: string, needle: string): boolean {
   let from = 0;
   for (;;) {
     const at = haystack.indexOf(needle, from);

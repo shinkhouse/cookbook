@@ -17,7 +17,9 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
-import { Recipe } from '../../core/model/recipes.model';
+import { stripDescriptors, ingredientHead } from '../../core/ingredient-key';
+import { Ingredient, Recipe } from '../../core/model/recipes.model';
+import { ingredientsInStep } from '../../core/step-ingredients';
 import { PrefsStore } from '../../core/stores/prefs.store';
 import { UnitSystem, amountText } from '../../core/units';
 import { RecipeStore } from '../../core/stores/recipe.store';
@@ -42,6 +44,8 @@ interface FlatStep {
   label: string | null;
   /** Which part the step belongs to: a component's position, or the parent. */
   owner: 'parent' | number;
+  /** The owner's own ingredients, so a step never claims another section's. */
+  ingredients: Ingredient[];
 }
 
 @Component({
@@ -103,12 +107,18 @@ export class CookModeComponent {
     const parts = this.parts();
     return [
       ...parts.flatMap((p, i) =>
-        p.recipe.steps.map((text): FlatStep => ({ text, label: p.label, owner: i })),
+        p.recipe.steps.map((text): FlatStep => ({
+          text,
+          label: p.label,
+          owner: i,
+          ingredients: p.recipe.ingredients,
+        })),
       ),
       ...recipe.steps.map((text): FlatStep => ({
         text,
         label: parts.length ? recipe.title : null,
         owner: 'parent',
+        ingredients: recipe.ingredients,
       })),
     ];
   });
@@ -131,6 +141,18 @@ export class CookModeComponent {
   protected readonly stepCount = computed(() => this.steps().length);
 
   protected readonly currentStep = computed(() => this.steps()[this.stepIndex()] ?? '');
+
+  /** What the current step uses: "1 large onion"-style amounts, unit-converted, not scaled. */
+  protected readonly stepChips = computed<string[]>(() => {
+    const step = this.flatSteps()[this.stepIndex()];
+    if (!step) return [];
+    const units = this.units();
+    return ingredientsInStep(step.text, step.ingredients).map((i) => {
+      const head = stripDescriptors(ingredientHead(i.name));
+      const amount = amountText(i.qty, i.unit, 1, units);
+      return amount ? `${amount} ${head}` : head;
+    });
+  });
 
   protected readonly isLastStep = computed(
     () => this.stepIndex() >= this.stepCount() - 1,

@@ -70,6 +70,15 @@
 
           <p class="step-text">{{ currentStep() }}</p>
 
+          @if (stepChips().length) {
+            <ul class="step-uses" aria-label="Uses">
+              <li class="step-uses-lead label" aria-hidden="true">Uses:</li>
+              @for (chip of stepChips(); track $index) {
+                <li class="step-chip tnum">{{ chip }}</li>
+              }
+            </ul>
+          }
+
           @if (stepDuration() !== null) {
             @if (stepTimer(); as timer) {
               @if (timer.remaining <= 0) {

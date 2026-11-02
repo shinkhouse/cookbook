@@ -24,7 +24,7 @@ const RECIPE: Recipe = {
     { qty: 2, unit: 'cup', name: 'stock', aisle: 'pantry' },
     { qty: 1, unit: '', name: 'onion', aisle: 'produce' },
   ],
-  steps: ['Simmer for 20 minutes.', 'Bake for 5 minutes.', 'Rest for 10 minutes.'],
+  steps: ['Simmer the stock for 20 minutes.', 'Bake for 5 minutes.', 'Rest for 10 minutes.'],
   notes: [],
   cookbooks: [],
 };
@@ -504,6 +504,67 @@ describe('cook mode ingredients panel', () => {
       expect(stage).toBeGreaterThan(stageOpen);
       expect(sideOpen).toBeGreaterThan(side);
     });
+  });
+});
+
+describe('cook mode step ingredients', () => {
+  let fixture: ComponentFixture<CookModeComponent>;
+  let el: HTMLElement;
+  const text = (node: Element | null | undefined) => (node?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const chips = () => Array.from(el.querySelectorAll('.step-chip')).map(text);
+
+  afterEach(() => {
+    fixture.destroy();
+    jasmine.clock().uninstall();
+  });
+
+  it('shows a Uses list under a step that names an ingredient', async () => {
+    fixture = await setup();
+    el = fixture.nativeElement;
+    expect(chips()).toEqual(['2 cup stock']);
+    expect(el.querySelector('.step-uses')!.getAttribute('aria-label')).toBe('Uses');
+  });
+
+  it('shows nothing under a step that names none', async () => {
+    fixture = await setup();
+    el = fixture.nativeElement;
+    el.querySelectorAll<HTMLElement>('.stage-nav button')[1].click();
+    fixture.detectChanges();
+    expect(el.querySelector('.step-uses')).toBeNull();
+  });
+
+  it('uses the component\'s ingredients for a component step', async () => {
+    const sauce: Recipe = {
+      ...RECIPE,
+      slug: 'sauce',
+      component: true,
+      ingredients: [{ qty: 3, unit: 'tbsp', name: 'butter', aisle: 'dairy' }],
+      steps: ['Melt the butter and the onion.'],
+    };
+    const parent: Recipe = {
+      ...RECIPE,
+      slug: 'parent',
+      ingredients: [{ qty: 1, unit: '', name: 'onion', aisle: 'produce' }],
+      steps: ['Fry the onion and the butter.'],
+      components: [{ slug: 'sauce', label: 'For the sauce' }],
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        ...provideFakeRecipes(new FakeRecipeRepository([parent, sauce])),
+        ...provideFakeCookbooks(new FakeCookbookRepository([])),
+      ],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    jasmine.clock().install();
+    fixture = TestBed.createComponent(CookModeComponent);
+    fixture.componentRef.setInput('slug', 'parent');
+    fixture.detectChanges();
+    el = fixture.nativeElement;
+    expect(chips()).toEqual(['3 tbsp butter']);
+    el.querySelectorAll<HTMLElement>('.stage-nav button')[1].click();
+    fixture.detectChanges();
+    expect(chips()).toEqual(['1 onion']);
   });
 });
 

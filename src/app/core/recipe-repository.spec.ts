@@ -53,6 +53,23 @@ describe('HttpRecipeRepository', () => {
     expect((await result).map((r) => r.slug)).toEqual(['a']);
   });
 
+  it('gets one recipe, archived included when writable, backfilling cookbooks', async () => {
+    const { cookbooks, ...legacy } = draft('a b');
+    const result = repo.get('a b');
+    httpMock
+      .expectOne({ method: 'GET', url: `${URL}/a%20b?includeArchived=true` })
+      .flush(legacy);
+    expect((await result)!.cookbooks).toEqual([DEFAULT_COOKBOOK_ID]);
+  });
+
+  it('gets null for an unknown slug', async () => {
+    const result = repo.get('gone');
+    httpMock
+      .expectOne(`${URL}/gone?includeArchived=true`)
+      .flush({ message: 'No such recipe.' }, { status: 404, statusText: 'Not Found' });
+    expect(await result).toBeNull();
+  });
+
   it('asks for the plain list when not writable', async () => {
     (repo as { writable: boolean }).writable = false;
     const result = repo.list();

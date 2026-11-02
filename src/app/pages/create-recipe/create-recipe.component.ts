@@ -694,7 +694,9 @@ export class CreateRecipeComponent {
       else delete cleaned.components;
 
       if (this.editing()) {
-        if (!(await this.recipes.update(cleaned))) {
+        // Against the copy the form loaded, so notes a device added since are
+        // kept and notes deleted here stay deleted.
+        if (!(await this.recipes.update(cleaned, this.original() ?? undefined))) {
           this.notice.set('That recipe no longer exists, so nothing was saved.');
           return;
         }

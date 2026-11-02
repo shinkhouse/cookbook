@@ -23,6 +23,13 @@ export abstract class RecipeRepository {
   /** The whole collection. Rejects if the API cannot be reached. */
   abstract list(): Promise<Recipe[]>;
 
+  /**
+   * One recipe as the server has it now, archived included when writable. Null
+   * when the slug is unknown (404). Read just before a full write, so the write
+   * does not undo what a device saved since this tab loaded.
+   */
+  abstract get(slug: string): Promise<Recipe | null>;
+
   /** Adds a recipe and resolves to what the API stored. */
   abstract create(recipe: Recipe): Promise<Recipe>;
 
@@ -78,6 +85,19 @@ export class HttpRecipeRepository extends RecipeRepository {
     const url = this.writable ? `${this.url}?includeArchived=true` : this.url;
     const all = await firstValueFrom(this.http.get<unknown[]>(url));
     return all.filter(isRecipe).map(withCookbooks);
+  }
+
+  override async get(slug: string): Promise<Recipe | null> {
+    const base = `${this.url}/${encodeURIComponent(slug)}`;
+    try {
+      const found = await firstValueFrom(
+        this.http.get<unknown>(this.writable ? `${base}?includeArchived=true` : base),
+      );
+      return isRecipe(found) ? withCookbooks(found) : null;
+    } catch (error) {
+      if (isNotFound(error)) return null;
+      throw error;
+    }
   }
 
   override create(recipe: Recipe): Promise<Recipe> {

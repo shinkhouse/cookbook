@@ -367,8 +367,8 @@ describe('RecipeStore lifecycle and writes', () => {
     const store = setup();
     await store.whenLoaded();
     const existing = store.bySlug('grandmas-chili')!;
-    expect(await store.update({ ...existing, cooked: 99 })).toBe(true);
-    expect(store.bySlug('grandmas-chili')?.cooked).toBe(99);
+    expect(await store.update({ ...existing, title: 'Chili, Revised' })).toBe(true);
+    expect(store.bySlug('grandmas-chili')?.title).toBe('Chili, Revised');
     expect(await store.update({ ...existing, slug: 'ghost' })).toBe(false);
   });
 
@@ -1524,6 +1524,72 @@ describe('RecipeStore what can I make', () => {
   it('searches as usual with nothing listed', () => {
     store.setQuery('  ');
     expect(store.results().length).toBe(seed.length);
+  });
+});
+
+describe('RecipeStore full writes keep device writes', () => {
+  let store: RecipeStore;
+  let fake: FakeRecipeRepository;
+  const SLUG = 'soup';
+
+  beforeEach(async () => {
+    localStorage.clear();
+    fake = new FakeRecipeRepository([fixture(SLUG, { notes: ['first', 'second'], cooked: 2 })]);
+    TestBed.configureTestingModule({ providers: [provideFakeRecipes(fake)] });
+    store = TestBed.inject(RecipeStore);
+    await store.whenLoaded();
+    // A phone writes to the server behind this tab's back: its cache is now stale.
+    await fake.addNote(SLUG, 'from the phone');
+    await fake.markCooked(SLUG);
+    await fake.setFavorite(SLUG, true);
+  });
+
+  afterEach(() => localStorage.clear());
+
+  const onServer = async () => (await fake.get(SLUG))!;
+  const expectPhoneWritesKept = async (notes = ['first', 'second', 'from the phone']) => {
+    const server = await onServer();
+    expect(server.notes).toEqual(notes);
+    expect(server.cooked).toBe(3);
+    expect(server.lastCooked).toBeTruthy();
+    expect(server.favorite).toBeTrue();
+    // The cache takes the server's answer, so the screen shows them too.
+    const cached = store.bySlug(SLUG) ?? (await onServer());
+    expect(cached.favorite).toBeTrue();
+  };
+
+  it('keeps them through an archive', async () => {
+    expect(await store.archive(SLUG)).toBeTrue();
+    await expectPhoneWritesKept();
+    expect((await onServer()).archived).toBeTrue();
+  });
+
+  it('keeps them through filing into a cookbook', async () => {
+    expect(await store.addToCookbook(SLUG, 'grandmas')).toBeTrue();
+    await expectPhoneWritesKept();
+    expect((await onServer()).cookbooks).toEqual([DEFAULT_COOKBOOK_ID, 'grandmas']);
+    expect(store.bySlug(SLUG)!.notes).toEqual(['first', 'second', 'from the phone']);
+  });
+
+  it('keeps them through unfiling from a cookbook', async () => {
+    expect(await store.removeFromCookbook(SLUG, DEFAULT_COOKBOOK_ID)).toBeTrue();
+    await expectPhoneWritesKept();
+    expect((await onServer()).cookbooks).toEqual([]);
+  });
+
+  it('keeps them through an edit built from an older copy, without restoring a deleted note', async () => {
+    const base = fixture(SLUG, { notes: ['first', 'second'], cooked: 2 });
+    // The editor deleted "first" and changed the title.
+    const edited = { ...base, title: 'Better Soup', notes: ['second'] };
+    expect(await store.update(edited, base)).toBeTrue();
+    await expectPhoneWritesKept(['second', 'from the phone']);
+    expect((await onServer()).title).toBe('Better Soup');
+  });
+
+  it('still saves, as before, when the fresh copy cannot be fetched', async () => {
+    fake.failNextGet(new Error('down'));
+    expect(await store.addToCookbook(SLUG, 'grandmas')).toBeTrue();
+    expect((await onServer()).cookbooks).toEqual([DEFAULT_COOKBOOK_ID, 'grandmas']);
   });
 });
 

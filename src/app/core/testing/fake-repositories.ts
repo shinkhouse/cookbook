@@ -83,6 +83,7 @@ export function provideFakeCookbooks(fake?: FakeCookbookRepository): Provider[] 
 export class FakeRecipeRepository extends RecipeRepository {
   private items: Recipe[];
   private pending: { error: unknown } | null = null;
+  private pendingGet: { error: unknown } | null = null;
 
   override writable = true;
 
@@ -96,9 +97,28 @@ export class FakeRecipeRepository extends RecipeRepository {
     this.pending = { error };
   }
 
+  /**
+   * The next `get` rejects with this. Apart from `failNext` because the store
+   * reads a fresh copy before every full write: `failNext` must keep failing the
+   * write itself, which is what the tests using it mean.
+   */
+  failNextGet(error: unknown): void {
+    this.pendingGet = { error };
+  }
+
   override async list(): Promise<Recipe[]> {
     this.maybeFail();
     return this.items.map((r) => ({ ...r }));
+  }
+
+  override async get(slug: string): Promise<Recipe | null> {
+    if (this.pendingGet) {
+      const { error } = this.pendingGet;
+      this.pendingGet = null;
+      throw error;
+    }
+    const found = this.items.find((r) => r.slug === slug);
+    return found ? { ...found, notes: [...found.notes] } : null;
   }
 
   override async create(recipe: Recipe): Promise<Recipe> {

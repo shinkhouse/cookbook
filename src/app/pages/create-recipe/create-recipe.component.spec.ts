@@ -338,6 +338,27 @@ describe('CreateRecipeComponent edit mode', () => {
     expect(navigate).toHaveBeenCalledWith(['/recipes', 'old-soup']);
   });
 
+  it('keeps a note, a cook and a star the phone saved while the editor was open', async () => {
+    fake = new FakeRecipeRepository([{ ...stored, notes: ['keep', 'drop me'] }]);
+    await setup('old-soup', fake);
+    await fake.addNote('old-soup', 'from the phone');
+    await fake.markCooked('old-soup');
+    await fake.setFavorite('old-soup', true);
+    // The user deletes one of the notes the editor loaded.
+    (page as unknown as { notes: { set(v: string[]): void } }).notes.set(['keep']);
+    page.title.set('Newer Soup');
+
+    await page.save();
+
+    const server = (await fake.get('old-soup'))!;
+    expect(server.title).toBe('Newer Soup');
+    expect(server.notes).toEqual(['keep', 'from the phone']);
+    expect(server.cooked).toBe(8);
+    expect(server.lastCooked).toBeTruthy();
+    expect(server.favorite).toBeTrue();
+    expect(navigate).toHaveBeenCalledWith(['/recipes', 'old-soup']);
+  });
+
   it('stays open with the error when the update fails', async () => {
     await setup();
     fake.failNext(Object.assign(new Error('x'), { status: 0 }));

@@ -197,13 +197,59 @@ export class RecipeStore {
    * too, so `archive` can reach them and a record sent with `archived: false`
    * would restore one. Returns false if the slug was unknown, here or on the
    * server. Throws if the API refuses.
+   *
+   * `base` is the copy the change was built from — the editor's copy as it
+   * loaded; by default, the one cached here. See `withDeviceWrites`.
    */
-  async update(recipe: Recipe): Promise<boolean> {
-    if (!this._recipes().some((r) => r.slug === recipe.slug)) return false;
-    const stored = await this.repo.update(recipe);
+  async update(recipe: Recipe, base?: Recipe): Promise<boolean> {
+    const cached = this._recipes().find((r) => r.slug === recipe.slug);
+    if (!cached) return false;
+    const stored = await this.repo.update(await this.withDeviceWrites(recipe, base ?? cached));
     if (!stored) return false;
     this._recipes.update((list) => list.map((r) => (r.slug === stored.slug ? stored : r)));
     return true;
+  }
+
+  /**
+   * A full write sends the whole record, so a copy loaded before a device added
+   * a note, counted a cook or starred the recipe would silently undo it. Just
+   * before writing, this reads the server's copy and carries over its `cooked`,
+   * `lastCooked` and `favorite`, and appends the notes it has that `base` did
+   * not — the ones added since — in the server's order. A note the user deleted
+   * from `base` is not in that difference, so it stays deleted.
+   *
+   * If the read fails the record goes as it is, as it did before: a flaky read
+   * must not stop a save.
+   */
+  private async withDeviceWrites(recipe: Recipe, base: Recipe): Promise<Recipe> {
+    let server: Recipe | null;
+    try {
+      server = await this.repo.get(recipe.slug);
+    } catch {
+      return recipe;
+    }
+    if (!server) return recipe;
+
+    // A multiset difference, so a note repeated on the server is counted fairly.
+    const known = new Map<string, number>();
+    for (const note of base.notes) known.set(note, (known.get(note) ?? 0) + 1);
+    const added = server.notes.filter((note) => {
+      const left = known.get(note) ?? 0;
+      if (left === 0) return true;
+      known.set(note, left - 1);
+      return false;
+    });
+
+    const merged: Recipe = {
+      ...recipe,
+      cooked: server.cooked,
+      notes: [...recipe.notes, ...added],
+    };
+    if (server.lastCooked) merged.lastCooked = server.lastCooked;
+    else delete merged.lastCooked;
+    if (server.favorite !== undefined) merged.favorite = server.favorite;
+    else delete merged.favorite;
+    return merged;
   }
 
   /**

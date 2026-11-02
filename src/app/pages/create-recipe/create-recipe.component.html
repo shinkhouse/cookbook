@@ -422,11 +422,11 @@
           </h3>
           <ul class="preview-list">
             @for (ing of ingredients(); track $index) {
-              <li>
+              <li class="preview-ing">
                 @if (amountLabel(ing); as amt) {
                   <span class="preview-amount">{{ amt }}</span>
                 }
-                {{ ing.name }}
+                <span class="preview-name">{{ ing.name }}</span>
                 <span class="preview-aisle">{{ ing.aisle }}</span>
               </li>
             }

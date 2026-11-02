@@ -1572,6 +1572,12 @@ describe('RecipeStore stale sort', () => {
     expect(store.results().map((r) => r.slug)).toEqual(before);
   });
 
+  it('ignores the sort in have mode with nothing listed yet', () => {
+    store.mode.set('have');
+    store.sort.set('stale');
+    expect(store.results().map((r) => r.slug)).toEqual(seed.map((r) => r.slug));
+  });
+
   it('survives reset', () => {
     store.sort.set('stale');
     store.reset();

@@ -408,7 +408,11 @@ export class RecipeStore {
             r.tags.some((t) => t.toLowerCase().includes(needle)) ||
             r.ingredients.some((i) => i.name.toLowerCase().includes(needle)),
         );
-    return this.sort() === 'stale' ? [...matched].sort(compareStale) : matched;
+    // Have mode with nothing listed lands here too; the sort control is hidden
+    // there, so it must not order anything.
+    return this.mode() === 'search' && this.sort() === 'stale'
+      ? [...matched].sort(compareStale)
+      : matched;
   });
 
   /**

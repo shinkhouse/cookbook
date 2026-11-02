@@ -43,3 +43,18 @@ export function describePhotoError(err: unknown): string {
   }
   return describeWriteError(err);
 }
+
+/**
+ * `describeWriteError` for the narrow writes a device makes once unlocked. The
+ * dev-only wording there (RECIPES_WRITE_KEY, localhost) means nothing on a phone,
+ * so a 403 here is "unlock again" and a 429 is the lockout.
+ */
+export function describeDeviceError(err: unknown): string {
+  const { status } = (err ?? {}) as { status?: unknown };
+  if (status === 403) return "This device isn't unlocked any more. Unlock it again from the footer.";
+  if (status === 429) return 'Too many wrong passcodes. Try again in 15 minutes.';
+  if (status === 0 || status === 502 || status === 503 || status === 504) {
+    return "Couldn't reach the recipe server.";
+  }
+  return 'Saving failed. Nothing was changed.';
+}

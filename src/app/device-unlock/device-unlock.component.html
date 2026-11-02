@@ -1,0 +1,35 @@
+@if (show) {
+    @if (unlocked()) {
+        <p class="status">
+            This device can save
+            <span aria-hidden="true">·</span>
+            <button type="button" class="link" (click)="lock()">Lock</button>
+        </p>
+    } @else if (!open()) {
+        <button type="button" class="link" (click)="begin()">Unlock this device</button>
+    } @else {
+        <form class="unlock-form" (ngSubmit)="submit()">
+            <label class="field">
+                <span class="label">Passcode</span>
+                <input
+                    type="password"
+                    name="passcode"
+                    autocomplete="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    required
+                    [(ngModel)]="passcode"
+                    [attr.aria-invalid]="problem() ? 'true' : null"
+                    [attr.aria-describedby]="problem() ? 'unlock-problem' : null"
+                />
+            </label>
+            <div class="actions">
+                <button type="submit" class="go" [disabled]="busy()">Unlock</button>
+                <button type="button" class="link" (click)="cancel()">Cancel</button>
+            </div>
+            @if (message()) {
+                <p id="unlock-problem" class="problem" role="alert">{{ message() }}</p>
+            }
+        </form>
+    }
+}

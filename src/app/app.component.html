@@ -49,3 +49,9 @@
 <main [class.is-cook]="isCookMode()">
     <router-outlet />
 </main>
+
+@if (!isCookMode()) {
+    <footer class="site-footer">
+        <app-device-unlock />
+    </footer>
+}

@@ -146,22 +146,20 @@ main {
     }
 }
 
-// A navy band closes the page, as in the reference.
+// A quiet hairline-topped strip closes the page; it only ever holds the
+// unlock control, so it stays out of the way.
 .site-footer {
     margin-top: var(--pad-section);
-    padding: calc(var(--pad-section) * 0.7) var(--pad-section);
-    background: var(--navy-deep);
+    padding: 16px var(--pad-section);
+    border-top: 1px solid var(--rule);
+    color: var(--ink-4);
+    font-size: var(--text-small);
     text-align: center;
-
-    p {
-        margin: 0;
-        color: rgb(238 242 248 / 0.72);
-        font-size: var(--text-small);
-    }
 }
 
 @media print {
-    .site-header {
+    .site-header,
+    .site-footer {
         display: none;
     }
 }

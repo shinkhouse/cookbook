@@ -96,4 +96,29 @@ describe('read-only build', () => {
     await RouterTestingHarness.create('/recipes/new');
     expect(TestBed.inject(Router).url).toBe('/recipes/new');
   });
+
+  it('shows the footer unlock entry when not writable, and not in cook mode', async () => {
+    stubNarrow(false);
+    const recipes = new FakeRecipeRepository([]);
+    recipes.writable = false;
+    TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [
+        provideRouter([{ path: '**', children: [] }]),
+        ...provideFakeRecipes(recipes),
+        ...provideFakeCookbooks(new FakeCookbookRepository([])),
+      ],
+    });
+    const fixture = TestBed.createComponent(AppComponent);
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/anywhere');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('footer.site-footer')?.textContent).toContain(
+      'Unlock this device',
+    );
+    await router.navigateByUrl('/recipes/anything/cook');
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isCookMode()).toBeTrue();
+    expect(fixture.nativeElement.querySelector('footer.site-footer')).toBeNull();
+  });
 });

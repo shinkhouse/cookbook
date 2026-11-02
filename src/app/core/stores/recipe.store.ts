@@ -4,6 +4,7 @@ import { Facet, buildFacets, matchesSelection } from '../facets';
 import { Coverage, compareCoverage, coverageOf, parseHave } from '../pantry';
 import { gapKeys, gapsOf } from '../recipe-health';
 import { RecipeRepository } from '../recipe-repository';
+import { DeviceStore } from './device.store';
 import { PrefsStore } from './prefs.store';
 
 /**
@@ -21,6 +22,7 @@ export class RecipeStore {
   // runs this way only (PrefsStore knows nothing about recipes).
   private readonly prefs = inject(PrefsStore);
   private readonly repo = inject(RecipeRepository);
+  private readonly device = inject(DeviceStore);
 
   /**
    * Empty until the API answers; `status` says whether that has happened. Holds
@@ -40,6 +42,9 @@ export class RecipeStore {
 
   /** Whether this build may write; screens omit add/edit/delete when not. */
   readonly writable = this.repo.writable;
+
+  /** Whether this device may make the narrow writes: a writable build, or an unlocked device. */
+  readonly canSave = computed(() => this.writable || this.device.unlocked());
 
   constructor() {
     void this.load();

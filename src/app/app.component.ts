@@ -4,12 +4,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
+import { DeviceUnlockComponent } from './device-unlock/device-unlock.component';
 import { ListStore } from './core/stores/list.store';
 import { RecipeStore } from './core/stores/recipe.store';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatIconModule, MatMenuModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatIconModule, MatMenuModule, DeviceUnlockComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })

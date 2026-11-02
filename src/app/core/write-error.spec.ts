@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { describePhotoError, describeWriteError } from './write-error';
+import { describeDeviceError, describePhotoError, describeWriteError } from './write-error';
 
 describe('describeWriteError', () => {
   it('says the server is unreachable for status 0', () => {
@@ -111,5 +111,19 @@ describe('describeWriteError', () => {
     it('defers to describeWriteError for other statuses', () => {
       expect(describePhotoError({ status: 415, error: { message: 'Unreadable.' } })).toBe('Unreadable.');
     });
+  });
+});
+
+describe('describeDeviceError', () => {
+  it('reads each status as a sentence', () => {
+    expect(describeDeviceError({ status: 403 })).toBe(
+      "This device isn't unlocked any more. Unlock it again from the footer.",
+    );
+    expect(describeDeviceError({ status: 429 })).toBe('Too many wrong passcodes. Try again in 15 minutes.');
+    for (const status of [0, 502, 503, 504]) {
+      expect(describeDeviceError({ status })).toBe("Couldn't reach the recipe server.");
+    }
+    expect(describeDeviceError({ status: 500, error: { message: 'x' } })).toBe('Saving failed. Nothing was changed.');
+    expect(describeDeviceError(null)).toBe('Saving failed. Nothing was changed.');
   });
 });

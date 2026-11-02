@@ -1,0 +1,83 @@
+:host {
+    display: block;
+    color: var(--ink-4);
+    font-size: var(--text-small);
+}
+
+.status {
+    margin: 0;
+}
+
+.link {
+    min-height: var(--touch);
+    padding: 0 6px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+
+    &:hover {
+        color: var(--navy);
+    }
+}
+
+.unlock-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+}
+
+.label {
+    font-size: var(--text-caption);
+}
+
+input {
+    min-height: var(--touch);
+    width: min(320px, 80vw);
+    padding: 0 14px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-card);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px; // under 16px makes iOS zoom the page on focus
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.go {
+    min-height: var(--touch);
+    padding: 0 22px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--navy);
+    color: var(--paper);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.6;
+    }
+}
+
+.problem {
+    margin: 0;
+    color: var(--ink-3);
+    font-weight: 600;
+}

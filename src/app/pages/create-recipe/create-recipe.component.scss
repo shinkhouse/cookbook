@@ -10,7 +10,7 @@
     gap: 6px;
     min-height: var(--touch);
     color: var(--ink-3);
-    font-size: 14px;
+    font-size: var(--text-small);
     font-weight: 600;
     text-decoration: none;
 
@@ -38,7 +38,7 @@
     max-width: 52ch;
     margin: 10px 0 0;
     color: var(--ink-3);
-    font-size: 16.5px;
+    font-size: var(--text-body);
 }
 
 .tabs {
@@ -56,7 +56,7 @@
     background: var(--surface);
     color: var(--ink-2);
     font-family: var(--font);
-    font-size: 14px;
+    font-size: var(--text-small);
     font-weight: 600;
     cursor: pointer;
 
@@ -84,7 +84,7 @@
 
 .field-label {
     display: block;
-    font-size: 10.5px;
+    font-size: var(--text-label);
     font-weight: 700;
     letter-spacing: 0.15em;
     text-transform: uppercase;
@@ -94,11 +94,11 @@
 .hint {
     margin: 8px 0 0;
     color: var(--ink-3);
-    font-size: 13.5px;
+    font-size: var(--text-small);
 
     code {
         font-family: var(--font);
-        font-size: 12.5px;
+        font-size: var(--text-label);
     }
 }
 
@@ -115,7 +115,7 @@ select {
     background: var(--surface);
     color: var(--ink);
     font-family: var(--font);
-    font-size: 16px;
+    font-size: var(--text-body);
     line-height: 1.5;
 
     &::placeholder {
@@ -125,7 +125,7 @@ select {
 
 textarea {
     resize: vertical;
-    font-size: 14px;
+    font-size: var(--text-small);
     line-height: 1.7;
     // Pasted recipe lines start with amounts; tabular figures keep them
     // aligned now that there is no monospace family to do it.
@@ -164,7 +164,7 @@ textarea {
 
     code {
         font-family: var(--font);
-        font-size: 13px;
+        font-size: var(--text-small);
         color: var(--ink-2);
     }
 }
@@ -229,7 +229,7 @@ textarea {
 
     select {
         flex: 0 0 110px;
-        font-size: 13px;
+        font-size: var(--text-small);
     }
 }
 
@@ -314,7 +314,7 @@ textarea {
     padding: 4px 12px;
     border-radius: var(--radius-pill);
     font-family: var(--font);
-    font-size: 10px;
+    font-size: var(--text-label);
     letter-spacing: 0.12em;
     text-transform: uppercase;
 
@@ -339,12 +339,12 @@ textarea {
 .notice {
     margin: 12px 0 0;
     color: var(--ink-3);
-    font-size: 13px;
+    font-size: var(--text-small);
 }
 
 .preview-title {
     margin-top: 14px;
-    font-size: 26px;
+    font-size: 1.625rem;
 }
 
 .preview-slug {
@@ -364,7 +364,7 @@ textarea {
     li {
         padding: 6px 0;
         color: var(--ink-2);
-        font-size: 14px;
+        font-size: var(--text-small);
 
         & + li {
             border-top: 1px solid var(--rule);
@@ -379,7 +379,7 @@ ol.preview-list li {
         content: counter(n) ".";
         margin-right: 8px;
         font-family: var(--font);
-        font-size: 12px;
+        font-size: var(--text-label);
         color: var(--ink-4);
     }
 }
@@ -401,14 +401,14 @@ ol.preview-list li {
     flex-shrink: 0;
     white-space: nowrap;
     font-family: var(--font);
-    font-size: 12.5px;
+    font-size: var(--text-label);
     color: var(--ink-4);
 }
 
 .preview-aisle {
     flex-shrink: 0;
     font-family: var(--font);
-    font-size: 10px;
+    font-size: var(--text-label);
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--ink-4);
@@ -425,7 +425,7 @@ ol.preview-list li {
         margin: 6px 0 0;
         padding-left: 18px;
         font-family: var(--font);
-        font-size: 12px;
+        font-size: var(--text-small);
         color: #6d5518;
     }
 }
@@ -436,7 +436,7 @@ ol.preview-list li {
     gap: 6px;
     margin: 0;
     color: #6d5518;
-    font-size: 13px;
+    font-size: var(--text-small);
     font-weight: 600;
 
     mat-icon {
@@ -466,7 +466,7 @@ ol.preview-list li {
     padding: 0 20px;
     border-radius: var(--radius-pill);
     font-family: var(--font);
-    font-size: 14px;
+    font-size: var(--text-small);
     font-weight: 600;
     text-decoration: none;
     cursor: pointer;
@@ -481,7 +481,7 @@ ol.preview-list li {
 .btn-small {
     min-height: 32px;
     padding: 0 12px;
-    font-size: 13px;
+    font-size: var(--text-small);
 }
 
 .btn-primary {

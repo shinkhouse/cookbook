@@ -52,7 +52,7 @@
 
     a {
         color: var(--navy-deep);
-        font-size: 14px;
+        font-size: var(--text-small);
         font-weight: 600;
         text-decoration: none;
     }
@@ -116,7 +116,7 @@
     padding-bottom: 10px;
     border-bottom: 1px solid var(--rule);
     color: var(--navy);
-    font-size: 16px;
+    font-size: var(--text-body);
     font-weight: 800;
     letter-spacing: 0.07em;
     text-transform: uppercase;
@@ -156,13 +156,13 @@
     grid-template-columns: 62px 1fr;
     gap: 12px;
     align-items: baseline;
-    font-size: 16px;
+    font-size: var(--text-body);
     color: var(--ink-2);
 }
 
 .row-amount {
     text-align: right;
-    font-size: 13.5px;
+    font-size: var(--text-small);
     font-weight: 600;
     color: var(--ink-4);
     overflow-wrap: anywhere;
@@ -178,7 +178,7 @@
     flex: none;
     max-width: 34%;
     color: var(--ink-4);
-    font-size: 12.5px;
+    font-size: var(--text-label);
     text-align: right;
 }
 
@@ -202,7 +202,7 @@
     padding: 0 18px;
     border-radius: var(--radius-pill);
     font-family: var(--font);
-    font-size: 14px;
+    font-size: var(--text-small);
     font-weight: 600;
     cursor: pointer;
 
@@ -254,7 +254,7 @@
 .empty-line {
     margin: 0;
     font-family: var(--font);
-    font-size: clamp(22px, 3vw, 30px);
+    font-size: clamp(1.375rem, 3vw, 1.875rem);
     color: var(--ink-2);
 }
 

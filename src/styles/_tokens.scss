@@ -54,10 +54,18 @@
     // families now come from weight, case and tracking instead.
     --font: "Figtree", ui-sans-serif, system-ui, -apple-system, sans-serif;
 
+    // Text sizes, in rem so they follow the reader's browser setting. Body
+    // text stays between 12px and 16px. Caption (12px) is only for counts
+    // and badges; anything someone has to read is label size or larger.
+    --text-caption: 0.75rem; // 12px
+    --text-label: 0.8125rem; // 13px, the uppercase data labels and meta
+    --text-small: 0.875rem; // 14px, secondary text, buttons, hints
+    --text-body: 1rem; // 16px
+
     // Fluid display sizes.
-    --size-library-h1: clamp(38px, 6vw, 62px);
-    --size-detail-h1: clamp(32px, 5vw, 52px);
-    --size-cook-step: clamp(27px, 3.6vw, 40px);
+    --size-library-h1: clamp(2.375rem, 6vw, 3.875rem);
+    --size-detail-h1: clamp(2rem, 5vw, 3.25rem);
+    --size-cook-step: clamp(1.6875rem, 3.6vw, 2.5rem);
 
     // ---- Shape ----------------------------------------------------------
     --radius-card: 6px;

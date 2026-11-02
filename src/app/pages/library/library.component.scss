@@ -45,7 +45,7 @@
 }
 
 .stat-count {
-    font-size: clamp(46px, 5vw, 62px);
+    font-size: clamp(2.875rem, 5vw, 3.875rem);
     font-weight: 800;
     letter-spacing: -0.04em;
     line-height: 0.86;
@@ -58,7 +58,7 @@
 }
 
 .stat-title {
-    font-size: 17px;
+    font-size: var(--text-body);
     font-weight: 700;
     letter-spacing: -0.015em;
     color: var(--ink);
@@ -66,7 +66,7 @@
 
 .stat-detail {
     color: var(--ink-3);
-    font-size: 13.5px;
+    font-size: var(--text-small);
 }
 
 .controls {
@@ -107,7 +107,7 @@
         background: none;
         color: var(--ink);
         font-family: var(--font);
-        font-size: 16px;
+        font-size: var(--text-body);
 
         &::placeholder {
             color: var(--ink-3);
@@ -162,7 +162,7 @@
     background: var(--paper);
     color: var(--ink-2);
     font-family: var(--font);
-    font-size: 14px;
+    font-size: var(--text-small);
     font-weight: 600;
     cursor: pointer;
     transition:
@@ -207,7 +207,7 @@
     border-radius: var(--radius-pill);
     background: var(--navy);
     color: var(--paper);
-    font-size: 10.5px;
+    font-size: var(--text-caption);
     font-weight: 700;
 }
 
@@ -242,7 +242,7 @@
     padding: 0 10px;
     border-radius: 4px;
     color: var(--ink-2);
-    font-size: 14.5px;
+    font-size: var(--text-small);
     cursor: pointer;
 
     &:hover {
@@ -263,7 +263,7 @@
     margin-left: auto;
     padding-left: 10px;
     color: var(--ink-4);
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-weight: 600;
 }
 
@@ -278,7 +278,7 @@
     background: none;
     color: var(--navy);
     font-family: var(--font);
-    font-size: 13px;
+    font-size: var(--text-small);
     font-weight: 700;
     text-align: left;
     cursor: pointer;
@@ -318,7 +318,7 @@
     background: var(--navy-tint);
     color: var(--navy-deep);
     font-family: var(--font);
-    font-size: 13.5px;
+    font-size: var(--text-small);
     font-weight: 600;
     cursor: pointer;
 
@@ -336,7 +336,7 @@
 // Names which menu a chip came from, so two chips reading "Chicken" and
 // "Mexican" do not look like the same kind of thing.
 .chip-facet {
-    font-size: 9.5px;
+    font-size: var(--text-label);
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -349,7 +349,7 @@
     padding: 4px 6px;
     color: var(--ink-3);
     font-family: var(--font);
-    font-size: 13px;
+    font-size: var(--text-small);
     font-weight: 600;
     text-decoration: underline;
     cursor: pointer;
@@ -371,7 +371,7 @@
     background: var(--paper);
     color: var(--ink-2);
     font-family: var(--font);
-    font-size: 14px;
+    font-size: var(--text-small);
     font-weight: 600;
     cursor: pointer;
 
@@ -543,7 +543,7 @@
 }
 
 .card-body h3 {
-    font-size: 20px;
+    font-size: 1.25rem;
 
     a {
         color: var(--ink);
@@ -557,14 +557,14 @@
 
 .card-credit {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--text-small);
 }
 
 .card-blurb {
     flex: 1;
     margin: 0;
     color: var(--ink-3);
-    font-size: 16px;
+    font-size: var(--text-body);
 }
 
 .card-actions {
@@ -583,7 +583,7 @@
     padding: 0 16px;
     border-radius: var(--radius-pill);
     font-family: var(--font);
-    font-size: 14px;
+    font-size: var(--text-small);
     font-weight: 600;
     cursor: pointer;
     transition:
@@ -639,7 +639,7 @@
 .empty-line {
     margin: 0;
     font-family: var(--font);
-    font-size: clamp(22px, 3vw, 30px);
+    font-size: clamp(1.375rem, 3vw, 1.875rem);
     color: var(--ink-2);
 }
 
@@ -660,7 +660,7 @@
     border-radius: var(--radius-pill);
     background: rgb(255 255 255 / 0.94);
     color: var(--ink-3);
-    font-size: 10px;
+    font-size: var(--text-caption);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;

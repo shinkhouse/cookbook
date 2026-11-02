@@ -41,7 +41,7 @@
     // §3.4 — 48px targets in cook mode.
     min-height: var(--touch-large);
     color: var(--cook-text);
-    font-size: 14px;
+    font-size: var(--text-small);
     font-weight: 600;
     text-decoration: none;
     opacity: 0.75;
@@ -61,7 +61,7 @@
 .cook-title {
     margin: 0;
     font-family: var(--font);
-    font-size: 21px;
+    font-size: 1.3125rem;
     text-align: center;
     opacity: 0.85;
     overflow-wrap: anywhere;
@@ -90,7 +90,7 @@
     background: var(--cook-surface);
     color: var(--cook-text);
     font-family: var(--font);
-    font-size: 14px;
+    font-size: var(--text-small);
     cursor: pointer;
 
     mat-icon {
@@ -125,7 +125,7 @@
     padding: 1px 6px;
     border-radius: var(--radius-pill);
     background: var(--cook-rule);
-    font-size: 11px;
+    font-size: var(--text-caption);
     font-weight: 600;
 }
 
@@ -135,7 +135,7 @@
 
 .timer-row {
     // mat-menu-item supplies the arrow-key focus and the 48px height.
-    font-size: 14px;
+    font-size: var(--text-small);
 
     &.is-done {
         font-weight: 600;
@@ -275,7 +275,7 @@
     padding: 0 24px;
     border-radius: var(--radius-pill);
     font-family: var(--font);
-    font-size: 16px;
+    font-size: var(--text-body);
     font-weight: 600;
     text-decoration: none;
     cursor: pointer;
@@ -478,12 +478,12 @@
     grid-template-columns: 62px 1fr;
     gap: 12px;
     align-items: baseline;
-    font-size: 16px;
+    font-size: var(--text-body);
 }
 
 .ing-amount {
     text-align: right;
-    font-size: 13.5px;
+    font-size: var(--text-small);
     font-weight: 600;
     color: var(--cook-accent);
     overflow-wrap: anywhere;
@@ -536,7 +536,7 @@
         background: none;
         color: var(--cook-text);
         font-family: var(--font);
-        font-size: 16px;
+        font-size: var(--text-body);
         text-align: left;
         cursor: pointer;
         opacity: 0.6;
@@ -563,14 +563,14 @@
 .jump-group {
     margin: 12px 14px 2px;
     color: var(--cook-accent) !important;
-    font-size: 11px;
+    font-size: var(--text-label);
 }
 
 // The sidebar's heading over a component's ingredients.
 .ing-group {
     margin: 16px 0 0;
     color: var(--cook-accent) !important;
-    font-size: 11px;
+    font-size: var(--text-label);
 }
 
 .jump-number {
@@ -582,7 +582,7 @@
     border: 1px solid var(--cook-rule);
     border-radius: var(--radius-pill);
     color: var(--cook-accent) !important;
-    font-size: 11px;
+    font-size: var(--text-label);
     letter-spacing: 0;
 }
 
@@ -606,7 +606,7 @@
     p {
         margin: 0;
         font-family: var(--font);
-        font-size: clamp(22px, 3vw, 30px);
+        font-size: clamp(1.375rem, 3vw, 1.875rem);
     }
 }
 
@@ -646,7 +646,7 @@
         gap: 5px;
         padding: 0 9px;
         min-width: 12ch;
-        font-size: 13px;
+        font-size: var(--text-small);
     }
 
     .timer-time {
@@ -654,6 +654,6 @@
     }
 
     .cook-title {
-        font-size: 17px;
+        font-size: 1.0625rem;
     }
 }

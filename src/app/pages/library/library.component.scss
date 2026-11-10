@@ -14,10 +14,9 @@
 }
 
 .head-copy {
-    flex: 1 1 380px;
+    flex: 1 1 100%;
 
     h1 {
-        max-width: 17ch;
         margin-top: 2px;
         font-size: var(--size-library-h1);
         line-height: 1.0;

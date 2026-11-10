@@ -1,22 +1,9 @@
 <div class="library">
   <header class="library-head">
     <div class="head-copy">
-      <span class="section-kicker">the family cookbook</span>
-      <h1>Everything worth cooking twice.</h1>
+      <h1>My Cookbooks</h1>
     </div>
 
-    <!-- The count is the point: in a cookbook kept over years, how many times a
-         recipe has actually been made is the honest measure of it. -->
-    @if (mostCooked(); as top) {
-      <a class="stat-block" [routerLink]="['/recipes', top.slug]">
-        <span class="stat-count tnum">{{ top.cooked }}</span>
-        <span class="stat-body">
-          <span class="label">Times cooked</span>
-          <span class="stat-title">{{ top.title }}</span>
-          <span class="stat-detail">more than anything else here</span>
-        </span>
-      </a>
-    }
   </header>
 
   <div class="controls">
@@ -229,12 +216,6 @@
                 <h3>
                   <a [routerLink]="['/recipes', recipe.slug]">{{ recipe.title }}</a>
                 </h3>
-
-                @if (recipe.subtitle) {
-                  <p class="credit card-credit">{{ recipe.subtitle }}</p>
-                }
-
-                <p class="card-blurb">{{ recipe.blurb }}</p>
 
                 <div class="card-actions">
                   <button type="button" class="btn-outline" (click)="cook(recipe, $event)">

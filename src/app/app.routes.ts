@@ -69,6 +69,11 @@ export const routes: Routes = [
     title: recipeTitle(),
   },
   {
+    path: 'book',
+    loadComponent: () => import('./pages/book/book.component').then((m) => m.BookComponent),
+    title: 'Print the cookbook',
+  },
+  {
     path: 'list',
     loadComponent: () =>
       import('./pages/shopping-list/shopping-list.component').then((m) => m.ShoppingListComponent),

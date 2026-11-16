@@ -620,6 +620,12 @@ h1 {
 
 // Print: the recipe as a card. Chosen units and servings are already in the
 // DOM, so the page prints what is on screen minus the controls.
+// In the printed cookbook, how often a recipe got made is the app's record,
+// not part of the recipe.
+:host-context(.book-recipe) .rail-activity {
+    display: none;
+}
+
 @media print {
     .hero,
     .actions,

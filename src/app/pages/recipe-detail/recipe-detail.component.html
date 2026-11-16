@@ -84,13 +84,13 @@
           </div>
         </div>
 
-        <div class="rail-item">
+        <div class="rail-item rail-activity">
           <p class="label">Times cooked</p>
           <p class="rail-value">{{ r.cooked }}</p>
         </div>
 
         @if (r.lastCooked) {
-          <div class="rail-item">
+          <div class="rail-item rail-activity">
             <p class="label">Last cooked</p>
             <p class="rail-value">{{ r.lastCooked | date: 'mediumDate' }}</p>
           </div>

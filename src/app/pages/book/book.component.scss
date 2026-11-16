@@ -1,0 +1,190 @@
+// On screen this is a working page: choose an arrangement, then print. The
+// book itself is laid out for paper, so most of what follows is in print.
+
+.book-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    max-width: var(--max-detail);
+    margin: 0 auto;
+    padding: var(--pad-section) var(--pad-section) 0;
+}
+
+.book-orders {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+
+    a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        padding: 0 14px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-pill);
+        color: var(--ink-2);
+        font-size: var(--text-small);
+        font-weight: 600;
+        text-decoration: none;
+
+        &:hover {
+            background: var(--surface);
+        }
+
+        &[aria-current='page'] {
+            border-color: var(--navy);
+            background: var(--navy-tint);
+            color: var(--navy-deep);
+        }
+    }
+}
+
+.tools-label {
+    margin-right: 6px;
+    color: var(--ink-3);
+    font-size: var(--text-small);
+    font-weight: 600;
+}
+
+.btn-print {
+    min-height: 40px;
+    padding: 0 20px;
+    border: 1px solid var(--navy);
+    border-radius: var(--radius-pill);
+    background: var(--navy);
+    color: var(--paper);
+    font-family: var(--font);
+    font-size: var(--text-small);
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--navy-deep);
+    }
+}
+
+.tools-hint {
+    flex: 1 1 100%;
+    margin: 0;
+    color: var(--ink-3);
+    font-size: var(--text-small);
+}
+
+.book-loading {
+    padding: var(--pad-section);
+    color: var(--ink-3);
+}
+
+.book-cover,
+.book-contents,
+.book-divider {
+    max-width: var(--max-detail);
+    margin: 0 auto;
+    padding: var(--pad-section);
+}
+
+.book-cover {
+    h1 {
+        font-size: var(--size-library-h1);
+    }
+}
+
+.cover-count,
+.cover-date {
+    margin: 8px 0 0;
+    color: var(--ink-3);
+    font-size: var(--text-body);
+}
+
+.book-contents {
+    h2 {
+        margin-bottom: 12px;
+    }
+
+    h3 {
+        margin: 20px 0 4px;
+        font-size: var(--text-body);
+    }
+
+    ol {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    // Title, a dotted leader, then the page number, as in a printed contents.
+    a {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        padding: 3px 0;
+        color: var(--ink);
+        text-decoration: none;
+    }
+}
+
+.entry-leader {
+    flex: 1;
+    min-width: 1.5em;
+    border-bottom: 1px dotted var(--rule-strong);
+}
+
+// Wide enough for three digits whether or not a number is in it yet, so filling
+// the numbers in cannot move anything onto another page.
+.entry-page {
+    flex: none;
+    min-width: 2.5em;
+    text-align: right;
+}
+
+.book-divider h2 {
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+@media print {
+    .book-tools,
+    .book-loading {
+        display: none;
+    }
+
+    .book-cover,
+    .book-contents,
+    .book-divider {
+        max-width: none;
+        padding: 0;
+    }
+
+    // One page each, with the type set in the middle of the cover and the
+    // dividers. 23cm fits inside a Letter or A4 page at the 1.5cm margins.
+    .book-cover,
+    .book-divider {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        height: 23cm;
+    }
+
+    .book-cover h1 {
+        font-size: 3rem;
+    }
+
+    .book-contents {
+        break-before: page;
+        font-size: 0.8125rem;
+
+        h3 {
+            break-after: avoid;
+        }
+
+        li {
+            break-inside: avoid;
+        }
+    }
+
+    .book-divider,
+    .book-recipe {
+        break-before: page;
+    }
+}

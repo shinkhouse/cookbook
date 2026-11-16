@@ -1,0 +1,63 @@
+<div class="book-tools">
+  <div class="book-orders" role="group" aria-label="Arrange the book by">
+    <span class="tools-label">Arrange by</span>
+    @for (o of orders; track o.id) {
+      <a
+        routerLink="."
+        [queryParams]="{ order: o.id }"
+        [attr.aria-current]="o.id === current() ? 'page' : null"
+      >{{ o.label }}</a>
+    }
+  </div>
+  <button type="button" class="btn-print" (click)="print()">Print</button>
+  <p class="tools-hint">
+    Printing from here leaves the page numbers blank. For a numbered PDF, run
+    <code>npm run book</code> in the cookbook folder.
+  </p>
+</div>
+
+@if (ready()) {
+  <article class="book" data-book-ready>
+    <section class="book-cover">
+      <h1>My Cookbooks</h1>
+      <p class="cover-count">{{ count() }} recipes</p>
+      <p class="cover-date">{{ today | date: 'MMMM y' }}</p>
+    </section>
+
+    <nav class="book-contents" aria-labelledby="book-contents-title">
+      <h2 id="book-contents-title">Contents</h2>
+      @for (section of sections(); track $index) {
+        @if (section.label) {
+          <h3>{{ section.label }}</h3>
+        }
+        <ol>
+          @for (e of section.entries; track e.anchor) {
+            <li>
+              <!-- A bare fragment, which Chrome keeps as a link inside the PDF. -->
+              <a [href]="'#' + e.anchor" (click)="jump($event, e.anchor)">
+                <span class="entry-title">{{ e.recipe.title }}</span>
+                <span class="entry-leader" aria-hidden="true"></span>
+                <span class="entry-page tnum" [attr.data-book-page]="e.anchor"></span>
+              </a>
+            </li>
+          }
+        </ol>
+      }
+    </nav>
+
+    @for (section of sections(); track $index) {
+      @if (section.label) {
+        <section class="book-divider">
+          <h2>{{ section.label }}</h2>
+        </section>
+      }
+      @for (e of section.entries; track e.anchor) {
+        <div class="book-recipe" [id]="e.anchor">
+          <app-recipe-detail [slug]="e.recipe.slug" />
+        </div>
+      }
+    }
+  </article>
+} @else {
+  <p class="book-loading">Loading the recipes…</p>
+}

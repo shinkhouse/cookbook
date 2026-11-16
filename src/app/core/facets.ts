@@ -111,6 +111,11 @@ const DEFS: readonly FacetDef[] = [
   },
 ];
 
+/** A defined facet's tags in the order they are offered, or [] for an unknown id. */
+export function facetTags(id: string): readonly string[] {
+  return DEFS.find((def) => def.id === id)?.tags ?? [];
+}
+
 /**
  * Builds the facets to show for a given tag list. A facet with no matching tags
  * is dropped, so the controls never offer an empty menu.

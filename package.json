@@ -7,7 +7,8 @@
     "build": "ng build",
     "deploy": "ng deploy --base-href=/cookbook/",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "book": "node scripts/book-pdf.mjs"
   },
   "private": true,
   "dependencies": {
@@ -39,6 +40,8 @@
     "karma-coverage": "~2.1.0",
     "karma-jasmine": "~4.0.0",
     "karma-jasmine-html-reporter": "~1.7.0",
+    "pdf-lib": "^1.17.1",
+    "playwright-core": "^1.65.1",
     "typescript": "~5.9.3"
   }
 }

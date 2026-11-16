@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:sandbox": "API_TARGET=http://localhost:3153 ng serve",
     "build": "ng build",
     "deploy": "ng deploy --base-href=/cookbook/",
     "watch": "ng build --watch --configuration development",

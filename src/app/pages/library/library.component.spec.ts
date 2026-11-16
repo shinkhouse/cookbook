@@ -274,6 +274,65 @@ describe('LibraryComponent cards', () => {
   });
 });
 
+describe('LibraryComponent pages', () => {
+  afterEach(() => localStorage.clear());
+
+  const many = (n: number) =>
+    new FakeRecipeRepository(
+      Array.from({ length: n }, (_, i) => ({
+        ...Recipes[0],
+        slug: `r${String(i).padStart(4, '0')}`,
+        title: `Recipe ${String(i).padStart(4, '0')}`,
+        component: false,
+      })),
+    );
+  const pager = (el: HTMLElement) => el.querySelector<HTMLElement>('nav.pager');
+  const pageButton = (el: HTMLElement, label: string) =>
+    [...el.querySelectorAll<HTMLButtonElement>('nav.pager button')].find(
+      (b) => b.textContent?.trim() === label || b.getAttribute('aria-label') === label,
+    )!;
+
+  it('shows 48 recipes a page, and moves between pages', async () => {
+    const fixture = await render(undefined, many(100));
+    const el = fixture.nativeElement as HTMLElement;
+    expect(cardTitles(el).length).toBe(48);
+    expect(cardTitles(el)[0]).toBe('Recipe 0000');
+    expect(pager(el)?.querySelector('.pager-status')?.textContent?.trim()).toBe('1–48 of 100');
+    expect(pageButton(el, 'Previous').disabled).toBe(true);
+
+    pageButton(el, 'Next').click();
+    fixture.detectChanges();
+    expect(cardTitles(el)[0]).toBe('Recipe 0048');
+    expect(pageButton(el, 'Page 2').getAttribute('aria-current')).toBe('page');
+    expect(pager(el)?.querySelector('.pager-status')?.textContent?.trim()).toBe('49–96 of 100');
+
+    pageButton(el, 'Page 3').click();
+    fixture.detectChanges();
+    expect(cardTitles(el)).toEqual(['Recipe 0096', 'Recipe 0097', 'Recipe 0098', 'Recipe 0099']);
+    expect(pageButton(el, 'Next').disabled).toBe(true);
+  });
+
+  it('counts every result, not just the page, with a thousands separator', async () => {
+    const el = (await render(undefined, many(1200))).nativeElement as HTMLElement;
+    expect(el.querySelector('.result-count')?.textContent?.trim()).toBe('1,200 recipes');
+  });
+
+  it('goes back to the first page when the search changes', async () => {
+    const fixture = await render(undefined, many(100));
+    const el = fixture.nativeElement as HTMLElement;
+    pageButton(el, 'Next').click();
+    TestBed.inject(RecipeStore).setQuery('Recipe');
+    fixture.detectChanges();
+    expect(cardTitles(el)[0]).toBe('Recipe 0000');
+  });
+
+  it('has no pager when everything fits on one page', async () => {
+    const el = (await render(undefined, many(48))).nativeElement as HTMLElement;
+    expect(cardTitles(el).length).toBe(48);
+    expect(pager(el)).toBeNull();
+  });
+});
+
 describe('LibraryComponent surprise me', () => {
   afterEach(() => localStorage.clear());
 

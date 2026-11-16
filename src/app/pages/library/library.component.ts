@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -10,6 +11,7 @@ import {
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { NoPhotoComponent } from '../../no-photo/no-photo.component';
+import { PagerComponent } from '../../pager/pager.component';
 import { environment } from '../../../environments/environment';
 import {
   Facet,
@@ -24,7 +26,7 @@ import { gapLabel, gapsOf } from '../../core/recipe-health';
 import { Recipe } from '../../core/model/recipes.model';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { ListStore } from '../../core/stores/list.store';
-import { RecipeStore, tagLabel } from '../../core/stores/recipe.store';
+import { PAGE_SIZE, RecipeStore, tagLabel } from '../../core/stores/recipe.store';
 
 /** §6.1 — search is debounced 150ms. */
 const SEARCH_DEBOUNCE_MS = 150;
@@ -44,7 +46,7 @@ interface BarItem {
 
 @Component({
   selector: 'app-library',
-  imports: [RouterLink, MatIconModule, NoPhotoComponent],
+  imports: [RouterLink, MatIconModule, NoPhotoComponent, PagerComponent, DecimalPipe],
   templateUrl: './library.component.html',
   styleUrl: './library.component.scss',
   host: {
@@ -312,6 +314,14 @@ export class LibraryComponent {
   protected toggleHave(): void {
     this.recipes.mode.update((m) => (m === 'have' ? 'search' : 'have'));
     this.host.nativeElement.querySelector<HTMLInputElement>('.search input')?.focus();
+  }
+
+  protected readonly pageSize = PAGE_SIZE;
+
+  /** A new page starts at its top, under the result count, not where the old one ended. */
+  protected goToPage(page: number): void {
+    this.recipes.page.set(page);
+    this.host.nativeElement.querySelector('.result-bar')?.scrollIntoView({ block: 'start' });
   }
 
   /** "Cook this" goes straight into cook mode, per §6.1. */

@@ -1,0 +1,42 @@
+<nav class="pager" aria-label="Pages">
+  <button
+    type="button"
+    class="pager-step"
+    [disabled]="page() === 1"
+    (click)="pageChange.emit(page() - 1)"
+  >
+    <mat-icon fontIcon="chevron_left" aria-hidden="true" />
+    Previous
+  </button>
+  <ol class="pager-pages">
+    @for (item of pages(); track $index) {
+      <li>
+        @if (item === 'gap') {
+          <span class="pager-gap" aria-hidden="true">…</span>
+        } @else {
+          <button
+            type="button"
+            class="pager-page tnum"
+            [attr.aria-current]="item === page() ? 'page' : null"
+            [attr.aria-label]="'Page ' + item"
+            (click)="pageChange.emit(item)"
+          >
+            {{ item }}
+          </button>
+        }
+      </li>
+    }
+  </ol>
+  <button
+    type="button"
+    class="pager-step"
+    [disabled]="page() === pageCount()"
+    (click)="pageChange.emit(page() + 1)"
+  >
+    Next
+    <mat-icon fontIcon="chevron_right" aria-hidden="true" />
+  </button>
+  <p class="pager-status tnum">
+    {{ range().first | number }}–{{ range().last | number }} of {{ total() | number }}
+  </p>
+</nav>

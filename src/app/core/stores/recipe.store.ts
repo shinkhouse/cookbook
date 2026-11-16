@@ -1,10 +1,16 @@
-import { Injectable, WritableSignal, computed, inject, signal } from '@angular/core';
+import { Injectable, WritableSignal, computed, inject, linkedSignal, signal } from '@angular/core';
 import { Recipe } from '../model/recipes.model';
 import { Facet, buildFacets, matchesSelection } from '../facets';
 import { Coverage, compareCoverage, coverageOf, parseHave } from '../pantry';
 import { gapKeys, gapsOf } from '../recipe-health';
 import { RecipeRepository } from '../recipe-repository';
 import { DeviceStore } from './device.store';
+
+/**
+ * Library cards per page: divides into the one, two and three columns the grid
+ * runs to, so a full page never ends on a ragged row.
+ */
+export const PAGE_SIZE = 48;
 
 /** How the library orders its results; 'default' is the order the API gave. */
 export type LibrarySort = 'default' | 'stale';
@@ -459,6 +465,35 @@ export class RecipeStore {
     return this.mode() === 'search' && this.sort() === 'stale'
       ? [...matched].sort(compareStale)
       : matched;
+  });
+
+  /**
+   * The library page, from 1. It goes back to 1 whenever the question changes
+   * (search, filters, cookbook, sort or mode) but not when the recipes do, so
+   * starring a recipe or coming back from one leaves you where you were.
+   */
+  readonly page = linkedSignal({
+    source: () => [
+      this.query(),
+      this.selectedTags(),
+      this.selectedGaps(),
+      this.selectedCookbooks(),
+      this.favsOnly(),
+      this.mode(),
+      this.sort(),
+    ],
+    computation: () => 1,
+  });
+
+  readonly pageCount = computed(() => Math.max(1, Math.ceil(this.results().length / PAGE_SIZE)));
+
+  /** The page actually shown: `page`, kept within the pages there are. */
+  readonly currentPage = computed(() => Math.min(Math.max(1, this.page()), this.pageCount()));
+
+  /** The results on the current page; the library renders these, not all of them. */
+  readonly pageResults = computed(() => {
+    const start = (this.currentPage() - 1) * PAGE_SIZE;
+    return this.results().slice(start, start + PAGE_SIZE);
   });
 
   /**

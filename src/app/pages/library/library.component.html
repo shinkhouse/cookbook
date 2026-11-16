@@ -219,7 +219,7 @@
       <div class="result-bar">
         <!-- The heading the card titles sit under. -->
         <h2 class="result-count label" aria-live="polite">
-          {{ results().length }} {{ results().length === 1 ? 'recipe' : 'recipes' }}
+          {{ results().length | number }} {{ results().length === 1 ? 'recipe' : 'recipes' }}
         </h2>
         <!-- Have mode ranks by coverage, so a sort there would do nothing. -->
         @if (!haveMode()) {
@@ -243,7 +243,7 @@
         </div>
       } @else {
         <ul class="grid">
-          @for (recipe of results(); track recipe.slug; let i = $index) {
+          @for (recipe of recipes.pageResults(); track recipe.slug; let i = $index) {
             <li class="card">
               <!-- The photo is a bigger target for the title's link, so it is
                    left out of the tab order and the accessibility tree rather
@@ -328,6 +328,16 @@
             </li>
           }
         </ul>
+
+        @if (recipes.pageCount() > 1) {
+          <app-pager
+            [page]="recipes.currentPage()"
+            [pageCount]="recipes.pageCount()"
+            [total]="results().length"
+            [pageSize]="pageSize"
+            (pageChange)="goToPage($event)"
+          />
+        }
       }
     }
   }

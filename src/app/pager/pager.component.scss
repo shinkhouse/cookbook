@@ -1,0 +1,93 @@
+:host {
+    display: block;
+}
+
+// Under the grid. Quiet like the facet triggers, with the current page in the
+// same navy an active filter uses.
+.pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 6px;
+    margin-top: calc(var(--pad-section) * 0.6);
+}
+
+.pager-step,
+.pager-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: var(--touch);
+    min-height: var(--touch);
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--ink-2);
+    font-family: var(--font);
+    font-size: var(--text-small);
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: var(--surface);
+        color: var(--ink);
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: default;
+    }
+
+    mat-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
+    }
+}
+
+.pager-page[aria-current='page'] {
+    border-color: var(--navy);
+    background: var(--navy-tint);
+    color: var(--navy-deep);
+}
+
+.pager-pages {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pager-gap {
+    padding: 0 6px;
+    color: var(--ink-4);
+}
+
+.pager-status {
+    flex: 1 1 100%;
+    margin: 0;
+    color: var(--ink-3);
+    font-size: var(--text-small);
+    text-align: center;
+}
+
+// A phone keeps Previous and Next with the range between them.
+@media (max-width: 599px) {
+    .pager-pages {
+        display: none;
+    }
+
+    .pager-status {
+        flex: 1 1 auto;
+        order: 1;
+    }
+
+    .pager > .pager-step:last-of-type {
+        order: 2;
+    }
+}

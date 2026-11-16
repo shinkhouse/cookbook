@@ -1650,3 +1650,59 @@ describe('RecipeStore stale sort', () => {
     expect(store.sort()).toBe('stale');
   });
 });
+
+describe('RecipeStore pages', () => {
+  let store: RecipeStore;
+
+  const seed = Array.from({ length: 100 }, (_, i) =>
+    fixture(`r${String(i).padStart(3, '0')}`, { tags: [i % 2 ? 'soup' : 'pasta'] }),
+  );
+
+  beforeEach(async () => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideFakeRecipes(new FakeRecipeRepository(seed))],
+    });
+    store = TestBed.inject(RecipeStore);
+    await store.whenLoaded();
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('shows the results 48 at a time', () => {
+    expect(store.pageCount()).toBe(3);
+    expect(store.pageResults().length).toBe(48);
+    expect(store.pageResults()[0].slug).toBe('r000');
+    store.page.set(2);
+    expect(store.pageResults()[0].slug).toBe('r048');
+    store.page.set(3);
+    expect(store.pageResults().map((r) => r.slug)).toEqual(['r096', 'r097', 'r098', 'r099']);
+  });
+
+  it('goes back to the first page when the question changes', () => {
+    const changes: (() => void)[] = [
+      () => store.setQuery('r0'),
+      () => store.toggleTag('soup'),
+      () => store.toggleFavsOnly(),
+      () => store.sort.set('stale'),
+      () => store.mode.set('have'),
+      () => store.selectedCookbooks.set(new Set(['sams-cookbook'])),
+      () => store.reset(),
+    ];
+    for (const change of changes) {
+      store.page.set(2);
+      change();
+      expect(store.page()).toBe(1);
+    }
+  });
+
+  it('stays on its page when a recipe changes, keeping within the pages there are', async () => {
+    store.page.set(3);
+    await store.add(fixture('r100'));
+    expect(store.currentPage()).toBe(3);
+    store.page.set(99);
+    expect(store.currentPage()).toBe(3);
+    // 101 recipes now, so the last page holds five.
+    expect(store.pageResults().length).toBe(5);
+  });
+});

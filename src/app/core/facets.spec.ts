@@ -26,8 +26,8 @@ describe('buildFacets', () => {
       'breakfast',
       'lunch',
       'dinner',
-      'dessert',
       'appetizer',
+      'dessert',
     ]);
     expect(byId.get('cuisine')?.options).toEqual(jasmine.arrayContaining(['italian', 'mexican']));
     expect(byId.get('protein')?.options).toContain('chicken');
@@ -47,6 +47,22 @@ describe('buildFacets', () => {
     expect(other.options).toContain('zzz-brand-new-tag');
     // Last of the tag facets; the gap facet comes after all of them.
     expect(facets.at(-1)?.id).toBe(OTHER_FACET);
+  });
+
+  it("files the church cookbooks' categories under groups, not Other", () => {
+    const facets = tagFacets([
+      'main dish', 'side dish', 'snack', 'beverage', 'turkey', 'casserole', 'bread',
+      'sandwich', 'sauce', 'jam', 'pickles', 'cookies', 'cake', 'bars', 'candy',
+      'ice cream', 'microwave', 'canning', 'slow cooker', 'diabetic', 'low calorie',
+    ]);
+    const byId = new Map(facets.map((f) => [f.id, f.options]));
+    expect(byId.get('meal')).toEqual(['main dish', 'side dish', 'snack', 'beverage']);
+    expect(byId.get('protein')).toEqual(['turkey']);
+    expect(byId.get('dish')).toEqual(['casserole', 'sandwich', 'bread', 'sauce', 'jam', 'pickles']);
+    expect(byId.get('sweets')).toEqual(['cake', 'cookies', 'bars', 'candy', 'ice cream']);
+    expect(byId.get('method')).toEqual(['canning', 'microwave', 'slow cooker']);
+    expect(byId.get('diet')).toEqual(['diabetic', 'low calorie']);
+    expect(byId.has(OTHER_FACET)).toBe(false);
   });
 
   it('files every cuisine in the collection under Cuisine, not Other', () => {

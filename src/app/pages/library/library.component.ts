@@ -31,8 +31,8 @@ import { PAGE_SIZE, RecipeStore, tagLabel } from '../../core/stores/recipe.store
 /** §6.1 — search is debounced 150ms. */
 const SEARCH_DEBOUNCE_MS = 150;
 
-/** The long tail of the bar, folded into one More menu when both are present. */
-const MORE_FACETS: readonly string[] = ['ingredient', OTHER_FACET];
+/** The long tail of the bar, folded into one More menu when two or more are present. */
+const MORE_FACETS: readonly string[] = ['method', 'diet', 'ingredient', OTHER_FACET];
 
 /** The open-menu id the cookbook switcher shares with the facet menus. */
 const SHELF = 'shelf';

@@ -152,6 +152,20 @@ describe('LibraryComponent More menu', () => {
     expect(TestBed.inject(RecipeStore).isTagSelected('broccoli')).toBe(true);
   });
 
+  it('gives Sweets its own trigger and folds Method, Diet, Ingredient and Other into More', async () => {
+    const fixture = await render(
+      undefined,
+      tagged(['main dish', 'cookies', 'microwave', 'diabetic', 'broccoli', 'zzz-odd']),
+    );
+    const el = fixture.nativeElement as HTMLElement;
+    expect(ids(el)).toEqual(['meal', 'sweets', 'more', 'gaps']);
+    triggers(el).find((t) => t.dataset['facetTrigger'] === 'more')!.click();
+    fixture.detectChanges();
+    expect([...el.querySelectorAll('#facet-more .facet-group-label')].map((h) => h.textContent?.trim())).toEqual(
+      ['Method', 'Diet', 'Ingredient', 'Other'],
+    );
+  });
+
   it('leaves a lone overflow facet as itself', async () => {
     const el = (await render(undefined, tagged(['dinner', 'broccoli']))).nativeElement;
     expect(ids(el)).toContain('ingredient');

@@ -66,18 +66,42 @@ export const OTHER_FACET = 'other';
 /**
  * Ordered most- to least-useful for narrowing this collection. Meal comes first
  * because it is what someone actually asks ("what's for dinner"), even though
- * dinner and lunch are the least selective tags in the data.
+ * dinner and lunch are the least selective tags in the data. The church
+ * cookbooks file recipes by course and kind ("main dish", "cookies"), so those
+ * tags have homes here too rather than all landing in Other.
  */
 const DEFS: readonly FacetDef[] = [
   {
     id: 'meal',
     label: 'Meal',
-    tags: ['breakfast', 'lunch', 'dinner', 'dessert', 'appetizer'],
+    tags: [
+      'breakfast',
+      'lunch',
+      'dinner',
+      'appetizer',
+      'main dish',
+      'side dish',
+      'dessert',
+      'snack',
+      'beverage',
+    ],
   },
   {
     id: 'protein',
     label: 'Protein',
-    tags: ['beef', 'ground beef', 'chicken', 'sausage', 'seafood', 'shrimp', 'eggs'],
+    tags: [
+      'beef',
+      'ground beef',
+      'chicken',
+      'turkey',
+      'pork',
+      'sausage',
+      'seafood',
+      'fish',
+      'salmon',
+      'shrimp',
+      'eggs',
+    ],
   },
   {
     id: 'cuisine',
@@ -102,12 +126,74 @@ const DEFS: readonly FacetDef[] = [
   {
     id: 'dish',
     label: 'Dish',
-    tags: ['pasta', 'soup', 'tacos', 'sauces', 'rice', 'tortilla'],
+    tags: [
+      'soup',
+      'salad',
+      'casserole',
+      'pasta',
+      'rice',
+      'sandwich',
+      'tacos',
+      'tortilla',
+      'vegetables',
+      'bread',
+      'rolls',
+      'muffins',
+      'dip',
+      'sauce',
+      'salsa',
+      'dressing',
+      'jam',
+      'pickles',
+    ],
+  },
+  {
+    // Kept apart from Dish: the books hold hundreds of cakes, pies and cookies,
+    // and folded in with soups and casseroles they would bury them.
+    id: 'sweets',
+    label: 'Sweets',
+    tags: ['cake', 'cheesecake', 'pie', 'cookies', 'bars', 'candy', 'pudding', 'ice cream', 'frosting'],
+  },
+  {
+    id: 'method',
+    label: 'Method',
+    tags: [
+      'canning',
+      'microwave',
+      'slow cooker',
+      'skillet',
+      'sheet-pan',
+      'make-ahead',
+      'quick',
+      'easy',
+      'weeknight',
+    ],
+  },
+  {
+    id: 'diet',
+    label: 'Diet',
+    tags: ['diabetic', 'low calorie'],
   },
   {
     id: 'ingredient',
     label: 'Ingredient',
-    tags: ['broccoli', 'cheese', 'tomato', 'vanilla', 'red pepper flakes'],
+    tags: [
+      'broccoli',
+      'cheese',
+      'mozzarella',
+      'tomato',
+      'cherry tomato',
+      'grape tomato',
+      'corn',
+      'zucchini',
+      'peach',
+      'basil',
+      'vanilla',
+      'honey',
+      'balsamic vinegar',
+      'red pepper flakes',
+      'orzo',
+    ],
   },
 ];
 

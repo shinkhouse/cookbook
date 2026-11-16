@@ -254,11 +254,13 @@
                     <!-- The first row is on screen at load and the first photo
                          is usually the largest paint, so neither waits. -->
                     <img
-                      [src]="recipe.photo"
+                      [attr.srcset]="cardSrcset(recipe)"
+                      sizes="(max-width: 640px) calc(100vw - 48px), (max-width: 1000px) 50vw, 380px"
+                      [src]="cardPhoto(recipe)"
                       alt=""
                       [attr.loading]="i < eagerPhotos ? 'eager' : 'lazy'"
                       [attr.fetchpriority]="i === 0 ? 'high' : null"
-                      (error)="onPhotoError(recipe.slug)"
+                      (error)="onPhotoError(recipe)"
                     />
                   } @else {
                     <div class="photo-placeholder"></div>

@@ -5,6 +5,7 @@ import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { photoSrcset, photoUrl, resizable } from '../../core/photos';
 import { gapSentence, gapsOf } from '../../core/recipe-health';
 import { scaleFactor, scaleLabel } from '../../core/scale';
 import { CookbookStore } from '../../core/stores/cookbook.store';
@@ -296,10 +297,27 @@ export class RecipeDetailComponent {
   /** Some stored photo URLs are hotlink blocked; fall back to the placeholder. */
   private readonly photoBroken = signal(false);
 
+  /** The resized photo failed, so the original URL gets a try. */
+  private readonly photoUnresized = signal(false);
+
   protected readonly showPhoto = computed(() => !!this.recipe()?.photo && !this.photoBroken());
 
+  private readonly resized = computed(
+    () => resizable(this.recipe()?.photo) && !this.photoUnresized(),
+  );
+
+  /** The hero runs the full width, so it asks for the larger sizes. */
+  protected readonly heroPhoto = computed(() => {
+    const photo = this.recipe()?.photo ?? '';
+    return this.resized() ? photoUrl(photo, 1200) : photo;
+  });
+
+  protected readonly heroSrcset = computed(() =>
+    this.resized() ? photoSrcset(this.recipe()!.photo!, [800, 1200]) : null,
+  );
+
   protected onPhotoError(): void {
-    this.photoBroken.set(true);
+    (this.resized() ? this.photoUnresized : this.photoBroken).set(true);
   }
 
   protected readonly units = this.prefs.units;

@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { GAP_FACET } from '../../core/facets';
+import { photoSrcset, photoUrl } from '../../core/photos';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
 import { Recipes } from '../../core/mock/recipes.mock';
@@ -202,6 +203,27 @@ describe('LibraryComponent cards', () => {
   it('heads the results, so card titles do not skip a level', async () => {
     const el = (await render(undefined, photographed(2))).nativeElement as HTMLElement;
     expect(el.querySelector('.result-bar h2')?.textContent?.trim()).toBe('2 recipes');
+  });
+
+  it('shows photos resized by the API, falling back to the original and then the placeholder', async () => {
+    const fixture = await render(undefined, photographed(1));
+    const el = fixture.nativeElement as HTMLElement;
+    const img = () => el.querySelector<HTMLImageElement>('.card-photo img');
+    const original = 'https://example.com/r0.jpg';
+
+    expect(img()!.getAttribute('src')).toBe(photoUrl(original, 400));
+    expect(img()!.getAttribute('srcset')).toBe(photoSrcset(original, [400, 800]));
+    expect(img()!.getAttribute('sizes')).toBeTruthy();
+
+    img()!.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(img()!.getAttribute('src')).toBe(original);
+    expect(img()!.hasAttribute('srcset')).toBe(false);
+
+    img()!.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(img()).toBeNull();
+    expect(el.querySelector('.card-photo .photo-placeholder')).not.toBeNull();
   });
 
   it('loads the first row of photos eagerly, the first at high priority', async () => {

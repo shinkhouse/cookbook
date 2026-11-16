@@ -11,6 +11,7 @@ import {
 } from '../../core/testing/fake-repositories';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { Recipes } from '../../core/mock/recipes.mock';
+import { photoSrcset, photoUrl } from '../../core/photos';
 import { RecipeDetailComponent } from './recipe-detail.component';
 
 const SLUG = 'grandmas-chili';
@@ -770,5 +771,39 @@ describe('RecipeDetailComponent cookbooks panel', () => {
   it('is not rendered when read-only', async () => {
     await setup(false);
     expect(panel()).toBeNull();
+  });
+});
+
+describe('RecipeDetailComponent photo', () => {
+  const PHOTO = 'https://example.com/chili.jpg';
+
+  it('shows the photo resized by the API, falling back to the original and then the placeholder', async () => {
+    const fake = new FakeRecipeRepository(
+      Recipes.map((r) => (r.slug === SLUG ? { ...r, photo: PHOTO } : r)),
+    );
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake), ...provideFakeCookbooks()],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    const fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const img = () => el.querySelector<HTMLImageElement>('.hero img');
+
+    expect(img()!.getAttribute('src')).toBe(photoUrl(PHOTO, 1200));
+    expect(img()!.getAttribute('srcset')).toBe(photoSrcset(PHOTO, [800, 1200]));
+    expect(img()!.getAttribute('sizes')).toBe('100vw');
+
+    img()!.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(img()!.getAttribute('src')).toBe(PHOTO);
+    expect(img()!.hasAttribute('srcset')).toBe(false);
+
+    img()!.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(img()).toBeNull();
+    expect(el.querySelector('.hero .photo-placeholder')).not.toBeNull();
   });
 });

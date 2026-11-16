@@ -18,6 +18,7 @@ import {
   GAP_LABELS,
   GapKey,
 } from '../../core/facets';
+import { photoSrcset, photoUrl, resizable } from '../../core/photos';
 import { gapLabel, gapsOf } from '../../core/recipe-health';
 import { Recipe } from '../../core/model/recipes.model';
 import { CookbookStore } from '../../core/stores/cookbook.store';
@@ -220,12 +221,29 @@ export class LibraryComponent {
    */
   private readonly brokenPhotos = signal<ReadonlySet<string>>(new Set());
 
+  /** Slugs whose resized photo failed; those try the original URL next. */
+  private readonly unresized = signal<ReadonlySet<string>>(new Set());
+
   protected showPhoto(slug: string, photo: string | undefined): boolean {
     return !!photo && !this.brokenPhotos().has(slug);
   }
 
-  protected onPhotoError(slug: string): void {
-    this.brokenPhotos.update((set) => new Set(set).add(slug));
+  private resized(recipe: Recipe): boolean {
+    return resizable(recipe.photo) && !this.unresized().has(recipe.slug);
+  }
+
+  /** A card is about 380px wide at most, so 400 and 800 cover 1x and 2x screens. */
+  protected cardPhoto(recipe: Recipe): string {
+    return this.resized(recipe) ? photoUrl(recipe.photo!, 400) : recipe.photo!;
+  }
+
+  protected cardSrcset(recipe: Recipe): string | null {
+    return this.resized(recipe) ? photoSrcset(recipe.photo!, [400, 800]) : null;
+  }
+
+  protected onPhotoError(recipe: Recipe): void {
+    const failed = this.resized(recipe) ? this.unresized : this.brokenPhotos;
+    failed.update((set) => new Set(set).add(recipe.slug));
   }
 
   protected readonly isFiltered = computed(

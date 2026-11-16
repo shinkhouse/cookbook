@@ -2,7 +2,14 @@
   <article class="detail">
     <div class="hero" [class.is-empty]="!showPhoto()">
       @if (showPhoto()) {
-        <img [src]="r.photo" [alt]="r.title" (error)="onPhotoError()" />
+        <img
+          [attr.srcset]="heroSrcset()"
+          sizes="100vw"
+          [src]="heroPhoto()"
+          [alt]="r.title"
+          fetchpriority="high"
+          (error)="onPhotoError()"
+        />
       } @else {
         <div class="photo-placeholder" aria-hidden="true"></div>
       }

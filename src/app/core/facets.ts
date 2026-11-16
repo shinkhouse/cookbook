@@ -113,6 +113,8 @@ const DEFS: readonly FacetDef[] = [
       'italian',
       'mexican',
       'french',
+      'german',
+      'scandinavian',
       'asian',
       'chinese',
       'korean',

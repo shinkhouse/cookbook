@@ -67,8 +67,8 @@ describe('buildFacets', () => {
 
   it('files every cuisine in the collection under Cuisine, not Other', () => {
     const cuisines = [
-      'american', 'italian', 'mexican', 'french', 'asian', 'chinese',
-      'korean', 'thai', 'indian', 'mediterranean', 'cajun', 'cuban',
+      'american', 'italian', 'mexican', 'french', 'german', 'scandinavian', 'asian',
+      'chinese', 'korean', 'thai', 'indian', 'mediterranean', 'cajun', 'cuban',
     ];
     const facets = tagFacets([...cuisines].reverse());
     expect(facets.map((f) => f.id)).toEqual(['cuisine']);

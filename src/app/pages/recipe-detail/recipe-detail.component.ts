@@ -4,6 +4,7 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
+import { NoPhotoComponent } from '../../no-photo/no-photo.component';
 import { environment } from '../../../environments/environment';
 import { photoSrcset, photoUrl, resizable } from '../../core/photos';
 import { gapSentence, gapsOf } from '../../core/recipe-health';
@@ -39,7 +40,7 @@ function groupRows(rows: DetailIngredient[]): { name: string | null; items: Deta
 
 @Component({
   selector: 'app-recipe-detail',
-  imports: [RouterLink, FormsModule, MatIconModule, MatCheckboxModule, DatePipe],
+  imports: [RouterLink, FormsModule, MatIconModule, MatCheckboxModule, DatePipe, NoPhotoComponent],
   templateUrl: './recipe-detail.component.html',
   styleUrl: './recipe-detail.component.scss',
 })

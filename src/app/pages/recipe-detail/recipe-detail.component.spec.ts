@@ -804,6 +804,6 @@ describe('RecipeDetailComponent photo', () => {
     img()!.dispatchEvent(new Event('error'));
     fixture.detectChanges();
     expect(img()).toBeNull();
-    expect(el.querySelector('.hero .ruled-band')).not.toBeNull();
+    expect(el.querySelector('.hero app-no-photo svg')).not.toBeNull();
   });
 });

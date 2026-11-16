@@ -1,0 +1,16 @@
+// Fills whatever slot the photo would have: a card's photo, or the recipe
+// page's hero band. Quiet enough to read as "no photo yet", not as content.
+:host {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    background: var(--surface-sunk);
+    color: var(--rule-strong);
+}
+
+svg {
+    display: block;
+    width: min(34%, 9rem);
+    max-height: 56%;
+}

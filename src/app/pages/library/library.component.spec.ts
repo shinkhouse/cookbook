@@ -223,7 +223,35 @@ describe('LibraryComponent cards', () => {
     img()!.dispatchEvent(new Event('error'));
     fixture.detectChanges();
     expect(img()).toBeNull();
-    expect(el.querySelector('.card-photo .photo-placeholder')).not.toBeNull();
+    expect(el.querySelector('.card-photo app-index-card')).not.toBeNull();
+  });
+
+  it('shows a recipe with no photo as its index card', async () => {
+    const recipe = { ...Recipes[0], slug: 'bare', title: 'Bare Chili', photo: undefined };
+    const el = (await render(undefined, new FakeRecipeRepository([recipe]))).nativeElement as HTMLElement;
+    const card = el.querySelector('.card-photo app-index-card');
+    expect(card?.querySelector('.card-title')?.textContent?.trim()).toBe('Bare Chili');
+    expect(card?.querySelectorAll('.card-lines li').length).toBeGreaterThan(0);
+  });
+
+  it('leaves a missing photo to the index card, and badges only what else is missing', async () => {
+    const steps = ['Brown the beef.', 'Add the beans.', 'Simmer.'];
+    const el = (
+      await render(
+        undefined,
+        new FakeRecipeRepository([
+          { ...Recipes[0], slug: 'whole', title: 'Whole', photo: undefined, steps },
+          { ...Recipes[0], slug: 'bare', title: 'Bare', photo: undefined, steps: [] },
+        ]),
+      )
+    ).nativeElement as HTMLElement;
+    const badge = (title: string) =>
+      [...el.querySelectorAll('.grid .card')]
+        .find((c) => c.querySelector('h3')?.textContent?.trim() === title)!
+        .querySelector('.gap-badge')
+        ?.textContent?.trim();
+    expect(badge('Whole')).toBeUndefined();
+    expect(badge('Bare')).toBe('No method');
   });
 
   it('loads the first row of photos eagerly, the first at high priority', async () => {

@@ -15,13 +15,39 @@
     background: var(--surface);
     overflow: hidden;
 
-    img,
-    .photo-placeholder {
+    img {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
     }
+}
+
+// No photo: the band is a strip of index card, header rule and lines, the same
+// paper the library shows for this recipe.
+.ruled-band {
+    --rule-gap: 1.375rem;
+    --header: 2.25rem;
+
+    width: 100%;
+    height: 100%;
+    background-color: var(--paper);
+    background-image:
+        linear-gradient(var(--navy), var(--navy)),
+        repeating-linear-gradient(
+            to bottom,
+            transparent 0,
+            transparent calc(var(--rule-gap) - 1px),
+            var(--navy-tint-edge) calc(var(--rule-gap) - 1px),
+            var(--navy-tint-edge) var(--rule-gap)
+        );
+    background-position:
+        0 var(--header),
+        0 calc(var(--header) + 2px);
+    background-size:
+        100% 2px,
+        100% 100%;
+    background-repeat: no-repeat;
 }
 
 .detail-body {

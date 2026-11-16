@@ -180,16 +180,6 @@ button {
     font-family: var(--font);
 }
 
-// Stands in for a missing photo. A flat navy wash at low opacity rather than
-// stripes — quieter, and it reads as intentional next to a real photograph.
-.photo-placeholder {
-    background:
-        linear-gradient(180deg, rgb(27 58 107 / 0.05), rgb(27 58 107 / 0.09)),
-        var(--surface);
-    display: grid;
-    place-items: center;
-}
-
 .sr-only {
     position: absolute;
     width: 1px;

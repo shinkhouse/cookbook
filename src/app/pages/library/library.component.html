@@ -263,7 +263,7 @@
                       (error)="onPhotoError(recipe)"
                     />
                   } @else {
-                    <div class="photo-placeholder"></div>
+                    <app-index-card [title]="recipe.title" [ingredients]="recipe.ingredients" [seed]="recipe.slug" />
                   }
                 </div>
               </a>

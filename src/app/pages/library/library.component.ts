@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
+import { IndexCardComponent } from '../../index-card/index-card.component';
 import { environment } from '../../../environments/environment';
 import {
   Facet,
@@ -43,7 +44,7 @@ interface BarItem {
 
 @Component({
   selector: 'app-library',
-  imports: [RouterLink, MatIconModule],
+  imports: [RouterLink, MatIconModule, IndexCardComponent],
   templateUrl: './library.component.html',
   styleUrl: './library.component.scss',
   host: {
@@ -87,9 +88,12 @@ export class LibraryComponent {
 
   protected readonly gapFacetId = GAP_FACET;
 
-  /** The card badge text for a recipe still missing something, or ''. */
+  /**
+   * The card badge text for a recipe still missing something, or ''. A missing
+   * photo goes unsaid: the index card in its place already says it.
+   */
   protected gapFor(recipe: Recipe): string {
-    return gapLabel(gapsOf(recipe));
+    return gapLabel({ ...gapsOf(recipe), needsPhoto: false });
   }
 
   /**

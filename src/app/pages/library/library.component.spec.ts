@@ -178,6 +178,52 @@ describe('LibraryComponent needs-work facet', () => {
   });
 });
 
+describe('LibraryComponent cards', () => {
+  afterEach(() => localStorage.clear());
+
+  const photographed = (n: number) =>
+    new FakeRecipeRepository(
+      Array.from({ length: n }, (_, i) => ({
+        ...Recipes[0],
+        slug: `r${i}`,
+        title: `R${i}`,
+        photo: `https://example.com/r${i}.jpg`,
+      })),
+    );
+
+  it('leaves the title as the one link to a recipe for assistive tech and the keyboard', async () => {
+    const el = (await render(undefined, photographed(1))).nativeElement as HTMLElement;
+    const photoLink = el.querySelector('.card .card-link')!;
+    expect(photoLink.getAttribute('aria-hidden')).toBe('true');
+    expect(photoLink.getAttribute('tabindex')).toBe('-1');
+    expect(el.querySelector('.card h3 a')?.textContent?.trim()).toBe('R0');
+  });
+
+  it('heads the results, so card titles do not skip a level', async () => {
+    const el = (await render(undefined, photographed(2))).nativeElement as HTMLElement;
+    expect(el.querySelector('.result-bar h2')?.textContent?.trim()).toBe('2 recipes');
+  });
+
+  it('loads the first row of photos eagerly, the first at high priority', async () => {
+    const el = (await render(undefined, photographed(5))).nativeElement as HTMLElement;
+    const imgs = [...el.querySelectorAll<HTMLImageElement>('.card-photo img')];
+    expect(imgs.map((i) => i.getAttribute('loading'))).toEqual([
+      'eager',
+      'eager',
+      'eager',
+      'lazy',
+      'lazy',
+    ]);
+    expect(imgs.map((i) => i.getAttribute('fetchpriority'))).toEqual([
+      'high',
+      null,
+      null,
+      null,
+      null,
+    ]);
+  });
+});
+
 describe('LibraryComponent surprise me', () => {
   afterEach(() => localStorage.clear());
 

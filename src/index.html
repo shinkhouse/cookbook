@@ -5,15 +5,23 @@
         <title>My Cookbooks</title>
         <base href="/cookbook/" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta
+            name="description"
+            content="The family cookbook: search recipes by title, tag or ingredient, find what you can make with what you have, and cook step by step."
+        />
         <link rel="icon" type="image/x-icon" href="favicon.ico" />
         <meta name="theme-color" content="#FBF7EF" />
         <!--
-            Newsreader, Karla and IBM Plex Mono are self-hosted through
-            @fontsource (see angular.json), per design spec §3.2 — no Google
-            Fonts CDN. Material Icons is still fetched here; mat-icon is the one
-            Material component the new design keeps (§2.4).
+            The recipes come from the API, so connect while the app boots. The
+            list is a CORS fetch, which needs the crossorigin connection.
         -->
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://api.samuelhinkhouse.com" crossorigin />
+        <!--
+            Figtree is self-hosted through @fontsource (see angular.json), per
+            design spec §3.2. Material Icons is still fetched here; mat-icon is
+            the one Material component the new design keeps (§2.4). The build
+            inlines the stylesheet, so only the font host needs a connection.
+        -->
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
             href="https://fonts.googleapis.com/icon?family=Material+Icons"

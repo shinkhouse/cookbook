@@ -217,9 +217,10 @@
     }
     @default {
       <div class="result-bar">
-        <p class="result-count label" aria-live="polite">
+        <!-- The heading the card titles sit under. -->
+        <h2 class="result-count label" aria-live="polite">
           {{ results().length }} {{ results().length === 1 ? 'recipe' : 'recipes' }}
-        </p>
+        </h2>
         <!-- Have mode ranks by coverage, so a sort there would do nothing. -->
         @if (!haveMode()) {
           <label class="sort">
@@ -242,25 +243,31 @@
         </div>
       } @else {
         <ul class="grid">
-          @for (recipe of results(); track recipe.slug) {
+          @for (recipe of results(); track recipe.slug; let i = $index) {
             <li class="card">
-              <a class="card-link" [routerLink]="['/recipes', recipe.slug]">
-                @if (gapFor(recipe); as gap) {
-                  <span class="gap-badge">{{ gap }}</span>
-                }
+              <!-- The photo is a bigger target for the title's link, so it is
+                   left out of the tab order and the accessibility tree rather
+                   than announced twice. -->
+              <a class="card-link" [routerLink]="['/recipes', recipe.slug]" aria-hidden="true" tabindex="-1">
                 <div class="card-photo">
                   @if (showPhoto(recipe.slug, recipe.photo)) {
+                    <!-- The first row is on screen at load and the first photo
+                         is usually the largest paint, so neither waits. -->
                     <img
                       [src]="recipe.photo"
-                      [alt]="recipe.title"
-                      loading="lazy"
+                      alt=""
+                      [attr.loading]="i < eagerPhotos ? 'eager' : 'lazy'"
+                      [attr.fetchpriority]="i === 0 ? 'high' : null"
                       (error)="onPhotoError(recipe.slug)"
                     />
                   } @else {
-                    <div class="photo-placeholder" aria-hidden="true"></div>
+                    <div class="photo-placeholder"></div>
                   }
                 </div>
               </a>
+              @if (gapFor(recipe); as gap) {
+                <span class="gap-badge">{{ gap }}</span>
+              }
 
               @if (recipes.canSave()) {
                 <button

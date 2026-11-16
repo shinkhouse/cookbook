@@ -24,51 +24,6 @@
     }
 }
 
-// The signature: the times-cooked count set at display size. A family cookbook
-// measures a recipe by how often it actually got made, so that figure earns the
-// largest type on the page after the headline itself.
-.stat-block {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    flex: 0 1 auto;
-    padding: 18px 26px 18px 22px;
-    border: 1px solid var(--navy-tint-edge);
-    border-radius: var(--radius-card);
-    background: var(--navy-tint);
-    text-decoration: none;
-    transition: border-color var(--motion-drawer) var(--ease);
-
-    &:hover {
-        border-color: var(--navy);
-    }
-}
-
-.stat-count {
-    font-size: clamp(2.875rem, 5vw, 3.875rem);
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    line-height: 0.86;
-    color: var(--navy);
-}
-
-.stat-body {
-    display: grid;
-    gap: 1px;
-}
-
-.stat-title {
-    font-size: var(--text-body);
-    font-weight: 700;
-    letter-spacing: -0.015em;
-    color: var(--ink);
-}
-
-.stat-detail {
-    color: var(--ink-3);
-    font-size: var(--text-small);
-}
-
 // The title is the cookbook switcher when there is more than one cookbook. It
 // keeps the headline's size; the chevron is what says it opens.
 .shelf-trigger {
@@ -923,8 +878,10 @@
 }
 
 
-// Sits over the photo corner opposite the favorite star.
+// Sits over the photo corner opposite the favorite star. Outside the photo
+// link so a screen reader still reads it; clicks fall through to the link.
 .gap-badge {
+    pointer-events: none;
     position: absolute;
     top: 12px;
     left: 12px;

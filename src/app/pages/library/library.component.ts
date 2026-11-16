@@ -71,6 +71,9 @@ export class LibraryComponent {
   /** Placeholder cards shown while the collection is being fetched. */
   protected readonly skeletons = [0, 1, 2, 3, 4, 5];
 
+  /** The widest grid shows three cards a row; those photos are on screen at load. */
+  protected readonly eagerPhotos = 3;
+
   /** Option labels differ by facet: tags are title-cased, gaps have names. */
   protected optionLabel(facet: Facet, option: string): string {
     return facet.kind === 'gap' ? GAP_LABELS[option as GapKey] : tagLabel(option);
@@ -176,7 +179,6 @@ export class LibraryComponent {
     const at = items.indexOf(document.activeElement as HTMLElement);
     items[(at + step + items.length) % items.length]?.focus();
   }
-  protected readonly mostCooked = computed(() => this.recipes.mostCooked());
 
   /** Which facet menu is open, if any. Only one at a time. */
   protected readonly openFacet = signal<string | null>(null);

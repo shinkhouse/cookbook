@@ -73,10 +73,17 @@ export class LibraryComponent {
   protected readonly haveMode = computed(() => this.recipes.mode() === 'have');
   /** Components are not offered, so a set of only those has nothing to pick. */
   protected readonly canSurprise = computed(() => this.results().some((r) => !r.component));
-  /** The cookbook facet leads when there is more than one cookbook to choose. */
+  /**
+   * The cookbook facet leads when there is more than one cookbook to choose.
+   * Needs work is a prompt to whoever edits the recipes, so the read-only site
+   * leaves it out.
+   */
   protected readonly facets = computed(() => {
+    const own = this.recipes.writable
+      ? this.recipes.facets()
+      : this.recipes.facets().filter((f) => f.kind !== 'gap');
     const cookbook = cookbookFacet(this.cookbooks.cookbooks());
-    return cookbook ? [cookbook, ...this.recipes.facets()] : this.recipes.facets();
+    return cookbook ? [cookbook, ...own] : own;
   });
   protected readonly mostCooked = computed(() => this.recipes.mostCooked());
 

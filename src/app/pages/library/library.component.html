@@ -148,10 +148,13 @@
         @if (!haveMode()) {
           <label class="sort">
             <span class="label">Sort</span>
-            <select [value]="recipes.sort()" (change)="onSort($any($event.target).value)">
-              <option value="default">Library order</option>
-              <option value="stale">Not cooked lately</option>
-            </select>
+            <span class="sort-field">
+              <select [value]="recipes.sort()" (change)="onSort($any($event.target).value)">
+                <option value="default">Library order</option>
+                <option value="stale">Not cooked lately</option>
+              </select>
+              <mat-icon class="sort-chevron" fontIcon="expand_more" aria-hidden="true" />
+            </span>
           </label>
         }
       </div>

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { GAP_FACET } from '../../core/facets';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
 import { Recipes } from '../../core/mock/recipes.mock';
@@ -52,6 +53,26 @@ describe('LibraryComponent cookbook facet', () => {
       o.textContent?.trim(),
     );
     expect(labels).toEqual(["Sam's Cookbook", "Bob's Cookbook"]);
+  });
+});
+
+describe('LibraryComponent needs-work facet', () => {
+  afterEach(() => localStorage.clear());
+
+  const hasGapFacet = (el: HTMLElement) =>
+    triggers(el).some((t) => t.dataset['facetTrigger'] === GAP_FACET);
+
+  it('offers Needs work where recipes can be edited', async () => {
+    const el = (await render()).nativeElement as HTMLElement;
+    expect(hasGapFacet(el)).toBe(true);
+  });
+
+  it('leaves Needs work off the read-only site', async () => {
+    const recipes = new FakeRecipeRepository();
+    recipes.writable = false;
+    const el = (await render(undefined, recipes)).nativeElement as HTMLElement;
+    expect(hasGapFacet(el)).toBe(false);
+    expect(triggers(el).length).toBeGreaterThan(0);
   });
 });
 

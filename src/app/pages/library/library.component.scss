@@ -409,21 +409,44 @@
     align-items: center;
     gap: 8px;
 
+    // Drawn like a facet trigger. The native chevron sits on the pill's curve
+    // and ignores padding, so it is hidden and the facets' icon stands in; with
+    // a real border, the focus ring follows the same edge you see.
     select {
+        appearance: none;
+        min-height: 40px;
+        padding: 0 36px 0 14px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius-pill);
+        background: var(--paper);
+        color: var(--ink-2);
         font-family: var(--font);
         font-size: var(--text-small);
-        color: var(--ink);
-        background: var(--paper);
-        // Chrome pins the native chevron to the inside of the right border and
-        // ignores padding there, so it sat on the pill's curve. A transparent
-        // right border is what moves it in; the visible edge is a shadow.
-        border: 0;
-        border-right: 12px solid transparent;
-        box-shadow: inset 0 0 0 1px var(--rule-strong);
-        border-radius: var(--radius-pill);
-        padding: 0 4px 0 12px;
-        min-height: 40px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: border-color var(--motion-drawer) var(--ease);
+
+        &:hover {
+            border-color: var(--ink-4);
+        }
     }
+}
+
+.sort-field {
+    position: relative;
+    display: inline-flex;
+}
+
+.sort-chevron {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+    color: var(--ink-4);
+    transform: translateY(-50%);
+    pointer-events: none;
 }
 
 // §6.1 — CSS Grid does this natively; mat-grid-list is dropped (§2.4).

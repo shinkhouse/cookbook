@@ -408,7 +408,8 @@ describe('LibraryComponent what can I make', () => {
   });
 });
 
-describe('LibraryComponent sort', () => {
+// Skipped while the Sort control is commented out of the library template.
+xdescribe('LibraryComponent sort', () => {
   afterEach(() => localStorage.clear());
 
   it('changes the order from the Sort select', async () => {

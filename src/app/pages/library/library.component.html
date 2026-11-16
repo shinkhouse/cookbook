@@ -221,19 +221,26 @@
         <h2 class="result-count label" aria-live="polite">
           {{ results().length | number }} {{ results().length === 1 ? 'recipe' : 'recipes' }}
         </h2>
-        <!-- Have mode ranks by coverage, so a sort there would do nothing. -->
-        @if (!haveMode()) {
-          <label class="sort">
-            <span class="label">Sort</span>
-            <span class="sort-field">
-              <select [value]="recipes.sort()" (change)="onSort($any($event.target).value)">
-                <option value="default">Library order</option>
-                <option value="stale">Not cooked lately</option>
-              </select>
-              <mat-icon class="sort-chevron" fontIcon="expand_more" aria-hidden="true" />
-            </span>
-          </label>
-        }
+        <!--
+          The Sort control is switched off for now, so the library always shows
+          library order. To bring back "Not cooked lately", uncomment this block
+          and the LibraryComponent sort specs; RecipeStore.sort and onSort are
+          still in place.
+
+          Have mode ranks by coverage, so a sort there would do nothing.
+          @if (!haveMode()) {
+            <label class="sort">
+              <span class="label">Sort</span>
+              <span class="sort-field">
+                <select [value]="recipes.sort()" (change)="onSort($any($event.target).value)">
+                  <option value="default">Library order</option>
+                  <option value="stale">Not cooked lately</option>
+                </select>
+                <mat-icon class="sort-chevron" fontIcon="expand_more" aria-hidden="true" />
+              </span>
+            </label>
+          }
+        -->
       </div>
 
       @if (results().length === 0) {

@@ -28,31 +28,133 @@ async function render(cookbooks?: FakeCookbookRepository, recipes?: FakeRecipeRe
 const triggers = (el: HTMLElement) =>
   [...el.querySelectorAll<HTMLElement>('[data-facet-trigger]')];
 
-describe('LibraryComponent cookbook facet', () => {
+const titleText = (el: HTMLElement) => el.querySelector('h1')?.textContent?.trim();
+
+const cardTitles = (el: HTMLElement) =>
+  [...el.querySelectorAll('.grid .card h3')].map((h) => h.textContent?.trim());
+
+describe('LibraryComponent cookbook switcher', () => {
   afterEach(() => localStorage.clear());
 
-  it('hides the Cookbook facet with one cookbook', async () => {
+  const twoBooks = () =>
+    new FakeCookbookRepository([
+      { id: 'sam', name: "Sam's Cookbook" },
+      { id: 'bob', name: "Bob's Cookbook" },
+    ]);
+  const filed = () =>
+    new FakeRecipeRepository([
+      { ...Recipes[0], slug: 'sams', title: 'Sams', cookbooks: ['sam'] },
+      { ...Recipes[0], slug: 'bobs', title: 'Bobs', cookbooks: ['bob'] },
+    ]);
+  const shelfTrigger = (el: HTMLElement) => el.querySelector<HTMLButtonElement>('h1 button');
+  const shelfOptions = (el: HTMLElement) => [
+    ...el.querySelectorAll<HTMLButtonElement>('.shelf-menu [role="menuitemradio"]'),
+  ];
+
+  it('is a plain title with one cookbook', async () => {
     const el = (await render()).nativeElement as HTMLElement;
-    expect(triggers(el).some((t) => t.dataset['facetTrigger'] === 'cookbook')).toBe(false);
+    expect(titleText(el)).toBe('All Cookbooks');
+    expect(shelfTrigger(el)).toBeNull();
   });
 
-  it('shows it first, named, with two', async () => {
-    const fixture = await render(
-      new FakeCookbookRepository([
-        { id: 'sam', name: "Sam's Cookbook" },
-        { id: 'bob', name: "Bob's Cookbook" },
-      ]),
-    );
+  it('switches cookbook from the title instead of a facet', async () => {
+    const fixture = await render(twoBooks(), filed());
     const el = fixture.nativeElement as HTMLElement;
-    const first = triggers(el)[0];
-    expect(first.dataset['facetTrigger']).toBe('cookbook');
-    expect(first.textContent).toContain('Cookbook');
+    expect(triggers(el).some((t) => t.dataset['facetTrigger'] === 'cookbook')).toBe(false);
+    expect(shelfTrigger(el)!.getAttribute('aria-expanded')).toBe('false');
+
+    shelfTrigger(el)!.click();
+    fixture.detectChanges();
+    expect(shelfOptions(el).map((o) => o.textContent?.trim())).toEqual([
+      'All Cookbooks',
+      "Sam's Cookbook",
+      "Bob's Cookbook",
+    ]);
+    expect(shelfOptions(el)[0].getAttribute('aria-checked')).toBe('true');
+
+    shelfOptions(el)[2].click();
+    fixture.detectChanges();
+    expect(titleText(el)).toBe("Bob's Cookbook");
+    expect(cardTitles(el)).toEqual(['Bobs']);
+    expect(el.querySelector('.shelf-menu')).toBeNull();
+
+    shelfTrigger(el)!.click();
+    fixture.detectChanges();
+    shelfOptions(el)[0].click();
+    fixture.detectChanges();
+    expect(titleText(el)).toBe('All Cookbooks');
+    expect(cardTitles(el)).toEqual(['Sams', 'Bobs']);
+  });
+
+  it('keeps the chosen cookbook through Clear filters', async () => {
+    const fixture = await render(twoBooks(), filed());
+    const el = fixture.nativeElement as HTMLElement;
+    shelfTrigger(el)!.click();
+    fixture.detectChanges();
+    shelfOptions(el)[2].click();
+    TestBed.inject(RecipeStore).setQuery('zzz-no-such-thing');
+    fixture.detectChanges();
+
+    el.querySelector<HTMLButtonElement>('.empty .btn-outline')!.click();
+    fixture.detectChanges();
+    expect(titleText(el)).toBe("Bob's Cookbook");
+    expect(cardTitles(el)).toEqual(['Bobs']);
+  });
+});
+
+describe('LibraryComponent favorites toggle', () => {
+  afterEach(() => localStorage.clear());
+
+  it('leads the filter row', async () => {
+    const fixture = await render();
+    const el = fixture.nativeElement as HTMLElement;
+    const first = el.querySelector<HTMLButtonElement>('.facet-bar button')!;
+    expect(first.textContent).toContain('Favorites');
+    expect(first.getAttribute('aria-pressed')).toBe('false');
+
     first.click();
     fixture.detectChanges();
-    const labels = [...el.querySelectorAll('#facet-cookbook .facet-option')].map((o) =>
-      o.textContent?.trim(),
+    expect(first.getAttribute('aria-pressed')).toBe('true');
+    expect(TestBed.inject(RecipeStore).favsOnly()).toBe(true);
+  });
+});
+
+describe('LibraryComponent More menu', () => {
+  afterEach(() => localStorage.clear());
+
+  const tagged = (tags: string[]) =>
+    new FakeRecipeRepository([{ ...Recipes[0], slug: 'a', title: 'A', tags }]);
+  const ids = (el: HTMLElement) => triggers(el).map((t) => t.dataset['facetTrigger']);
+
+  it('folds Ingredient and Other into More, and chips keep their own names', async () => {
+    const fixture = await render(undefined, tagged(['dinner', 'broccoli', 'zzz-odd']));
+    const el = fixture.nativeElement as HTMLElement;
+    expect(ids(el)).toContain('more');
+    expect(ids(el)).not.toContain('ingredient');
+    expect(ids(el)).not.toContain('other');
+
+    const more = triggers(el).find((t) => t.dataset['facetTrigger'] === 'more')!;
+    more.click();
+    fixture.detectChanges();
+    const groups = [...el.querySelectorAll('#facet-more .facet-group-label')].map((h) =>
+      h.textContent?.trim(),
     );
-    expect(labels).toEqual(["Sam's Cookbook", "Bob's Cookbook"]);
+    expect(groups).toEqual(['Ingredient', 'Other']);
+
+    const broccoli = [...el.querySelectorAll('#facet-more .facet-option')].find((o) =>
+      o.textContent?.includes('Broccoli'),
+    )!;
+    broccoli.querySelector<HTMLInputElement>('input')!.click();
+    fixture.detectChanges();
+    expect(more.querySelector('.facet-count')?.textContent?.trim()).toBe('1');
+    expect(el.querySelector('.active-filters')?.textContent).toContain('Ingredient');
+    expect(TestBed.inject(RecipeStore).isTagSelected('broccoli')).toBe(true);
+  });
+
+  it('leaves a lone overflow facet as itself', async () => {
+    const el = (await render(undefined, tagged(['dinner', 'broccoli']))).nativeElement;
+    expect(ids(el)).toContain('ingredient');
+    expect(ids(el)).not.toContain('more');
   });
 });
 
@@ -80,9 +182,7 @@ describe('LibraryComponent surprise me', () => {
   afterEach(() => localStorage.clear());
 
   const button = (el: HTMLElement) =>
-    [...el.querySelectorAll<HTMLButtonElement>('.controls button')].find((b) =>
-      b.textContent?.includes('Surprise me'),
-    )!;
+    el.querySelector<HTMLButtonElement>('.controls button[aria-label="Surprise me"]')!;
 
   it('disables Surprise me with no results', async () => {
     const fixture = await render();
@@ -121,7 +221,7 @@ describe('LibraryComponent what can I make', () => {
     const fixture = await render(undefined, new FakeRecipeRepository([recipe]));
     const el = fixture.nativeElement as HTMLElement;
     const input = el.querySelector<HTMLInputElement>('.search input')!;
-    const toggle = [...el.querySelectorAll<HTMLButtonElement>('.controls button')].find((b) =>
+    const toggle = [...el.querySelectorAll<HTMLButtonElement>('.search button')].find((b) =>
       b.textContent?.includes('What can I make?'),
     )!;
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
@@ -131,6 +231,7 @@ describe('LibraryComponent what can I make', () => {
     fixture.detectChanges();
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
     expect(input.placeholder).toBe('List what you have: chicken, rice, broccoli');
+    expect(document.activeElement).toBe(input);
 
     TestBed.inject(RecipeStore).setQuery('chicken, rice');
     fixture.detectChanges();

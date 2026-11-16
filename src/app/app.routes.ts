@@ -18,7 +18,7 @@ const recipeTitle =
     // A direct hit on a recipe URL resolves before the collection has arrived.
     await store.whenLoaded();
     const recipe = store.bySlug(slug);
-    if (!recipe) return "My Cookbooks";
+    if (!recipe) return "All Cookbooks";
     return suffix ? `${recipe.title} — ${suffix}` : recipe.title;
   };
 

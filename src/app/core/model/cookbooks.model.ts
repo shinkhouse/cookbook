@@ -25,5 +25,5 @@ export const DEFAULT_COOKBOOK_ID = 'sams-cookbook';
 
 /** Seeded the first time the app runs, the same way recipes are. */
 export const CookbookSeed: Cookbook[] = [
-  { id: DEFAULT_COOKBOOK_ID, name: "My Cookbooks" },
+  { id: DEFAULT_COOKBOOK_ID, name: "All Cookbooks" },
 ];

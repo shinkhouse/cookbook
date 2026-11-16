@@ -1,8 +1,23 @@
-import { Component, ElementRef, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { Facet, GAP_FACET, cookbookFacet, GAP_LABELS, GapKey } from '../../core/facets';
+import {
+  Facet,
+  GAP_FACET,
+  OTHER_FACET,
+  cookbookFacet,
+  GAP_LABELS,
+  GapKey,
+} from '../../core/facets';
 import { gapLabel, gapsOf } from '../../core/recipe-health';
 import { Recipe } from '../../core/model/recipes.model';
 import { CookbookStore } from '../../core/stores/cookbook.store';
@@ -11,6 +26,19 @@ import { RecipeStore, tagLabel } from '../../core/stores/recipe.store';
 
 /** §6.1 — search is debounced 150ms. */
 const SEARCH_DEBOUNCE_MS = 150;
+
+/** The long tail of the bar, folded into one More menu when both are present. */
+const MORE_FACETS: readonly string[] = ['ingredient', OTHER_FACET];
+
+/** The open-menu id the cookbook switcher shares with the facet menus. */
+const SHELF = 'shelf';
+
+/** One trigger in the facet bar: a facet, or several folded under one name. */
+interface BarItem {
+  id: string;
+  label: string;
+  facets: Facet[];
+}
 
 @Component({
   selector: 'app-library',
@@ -27,6 +55,7 @@ const SEARCH_DEBOUNCE_MS = 150;
 export class LibraryComponent {
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   protected readonly recipes = inject(RecipeStore);
   protected readonly cookbooks = inject(CookbookStore);
   protected readonly list = inject(ListStore);
@@ -42,9 +71,8 @@ export class LibraryComponent {
   /** Placeholder cards shown while the collection is being fetched. */
   protected readonly skeletons = [0, 1, 2, 3, 4, 5];
 
-  /** Option labels differ by facet: tags are title-cased, gaps have names, cookbooks show their name. */
+  /** Option labels differ by facet: tags are title-cased, gaps have names. */
   protected optionLabel(facet: Facet, option: string): string {
-    if (facet.kind === 'cookbook') return this.cookbooks.byId(option)?.name ?? option;
     return facet.kind === 'gap' ? GAP_LABELS[option as GapKey] : tagLabel(option);
   }
 
@@ -74,17 +102,80 @@ export class LibraryComponent {
   /** Components are not offered, so a set of only those has nothing to pick. */
   protected readonly canSurprise = computed(() => this.results().some((r) => !r.component));
   /**
-   * The cookbook facet leads when there is more than one cookbook to choose.
-   * Needs work is a prompt to whoever edits the recipes, so the read-only site
-   * leaves it out.
+   * The filter facets. Needs work is a prompt to whoever edits the recipes, so
+   * the read-only site leaves it out.
    */
-  protected readonly facets = computed(() => {
-    const own = this.recipes.writable
+  protected readonly facets = computed(() =>
+    this.recipes.writable
       ? this.recipes.facets()
-      : this.recipes.facets().filter((f) => f.kind !== 'gap');
-    const cookbook = cookbookFacet(this.cookbooks.cookbooks());
-    return cookbook ? [cookbook, ...own] : own;
+      : this.recipes.facets().filter((f) => f.kind !== 'gap'),
+  );
+
+  /** The bar's triggers, in facet order, with the long tail folded into More. */
+  protected readonly barItems = computed<BarItem[]>(() => {
+    const facets = this.facets();
+    const folded = facets.filter((f) => MORE_FACETS.includes(f.id));
+    const items: BarItem[] = [];
+    for (const facet of facets) {
+      if (folded.length < 2 || !folded.includes(facet)) {
+        items.push({ id: facet.id, label: facet.label, facets: [facet] });
+      } else if (facet === folded[0]) {
+        items.push({ id: 'more', label: 'More', facets: folded });
+      }
+    }
+    return items;
   });
+
+  /**
+   * The cookbook is the shelf being browsed rather than a filter on it, so it
+   * is chosen from the title. Null with one cookbook: there is nothing to switch.
+   */
+  protected readonly shelf = computed(() => cookbookFacet(this.cookbooks.cookbooks()));
+
+  /** The cookbook on the shelf, or null for all of them. */
+  protected readonly shelfId = computed(() => {
+    const shelf = this.shelf();
+    const on = shelf?.options.filter((id) => this.recipes.isOptionSelected(shelf, id)) ?? [];
+    return on.length === 1 ? on[0] : null;
+  });
+
+  protected readonly title = computed(() => {
+    const id = this.shelfId();
+    return (id && this.cookbooks.byId(id)?.name) || 'All Cookbooks';
+  });
+
+  protected toggleShelf(): void {
+    this.toggleFacet(SHELF);
+    if (this.openFacet() !== SHELF) return;
+    // A menu takes focus on opening, landing on the current choice.
+    afterNextRender(
+      () =>
+        this.host.nativeElement
+          .querySelector<HTMLElement>('.shelf-menu [aria-checked="true"]')
+          ?.focus(),
+      { injector: this.injector },
+    );
+  }
+
+  protected chooseShelf(id: string | null): void {
+    const shelf = this.shelf();
+    if (!shelf) return;
+    this.recipes.clearFacet(shelf);
+    if (id) this.recipes.toggleOption(shelf, id);
+    this.closeFacet(true);
+  }
+
+  /** Up and down move through the menu, wrapping at either end. */
+  protected onShelfKey(event: KeyboardEvent): void {
+    const step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    const items = [
+      ...this.host.nativeElement.querySelectorAll<HTMLElement>('.shelf-menu [role="menuitemradio"]'),
+    ];
+    const at = items.indexOf(document.activeElement as HTMLElement);
+    items[(at + step + items.length) % items.length]?.focus();
+  }
   protected readonly mostCooked = computed(() => this.recipes.mostCooked());
 
   /** Which facet menu is open, if any. Only one at a time. */
@@ -113,10 +204,10 @@ export class LibraryComponent {
   protected onDocumentClick(event: MouseEvent): void {
     if (this.openFacet() === null) return;
     const target = event.target as Node | null;
-    // A click inside the bar is either on a trigger or on an option; both are
-    // handled by their own handlers.
-    const bar = this.host.nativeElement.querySelector('.facet-bar');
-    if (target && bar?.contains(target)) return;
+    // A click inside the bar or the title is either on a trigger or on an
+    // option; both are handled by their own handlers.
+    const menus = this.host.nativeElement.querySelectorAll('.facet-bar, .shelf');
+    if (target && [...menus].some((m) => m.contains(target))) return;
     this.closeFacet();
   }
 
@@ -160,6 +251,15 @@ export class LibraryComponent {
     return this.recipes.facetCount(facet);
   }
 
+  /** What a trigger's badge counts: everything chosen under it. */
+  protected itemCount(item: BarItem): number {
+    return item.facets.reduce((n, facet) => n + this.facetCount(facet), 0);
+  }
+
+  protected clearItem(item: BarItem): void {
+    for (const facet of item.facets) this.recipes.clearFacet(facet);
+  }
+
   protected onSearch(value: string): void {
     this.typed.set(value);
     clearTimeout(this.debounce);
@@ -172,15 +272,22 @@ export class LibraryComponent {
     this.recipes.setQuery('');
   }
 
+  /** Leaves the chosen cookbook alone: it is the shelf, not one of the filters. */
   protected clearAll(): void {
+    const shelf = this.recipes.selectedCookbooks();
     this.clearSearch();
     this.recipes.reset();
+    this.recipes.selectedCookbooks.set(shelf);
     this.closeFacet();
   }
 
-  /** Keeps what was typed: a search word is often an ingredient you have. */
+  /**
+   * Keeps what was typed: a search word is often an ingredient you have. Either
+   * way the next thing to do is type, so the field takes focus.
+   */
   protected toggleHave(): void {
     this.recipes.mode.update((m) => (m === 'have' ? 'search' : 'have'));
+    this.host.nativeElement.querySelector<HTMLInputElement>('.search input')?.focus();
   }
 
   /** "Cook this" goes straight into cook mode, per §6.1. */

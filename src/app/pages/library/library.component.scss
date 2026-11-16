@@ -14,6 +14,7 @@
 }
 
 .head-copy {
+    position: relative;
     flex: 1 1 100%;
 
     h1 {
@@ -68,23 +69,117 @@
     font-size: var(--text-small);
 }
 
+// The title is the cookbook switcher when there is more than one cookbook. It
+// keeps the headline's size; the chevron is what says it opens.
+.shelf-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1em;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover .shelf-chevron {
+        color: var(--ink);
+    }
+}
+
+// Width and height are in the icon's own ems, which the font-size has already
+// scaled down from the headline's.
+.shelf-chevron {
+    flex: none;
+    width: 1em;
+    height: 1em;
+    font-size: 0.6em;
+    color: var(--ink-4);
+    transition:
+        transform var(--motion-drawer) var(--ease),
+        color var(--motion-drawer) var(--ease);
+
+    &.is-open {
+        transform: rotate(180deg);
+    }
+}
+
+.shelf-menu {
+    min-width: 240px;
+}
+
+.shelf-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: var(--touch);
+    padding: 0 10px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--ink-2);
+    font-family: var(--font);
+    font-size: var(--text-small);
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        background: var(--surface);
+    }
+
+    mat-icon {
+        flex: none;
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
+        color: var(--navy);
+        visibility: hidden;
+    }
+
+    &[aria-checked='true'] {
+        color: var(--navy-deep);
+
+        mat-icon {
+            visibility: visible;
+        }
+    }
+}
+
+// One row at every width: the search field gives way so the dice never wraps
+// onto a line of its own.
 .controls {
     display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    margin-bottom: 16px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
 }
 
 .search {
     display: flex;
     align-items: center;
     gap: 10px;
-    flex: 1 1 320px;
+    flex: 1 1 auto;
+    min-width: 0;
     min-height: var(--touch);
     padding: 0 16px;
     border: 1px solid var(--rule-strong);
     border-radius: var(--radius-pill);
     background: var(--surface);
+    transition:
+        background var(--motion-drawer) var(--ease),
+        border-color var(--motion-drawer) var(--ease);
+
+    // Have mode reads the field as a pantry list, and the tint says so.
+    &.is-have {
+        border-color: var(--navy-tint-edge);
+        background: var(--navy-tint);
+    }
 
     // The ring belongs on the whole field, not the bare input inside it.
     &:focus-within {
@@ -102,6 +197,7 @@
 
     input {
         flex: 1;
+        min-width: 0;
         border: 0;
         background: none;
         color: var(--ink);
@@ -136,13 +232,95 @@
     }
 }
 
+// Sits against the field's right edge. On a phone only the icon fits beside a
+// usable input; the button's label keeps its name.
+.search .have-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+    min-height: 32px;
+    margin-right: -8px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--navy);
+    font-family: var(--font);
+    font-size: var(--text-small);
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        background var(--motion-drawer) var(--ease),
+        color var(--motion-drawer) var(--ease);
+
+    &:hover {
+        background: var(--surface-sunk);
+    }
+
+    &.is-on {
+        background: var(--navy);
+        color: var(--paper);
+    }
+
+    mat-icon {
+        width: 17px;
+        height: 17px;
+        font-size: 17px;
+        color: inherit;
+    }
+
+    @media (max-width: 599px) {
+        padding: 0 8px;
+
+        .have-label {
+            display: none;
+        }
+    }
+}
+
+.icon-btn {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: var(--touch);
+    height: var(--touch);
+    padding: 0;
+    border: 1px solid var(--rule-strong);
+    border-radius: 50%;
+    background: var(--paper);
+    color: var(--ink-3);
+    cursor: pointer;
+    transition:
+        border-color var(--motion-drawer) var(--ease),
+        color var(--motion-drawer) var(--ease);
+
+    &:hover:not(:disabled) {
+        border-color: var(--ink-4);
+        color: var(--ink);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+
+    mat-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 20px;
+    }
+}
+
 // The facet bar. Twenty-six tags as single-select pills filled three rows and
 // still only let you ask one question at a time; grouped multi-selects fit on
 // one row and answer the question people actually have.
 .facet-bar {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    align-items: center;
+    gap: 4px;
     margin-bottom: 14px;
 }
 
@@ -150,15 +328,49 @@
     position: relative;
 }
 
+.facet-wrap {
+    position: relative;
+}
+
+// On a phone the bar is one row that scrolls sideways rather than three that
+// wrap. A scroller clips what it positions, so triggers give up their own
+// positioning and menus open full width from the wrapper, outside the clip and
+// on screen whichever trigger opened them.
+@media (max-width: 599px) {
+    .facet-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        // Room for focus rings, which the scroller would otherwise clip too.
+        margin: -4px -4px 10px;
+        padding: 4px;
+    }
+
+    .facet {
+        position: static;
+    }
+
+    .facet-trigger {
+        flex: none;
+        white-space: nowrap;
+    }
+
+    .facet-bar .facet-menu {
+        right: 0;
+    }
+}
+
+// Quiet until used: most facets are off most of the time, and eight outlined
+// pills that all read as equally important were most of the clutter.
 .facet-trigger {
     display: inline-flex;
     align-items: center;
     gap: 7px;
     min-height: 40px;
-    padding: 0 14px;
-    border: 1px solid var(--rule-strong);
+    padding: 0 12px;
+    border: 1px solid transparent;
     border-radius: var(--radius-pill);
-    background: var(--paper);
+    background: transparent;
     color: var(--ink-2);
     font-family: var(--font);
     font-size: var(--text-small);
@@ -168,8 +380,10 @@
         border-color var(--motion-drawer) var(--ease),
         background var(--motion-drawer) var(--ease);
 
-    &:hover {
-        border-color: var(--ink-4);
+    &:hover,
+    &.is-open {
+        background: var(--surface);
+        color: var(--ink);
     }
 
     // A facet with something chosen keeps the navy so the state is legible
@@ -180,12 +394,21 @@
         color: var(--navy-deep);
     }
 
-    &.is-open {
-        border-color: var(--navy);
-    }
-
     &.is-open .facet-chevron {
         transform: rotate(180deg);
+    }
+}
+
+.fav-filter {
+    mat-icon {
+        width: 17px;
+        height: 17px;
+        font-size: 17px;
+        color: var(--ink-4);
+    }
+
+    &.is-on mat-icon {
+        color: var(--navy);
     }
 }
 
@@ -257,6 +480,19 @@
     }
 }
 
+// More holds two facets; each keeps its name so Broccoli and an odd tag do not
+// read as the same kind of thing.
+.facet-group + .facet-group {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--rule);
+}
+
+.facet-group-label {
+    margin: 0;
+    padding: 10px 10px 4px;
+}
+
 // How many recipes carry this gap — the reason you would tick it.
 .option-count {
     margin-left: auto;
@@ -290,9 +526,11 @@
 // The Needs-work facet asks what a recipe is missing rather than what it is, so
 // it sits slightly apart from the descriptive facets.
 .facet-trigger.is-gap {
+    border-color: var(--rule-strong);
     border-style: dashed;
 
     &.is-on {
+        border-color: var(--navy);
         border-style: solid;
     }
 }
@@ -355,40 +593,6 @@
 
     &:hover {
         color: var(--navy);
-    }
-}
-
-// The favorites toggle keeps the old pill shape; the have-mode toggle shares it.
-.pill-fav,
-.pill-have {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: var(--touch);
-    padding: 0 18px;
-    border: 1px solid var(--rule-strong);
-    border-radius: var(--radius-pill);
-    background: var(--paper);
-    color: var(--ink-2);
-    font-family: var(--font);
-    font-size: var(--text-small);
-    font-weight: 600;
-    cursor: pointer;
-
-    &:hover {
-        border-color: var(--ink-4);
-    }
-
-    &.is-on {
-        border-color: var(--navy);
-        background: var(--navy);
-        color: var(--paper);
-    }
-
-    mat-icon {
-        font-size: 17px;
-        width: 17px;
-        height: 17px;
     }
 }
 
@@ -734,10 +938,4 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-}
-
-// Sits in the controls row beside Favorites, so it matches that pill's height.
-.surprise {
-    min-height: var(--touch);
-    padding: 0 18px;
 }

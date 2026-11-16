@@ -82,7 +82,22 @@ const DEFS: readonly FacetDef[] = [
   {
     id: 'cuisine',
     label: 'Cuisine',
-    tags: ['italian', 'mexican'],
+    // `asian` is on every East and Southeast Asian recipe as well as its own
+    // cuisine, so one option finds them all; it leads the ones it covers.
+    tags: [
+      'american',
+      'italian',
+      'mexican',
+      'french',
+      'asian',
+      'chinese',
+      'korean',
+      'thai',
+      'indian',
+      'mediterranean',
+      'cajun',
+      'cuban',
+    ],
   },
   {
     id: 'dish',

@@ -437,11 +437,11 @@ describe('RecipeStore lifecycle and writes', () => {
   it('keeps the derived facets in step with an added recipe', async () => {
     const store = setup();
     await store.whenLoaded();
-    await store.add(fixture('thai-curry', { title: 'Thai Curry', tags: ['thai', 'dinner'] }));
+    await store.add(fixture('smoked-ribs', { title: 'Smoked Ribs', tags: ['smoky', 'dinner'] }));
     // Tags are derived, so a new tag has to reach the filter controls. It is
     // not in any defined group, so it belongs to the catch-all.
-    expect(store.tags()).toContain('thai');
-    expect(store.facets().find((f) => f.id === 'other')?.options).toContain('thai');
+    expect(store.tags()).toContain('smoky');
+    expect(store.facets().find((f) => f.id === 'other')?.options).toContain('smoky');
   });
 });
 

@@ -29,7 +29,7 @@ describe('buildFacets', () => {
       'dessert',
       'appetizer',
     ]);
-    expect(byId.get('cuisine')?.options).toEqual(['italian', 'mexican']);
+    expect(byId.get('cuisine')?.options).toEqual(jasmine.arrayContaining(['italian', 'mexican']));
     expect(byId.get('protein')?.options).toContain('chicken');
     expect(byId.get('protein')?.options).toContain('ground beef');
   });
@@ -47,6 +47,16 @@ describe('buildFacets', () => {
     expect(other.options).toContain('zzz-brand-new-tag');
     // Last of the tag facets; the gap facet comes after all of them.
     expect(facets.at(-1)?.id).toBe(OTHER_FACET);
+  });
+
+  it('files every cuisine in the collection under Cuisine, not Other', () => {
+    const cuisines = [
+      'american', 'italian', 'mexican', 'french', 'asian', 'chinese',
+      'korean', 'thai', 'indian', 'mediterranean', 'cajun', 'cuban',
+    ];
+    const facets = tagFacets([...cuisines].reverse());
+    expect(facets.map((f) => f.id)).toEqual(['cuisine']);
+    expect(facets[0].options).toEqual(cuisines);
   });
 
   it('drops a facet with no matching tags rather than offering an empty menu', () => {

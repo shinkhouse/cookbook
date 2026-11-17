@@ -1,13 +1,15 @@
-import { DOCUMENT, DatePipe } from '@angular/common';
+import { DOCUMENT, DatePipe, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Component, computed, inject, input, signal } from '@angular/core';
-import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
 import { NoPhotoComponent } from '../../no-photo/no-photo.component';
 import { environment } from '../../../environments/environment';
 import { photoSrcset, photoUrl, resizable } from '../../core/photos';
-import { gapSentence, gapsOf } from '../../core/recipe-health';
+import { StepPiece, mentionPieces } from '../../core/mentions';
+import { methodNote } from '../../core/recipe-health';
 import { scaleFactor, scaleLabel } from '../../core/scale';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { DeviceStore } from '../../core/stores/device.store';
@@ -17,6 +19,15 @@ import { RecipeStore, tagLabel } from '../../core/stores/recipe.store';
 import { Recipe } from '../../core/model/recipes.model';
 import { UnitSystem, amountText } from '../../core/units';
 import { describeDeviceError, describeWriteError } from '../../core/write-error';
+
+/** The list a phone shows at a time; a wider screen shows all three. */
+type PhoneTab = 'ingredients' | 'steps' | 'notes';
+
+/** A run of step text, with the amount to show when it names an ingredient. */
+interface ShownPiece {
+  text: string;
+  amount?: string;
+}
 
 /** One row of the ingredient card, with its amount already scaled. */
 interface DetailIngredient {
@@ -40,7 +51,16 @@ function groupRows(rows: DetailIngredient[]): { name: string | null; items: Deta
 
 @Component({
   selector: 'app-recipe-detail',
-  imports: [RouterLink, FormsModule, MatIconModule, MatCheckboxModule, DatePipe, NoPhotoComponent],
+  imports: [
+    RouterLink,
+    FormsModule,
+    MatIconModule,
+    MatCheckboxModule,
+    MatMenuModule,
+    NgTemplateOutlet,
+    DatePipe,
+    NoPhotoComponent,
+  ],
   templateUrl: './recipe-detail.component.html',
   styleUrl: './recipe-detail.component.scss',
 })
@@ -79,10 +99,6 @@ export class RecipeDetailComponent {
   protected readonly noteError = signal('');
 
   protected readonly cookbooks = inject(CookbookStore);
-  /** The id of the cookbook whose checkbox is mid-write; one at a time. */
-  protected readonly cookbookSaving = signal<string | null>(null);
-  protected readonly cookbookError = signal('');
-  private readonly cookbookRevision = signal(0);
   /**
    * The credit line. Book recipes carry it as their subtitle already; the
    * contributor stands in when a recipe has only that.
@@ -92,38 +108,30 @@ export class RecipeDetailComponent {
     return r?.subtitle || (r?.contributor ? `From ${r.contributor}` : '');
   });
 
-  /** "Goddard Family Cookbook, page 112", for a recipe from a printed book. */
-  protected readonly printedSource = computed(() => {
+  /**
+   * The printed book a recipe came from and its page there. The import filed
+   * it in its book first; a later filing is appended after, so the first
+   * cookbook is the book. Null when the recipe has no page.
+   */
+  protected readonly printedBook = computed(() => {
     const r = this.recipe();
-    if (!r?.sourcePage) return '';
-    // The import filed it in its book first; a later filing is appended after.
-    const book = this.cookbooks.byId(r.cookbooks[0] ?? '');
-    return book ? `${book.name}, page ${r.sourcePage}` : `Page ${r.sourcePage} of the printed book`;
+    if (!r?.sourcePage) return null;
+    return { book: this.cookbooks.byId(r.cookbooks[0] ?? '') ?? null, page: r.sourcePage };
   });
 
-  protected readonly cookbookRows = computed(() =>
-    this.cookbooks.cookbooks().map((book) => ({ book, key: `${book.id}/${this.cookbookRevision()}` })),
-  );
+  /** The cookbooks to name beside the credit: all of them, less the printed book given its own line. */
+  protected readonly shelves = computed(() => {
+    const r = this.recipe();
+    if (!r) return [];
+    const printed = this.printedBook()?.book?.id;
+    return r.cookbooks
+      .map((id) => this.cookbooks.byId(id))
+      .filter((book): book is NonNullable<typeof book> => !!book && book.id !== printed);
+  });
 
-  /**
-   * Files the recipe into or out of a cookbook. The checkbox flips itself on
-   * click, so a failure sets it back to what is stored.
-   */
-  protected async toggleCookbook(id: string, change: MatCheckboxChange): Promise<void> {
-    const slug = this.slug();
-    const on = change.checked;
-    this.cookbookSaving.set(id);
-    this.cookbookError.set('');
-    try {
-      if (on) await this.recipes.addToCookbook(slug, id);
-      else await this.recipes.removeFromCookbook(slug, id);
-    } catch (err) {
-      this.cookbookError.set(describeWriteError(err));
-      // The box has already flipped itself; remaking the rows puts it back to what is stored.
-      this.cookbookRevision.update((n) => n + 1);
-    } finally {
-      this.cookbookSaving.set(null);
-    }
+  /** Opens the library on one cookbook's shelf. */
+  protected openShelf(id: string): void {
+    this.recipes.selectedCookbooks.set(new Set([id]));
   }
 
   protected readonly isFav = computed(() => this.recipe()?.favorite === true);
@@ -234,10 +242,28 @@ export class RecipeDetailComponent {
     void this.recipes.load();
   }
 
-  /** What this recipe is still missing, if anything. */
-  protected readonly gapNote = computed(() => {
+  /** "Just one step for 8 ingredients.", for the note under a thin method. */
+  protected readonly methodNote = computed(() => {
     const r = this.recipe();
-    return r ? gapSentence(gapsOf(r)) : '';
+    return r ? methodNote(r) : '';
+  });
+
+  /** On a phone, which list is showing. */
+  protected readonly tab = signal<PhoneTab>('ingredients');
+  /** On a phone, whether the description is shown in full. */
+  protected readonly descOpen = signal(false);
+  /** Whether the add-a-note field is open. */
+  protected readonly noteOpen = signal(false);
+
+  protected openNote(): void {
+    this.noteOpen.set(true);
+    this.tab.set('notes');
+  }
+
+  /** Where the photo's crop sits: its focus point, or the middle. */
+  protected readonly photoFocus = computed(() => {
+    const focus = this.recipe()?.photoFocus;
+    return focus ? `${focus.x}% ${focus.y}%` : '50% 50%';
   });
 
   /**
@@ -271,9 +297,11 @@ export class RecipeDetailComponent {
   protected readonly ingredientGroups = computed(() => groupRows(this.ingredients()));
 
   /**
-   * Each embedded recipe as its own titled section. Rows are numbered on from
-   * the parent's, so one check set and one scale factor cover the whole page.
-   * A component that no longer resolves is already left out by the store.
+   * Each embedded recipe, listed under its own name below the parent's
+   * ingredients, with any steps of its own before the parent's. Rows are
+   * numbered on from the parent's, so one check set and one scale factor cover
+   * the whole page. A component that no longer resolves is already left out by
+   * the store.
    */
   protected readonly componentSections = computed(() => {
     const recipe = this.recipe();
@@ -282,9 +310,44 @@ export class RecipeDetailComponent {
     return this.recipes.componentsOf(recipe.slug).map((part) => {
       const items = this.rows(part.recipe.ingredients, offset);
       offset += items.length;
-      return { label: part.label, groups: groupRows(items), steps: part.recipe.steps };
+      return {
+        label: part.label,
+        groups: groupRows(items),
+        steps: part.recipe.steps.map((step) => this.pieces(step, items)),
+      };
     });
   });
+
+  /**
+   * The recipe's own steps, each split where it names an ingredient. Its steps
+   * often use what its parts list ("add the chicken" from the soup base), so
+   * every list on the page counts.
+   */
+  protected readonly steps = computed(() => {
+    const recipe = this.recipe();
+    if (!recipe) return [];
+    const items = [...this.ingredients(), ...this.componentSections().flatMap((part) => part.groups.flatMap((g) => g.items))];
+    return recipe.steps.map((step) => this.pieces(step, items));
+  });
+
+  /** True when some step names an ingredient, so the hint under the steps has something to explain. */
+  protected readonly hasMentions = computed(() =>
+    [this.steps(), ...this.componentSections().map((part) => part.steps)].some((steps) =>
+      steps.some((pieces) => pieces.some((p) => p.amount)),
+    ),
+  );
+
+  /**
+   * A step as text runs. A run naming an ingredient carries what the list says
+   * of it, scaled and in the chosen units: "1 can tomato juice". One with no
+   * amount ("salt, to taste") is left plain, as there is nothing to add.
+   */
+  private pieces(step: string, items: readonly DetailIngredient[]): ShownPiece[] {
+    return mentionPieces(step, items.map((i) => i.name)).map((piece: StepPiece): ShownPiece => {
+      const item = piece.ingredient === undefined ? undefined : items[piece.ingredient];
+      return item?.amount ? { text: piece.text, amount: `${item.amount} ${item.name}` } : { text: piece.text };
+    });
+  }
 
   private readonly componentIngredientCount = computed(() => {
     const recipe = this.recipe();
@@ -312,6 +375,10 @@ export class RecipeDetailComponent {
   }
 
   protected readonly checkedCount = computed(() => this.checked().size);
+
+  protected clearChecks(): void {
+    this.checked.set(new Set());
+  }
 
   /** Some stored photo URLs are hotlink blocked; fall back to the placeholder. */
   private readonly photoBroken = signal(false);

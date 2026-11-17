@@ -1,192 +1,222 @@
 @if (recipe(); as r) {
-  <article class="detail">
-    <div class="hero" [class.is-empty]="!showPhoto()">
-      @if (showPhoto()) {
+  <!--
+    The favorite, print, edit and more buttons. With a photo they sit beside
+    the title (and over the photo on a phone); without one, in the action row,
+    with print and edit folded into the menu. Drawn in one place at a time.
+  -->
+  <ng-template #tools let-full="full">
+    <div class="tools" [class.is-full]="full">
+      @if (canSave()) {
+        <button
+          type="button"
+          class="icon-button fav-button"
+          [class.is-on]="isFav()"
+          [disabled]="favSaving()"
+          (click)="toggleFav()"
+          [attr.aria-pressed]="isFav()"
+          [attr.aria-label]="isFav() ? 'Favorite' : 'Add to favorites'"
+        >
+          <mat-icon [fontIcon]="isFav() ? 'star' : 'star_border'" aria-hidden="true" />
+        </button>
+      } @else if (isFav()) {
+        <!-- Read-only: the star is shown, not offered. -->
+        <mat-icon class="fav-static" fontIcon="star" role="img" aria-label="Favorite" />
+      }
+      @if (full) {
+        <button type="button" class="icon-button tool-wide" (click)="print()" aria-label="Print">
+          <mat-icon fontIcon="print" aria-hidden="true" />
+        </button>
+        @if (writable) {
+          <a class="icon-button tool-wide" [routerLink]="['/recipes', r.slug, 'edit']" aria-label="Edit">
+            <mat-icon fontIcon="edit" aria-hidden="true" />
+          </a>
+        }
+      }
+      <button type="button" class="icon-button" [matMenuTriggerFor]="more" aria-label="More">
+        <mat-icon fontIcon="more_horiz" aria-hidden="true" />
+      </button>
+    </div>
+  </ng-template>
+
+  <mat-menu #more="matMenu" xPosition="before">
+    <button mat-menu-item (click)="print()">
+      <mat-icon fontIcon="print" /> Print
+    </button>
+    @if (writable) {
+      <a mat-menu-item [routerLink]="['/recipes', r.slug, 'edit']">
+        <mat-icon fontIcon="edit" /> Edit
+      </a>
+    }
+    @if (canSave()) {
+      <button mat-menu-item (click)="askCooked()">
+        <mat-icon fontIcon="done_all" /> Mark as cooked
+      </button>
+    }
+    @if (writable) {
+      <button mat-menu-item (click)="askArchive()">
+        <mat-icon fontIcon="archive" /> Archive
+      </button>
+    }
+  </mat-menu>
+
+  <article class="detail" [class.has-photo]="showPhoto()" [attr.data-tab]="tab()">
+    @if (showPhoto()) {
+      <div class="hero">
         <img
           [attr.srcset]="heroSrcset()"
           sizes="100vw"
           [src]="heroPhoto()"
           [alt]="r.title"
+          [style.object-position]="photoFocus()"
           fetchpriority="high"
           (error)="onPhotoError()"
         />
-      } @else {
-        <app-no-photo />
-      }
-    </div>
+      </div>
+    }
 
     <div class="detail-body">
-      <a class="back" routerLink="/">
+      <a class="back" routerLink="/" aria-label="All recipes">
         <mat-icon fontIcon="arrow_back" aria-hidden="true" />
-        All recipes
+        <span class="back-text">All recipes</span>
       </a>
 
-      <h1>{{ r.title }}</h1>
+      <header class="detail-head">
+        <div class="head-text">
+          <h1>{{ r.title }}</h1>
 
-      @if (credit()) {
-        <p class="credit detail-credit">{{ credit() }}</p>
-      }
+          @if (credit() || shelves().length > 0) {
+            <p class="detail-meta">
+              @if (credit()) {
+                <span class="credit detail-credit">{{ credit() }}</span>
+              }
+              @for (book of shelves(); track book.id) {
+                <!-- The dot travels with its link, so a wrap never leaves it hanging. -->
+                <span class="shelf">
+                  @if (credit() || !$first) {
+                    <span class="meta-dot" aria-hidden="true">·</span>
+                  }
+                  <a class="shelf-link" routerLink="/" (click)="openShelf(book.id)">{{ book.name }}</a>
+                </span>
+              }
+            </p>
+          }
 
-      @if (printedSource()) {
-        <p class="detail-source detail-page">{{ printedSource() }}</p>
-      }
+          @if (printedBook(); as printed) {
+            <p class="detail-book detail-page">
+              <mat-icon fontIcon="menu_book" aria-hidden="true" />
+              @if (printed.book; as book) {
+                <a class="shelf-link" routerLink="/" (click)="openShelf(book.id)">{{ book.name }}</a>
+                <span class="meta-dot" aria-hidden="true">·</span> page {{ printed.page }}
+              } @else {
+                Page {{ printed.page }} of the printed book
+              }
+            </p>
+          }
 
-      @if (r.sourceUrl) {
-        <p class="detail-source">
-          <a [href]="r.sourceUrl" target="_blank" rel="noopener">Source</a>
-        </p>
-      }
+          @if (r.sourceUrl) {
+            <p class="detail-source">
+              <a [href]="r.sourceUrl" target="_blank" rel="noopener">Source</a>
+            </p>
+          }
 
-      @if (r.desc) {
-        <p class="detail-desc">{{ r.desc }}</p>
-      }
-
-      <div class="tags">
-        @for (tag of r.tags; track tag) {
-          <span class="tag">{{ tagLabel(tag) }}</span>
-        }
-      </div>
-
-      <!-- §6.2 — the metadata rail: duration, servings stepper, times cooked. -->
-      <div class="rail">
-        @if (r.time) {
-          <div class="rail-item">
-            <p class="label">Duration</p>
-            <p class="rail-value">{{ r.time }}</p>
-          </div>
-        }
-
-        <div class="rail-item">
-          <p class="label">Makes</p>
-          <div class="stepper">
-            <button
-              type="button"
-              (click)="stepServings(-1)"
-              [disabled]="servings() <= 1"
-              aria-label="One fewer serving"
-            >
-              <mat-icon fontIcon="remove" />
-            </button>
-            <span class="stepper-value">{{ servings() }}</span>
-            <button type="button" (click)="stepServings(1)" aria-label="One more serving">
-              <mat-icon fontIcon="add" />
-            </button>
-          </div>
-          <p class="rail-note">
-            {{ scaleLabel(factor()) }}
-            @if (factor() !== 1) {
-              <button type="button" class="link-button" (click)="resetServings()">reset</button>
+          @if (r.desc) {
+            <p class="detail-desc" [class.is-open]="descOpen()">{{ r.desc }}</p>
+            @if (r.desc.length > 120 && !descOpen()) {
+              <button type="button" class="link-button desc-more" (click)="descOpen.set(true)">More</button>
             }
-          </p>
+          }
+
+          @if (r.tags.length > 0) {
+            <div class="tags">
+              @for (tag of r.tags; track tag) {
+                <span class="tag">{{ tagLabel(tag) }}</span>
+              }
+            </div>
+          }
         </div>
 
-        <div class="rail-item rail-units">
-          <p id="units-label" class="label">Units</p>
-          <div class="unit-toggle" role="group" aria-labelledby="units-label">
+        @if (showPhoto()) {
+          <ng-container [ngTemplateOutlet]="tools" [ngTemplateOutletContext]="{ full: true }" />
+        } @else if (writable) {
+          <a class="photo-slot" [routerLink]="['/recipes', r.slug, 'edit']">
+            <mat-icon fontIcon="photo_camera" aria-hidden="true" />
+            <span class="photo-slot-title">Add a photo</span>
+            <span class="photo-slot-note">next time you make it</span>
+          </a>
+        }
+      </header>
+
+      <div class="actions">
+        <div class="actions-main">
+          <a class="btn-primary" [routerLink]="['/recipes', r.slug, 'cook']">
+            <mat-icon fontIcon="local_fire_department" aria-hidden="true" />
+            Start cooking
+          </a>
+
+          @if (showListControls) {
+            <button
+              type="button"
+              class="btn-ghost"
+              [class.is-on]="list.has(r.slug)"
+              (click)="list.toggleRecipe(r.slug)"
+            >
+              @if (list.has(r.slug)) {
+                <mat-icon fontIcon="check" aria-hidden="true" /> On the list
+              } @else {
+                <mat-icon fontIcon="add_shopping_cart" aria-hidden="true" /> Add to list
+              }
+            </button>
+          }
+        </div>
+
+        @if (!showPhoto()) {
+          <ng-container [ngTemplateOutlet]="tools" [ngTemplateOutletContext]="{ full: false }" />
+        }
+
+        <div class="meta">
+          @if (r.time) {
+            <span class="meta-time">
+              <mat-icon fontIcon="schedule" aria-hidden="true" />
+              {{ r.time }}
+            </span>
+          }
+
+          <span class="meta-makes">
+            <span id="makes-label">Makes</span>
+            <span class="stepper" role="group" aria-labelledby="makes-label">
+              <button
+                type="button"
+                (click)="stepServings(-1)"
+                [disabled]="servings() <= 1"
+                aria-label="One fewer serving"
+              >
+                <mat-icon fontIcon="remove" />
+              </button>
+              <span class="stepper-value tnum">{{ servings() }}</span>
+              <button type="button" (click)="stepServings(1)" aria-label="One more serving">
+                <mat-icon fontIcon="add" />
+              </button>
+            </span>
+            @if (r.servingsUnit) {
+              <span class="makes-unit">{{ r.servingsUnit }}</span>
+            }
+            @if (factor() !== 1) {
+              <span class="scale-note">
+                {{ scaleLabel(factor()) }}
+                <button type="button" class="link-button" (click)="resetServings()">reset</button>
+              </span>
+            }
+          </span>
+
+          <div class="unit-toggle" role="group" aria-label="Units">
             <button type="button" [attr.aria-pressed]="units() === 'us'" (click)="setUnits('us')">US</button>
             <button type="button" [attr.aria-pressed]="units() === 'metric'" (click)="setUnits('metric')">Metric</button>
           </div>
         </div>
 
-        <div class="rail-item rail-activity">
-          <p class="label">Times cooked</p>
-          <p class="rail-value">{{ r.cooked }}</p>
-        </div>
-
-        @if (r.lastCooked) {
-          <div class="rail-item rail-activity">
-            <p class="label">Last cooked</p>
-            <p class="rail-value">{{ r.lastCooked | date: 'mediumDate' }}</p>
-          </div>
-        }
-      </div>
-
-      @if (gapNote()) {
-        <p class="gap-note">
-          <mat-icon fontIcon="edit_note" aria-hidden="true" />
-          <span>{{ gapNote() }} Worth filling in next time you make it.</span>
-        </p>
-      }
-
-      <div class="actions">
-        <a class="btn-primary" [routerLink]="['/recipes', r.slug, 'cook']">
-          <mat-icon fontIcon="local_fire_department" aria-hidden="true" />
-          Start cooking
-        </a>
-
-        @if (showListControls) {
-          <button
-            type="button"
-            class="btn-ghost"
-            [class.is-on]="list.has(r.slug)"
-            (click)="list.toggleRecipe(r.slug)"
-          >
-            @if (list.has(r.slug)) {
-              <mat-icon fontIcon="check" aria-hidden="true" /> On the list
-            } @else {
-              <mat-icon fontIcon="add_shopping_cart" aria-hidden="true" /> Add to list
-            }
-          </button>
-        }
-
-        @if (canSave()) {
-          <button
-            type="button"
-            class="btn-ghost"
-            [disabled]="favSaving()"
-            (click)="toggleFav()"
-            [attr.aria-pressed]="isFav()"
-          >
-            <mat-icon [fontIcon]="isFav() ? 'star' : 'star_border'" aria-hidden="true" />
-            {{ isFav() ? 'Favorite' : 'Add to favorites' }}
-          </button>
-        } @else if (isFav()) {
-          <!-- Read-only: the star is shown, not offered. -->
-          <mat-icon class="fav-static" fontIcon="star" role="img" aria-label="Favorite" />
-        }
-
-        @if (canSave() && !confirmingCooked()) {
-          <button type="button" class="btn-ghost" (click)="askCooked()">
-            <mat-icon fontIcon="done_all" aria-hidden="true" />
-            Mark as cooked
-          </button>
-        }
-
-        <button type="button" class="btn-ghost" (click)="print()">
-          <mat-icon fontIcon="print" aria-hidden="true" />
-          Print
-        </button>
-
-        @if (writable && !confirmingArchive()) {
-          <a class="btn-ghost btn-quiet" [routerLink]="['/recipes', r.slug, 'edit']">
-            <mat-icon fontIcon="edit" aria-hidden="true" />
-            Edit
-          </a>
-          <button type="button" class="btn-ghost btn-quiet" (click)="askArchive()">
-            <mat-icon fontIcon="archive" aria-hidden="true" />
-            Archive
-          </button>
-        }
-
-        @if (canSave() && confirmingCooked()) {
-          <div class="archive-confirm cooked-confirm">
-            <p>Cooked it today?</p>
-            <div class="archive-buttons">
-              <button type="button" class="btn-ghost" [disabled]="cookedSaving()" (click)="cancelCooked()">
-                Cancel
-              </button>
-              <button type="button" class="btn-outline" [disabled]="cookedSaving()" (click)="markCooked()">
-                {{ cookedSaving() ? 'Saving…' : 'Yes' }}
-              </button>
-            </div>
-          </div>
-        }
-        <!-- Outside the confirm: a 403 locks the device, which removes the controls. -->
+        <!-- Outside the buttons: a 403 locks the device, which removes the controls. -->
         @if (favError()) {
           <p class="cooked-error fav-error" role="alert">{{ favError() }}</p>
-        }
-        @if (cookedError()) {
-          <p class="cooked-error" role="alert">{{ cookedError() }}</p>
         }
 
         @if (confirmingArchive()) {
@@ -207,127 +237,124 @@
         }
       </div>
 
-      @if (writable) {
-        <section class="cookbooks-panel" aria-labelledby="cookbooks-title">
-          <h2 id="cookbooks-title" class="label">Cookbooks</h2>
-          @if (cookbooks.cookbooks().length === 0) {
-            <a class="link-button" routerLink="/cookbooks/new">Add cookbook</a>
-          } @else {
-            <ul>
-              @for (row of cookbookRows(); track row.key) {
-                <li>
-                  <mat-checkbox
-                    [checked]="r.cookbooks.includes(row.book.id)"
-                    [disabled]="cookbookSaving() === row.book.id"
-                    (change)="toggleCookbook(row.book.id, $event)"
-                  >
-                    {{ row.book.name }}
-                  </mat-checkbox>
-                </li>
-              }
-            </ul>
-          }
-          @if (cookbookError()) {
-            <p class="cooked-error" role="alert">{{ cookbookError() }}</p>
-          }
-        </section>
-      }
+      <!-- On a phone, one list at a time. -->
+      <div class="phone-tabs" role="tablist" aria-label="Show">
+        <button type="button" role="tab" [attr.aria-selected]="tab() === 'ingredients'" (click)="tab.set('ingredients')">
+          Ingredients <span class="tab-count">· {{ totalIngredients() }}</span>
+        </button>
+        <button type="button" role="tab" [attr.aria-selected]="tab() === 'steps'" (click)="tab.set('steps')">
+          Steps <span class="tab-count">· {{ r.steps.length }}</span>
+        </button>
+        <button type="button" role="tab" [attr.aria-selected]="tab() === 'notes'" (click)="tab.set('notes')">
+          Notes <span class="tab-count">· {{ r.notes.length }}</span>
+        </button>
+      </div>
 
-      @for (part of componentSections(); track $index) {
-        <section class="component-section">
-          <div class="section-head">
-            <h3 class="section-title">{{ part.label }}</h3>
-          </div>
-          <div class="columns">
-            <div class="ingredients-card">
-              @for (group of part.groups; track $index) {
-                @if (group.name) {
-                  <h4 class="ing-group">{{ group.name }}</h4>
-                }
-                <ul class="ingredient-list">
-                  @for (item of group.items; track item.index) {
-                    <li [class.is-checked]="item.checked">
-                      <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
-                        <span class="ing-row">
-                          <span class="ing-amount tnum">{{ item.amount }}</span>
-                          <span class="ing-name">{{ item.name }}</span>
-                        </span>
-                      </mat-checkbox>
-                    </li>
-                  }
-                </ul>
-              }
-            </div>
-            @if (part.steps.length > 0) {
-              <ol class="step-list">
-                @for (step of part.steps; track $index) {
-                  <li>
-                    <span class="step-number tnum">{{ $index + 1 }}</span>
-                    <p>{{ step }}</p>
-                  </li>
-                }
-              </ol>
+      <!-- One set of rows for the recipe and each embedded part. -->
+      <ng-template #ingredientRows let-groups>
+        @for (group of groups; track $index) {
+          @if (group.name) {
+            <h3 class="ing-group">{{ group.name }}</h3>
+          }
+          <ul class="ingredient-list">
+            @for (item of group.items; track item.index) {
+              <li [class.is-checked]="item.checked">
+                <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
+                  <!-- Amount and name are separate columns so figures line up
+                       down the list, the way a printed recipe card sets them. -->
+                  <span class="ing-row">
+                    <span class="ing-amount tnum">{{ item.amount }}</span>
+                    <span class="ing-name">{{ item.name }}</span>
+                  </span>
+                </mat-checkbox>
+              </li>
             }
-          </div>
-        </section>
-      }
+          </ul>
+        }
+      </ng-template>
+
+      <!-- A step, with each ingredient it names dotted; the amount shows on hover or tap. -->
+      <ng-template #stepRows let-steps>
+        <ol class="step-list">
+          @for (step of steps; track $index) {
+            <li>
+              <span class="step-number tnum">{{ $index + 1 }}</span>
+              <!-- On one line: a line break here would put a space before every comma. -->
+              <p>@for (piece of step; track $index) {@if (piece.amount) {<button type="button" class="mention" [attr.data-amount]="piece.amount" [attr.aria-label]="piece.amount">{{ piece.text }}</button>} @else {<ng-container>{{ piece.text }}</ng-container>}}</p>
+            </li>
+          }
+        </ol>
+      </ng-template>
 
       <div class="columns">
-        <aside>
+        <aside class="ingredients-col">
           <div class="section-head">
             <h2 class="section-title">Ingredients</h2>
+            @if (checkedCount() > 0) {
+              <button type="button" class="link-button clear-checks" (click)="clearChecks()">Clear checks</button>
+            }
           </div>
           <div class="ingredients-card">
-            @for (group of ingredientGroups(); track $index) {
-              @if (group.name) {
-                <h3 class="ing-group">{{ group.name }}</h3>
-              }
-              <ul class="ingredient-list">
-                @for (item of group.items; track item.index) {
-                  <li [class.is-checked]="item.checked">
-                    <mat-checkbox [checked]="item.checked" (change)="toggleCheck(item.index)">
-                      <!-- Amount and name are separate columns so figures line up
-                           down the list, the way a printed recipe card sets them. -->
-                      <span class="ing-row">
-                        <span class="ing-amount tnum">{{ item.amount }}</span>
-                        <span class="ing-name">{{ item.name }}</span>
-                      </span>
-                    </mat-checkbox>
-                  </li>
-                }
-              </ul>
+            <ng-container [ngTemplateOutlet]="ingredientRows" [ngTemplateOutletContext]="{ $implicit: ingredientGroups() }" />
+            <!-- Each embedded part's list under its own name, after the recipe's own. -->
+            @for (part of componentSections(); track $index) {
+              <section class="component-section">
+                <h3 class="part-title">{{ part.label }}</h3>
+                <ng-container [ngTemplateOutlet]="ingredientRows" [ngTemplateOutletContext]="{ $implicit: part.groups }" />
+              </section>
             }
-  
             @if (checkedCount() > 0) {
               <p class="checked-count label">{{ checkedCount() }} of {{ totalIngredients() }} in hand</p>
             }
-
           </div>
         </aside>
 
         <section class="steps">
-          <div class="section-head">
-            <h2 class="section-title">Instructions</h2>
-          </div>
+          <div class="steps-body">
+            <div class="section-head">
+              <h2 class="section-title">Instructions</h2>
+            </div>
 
-          @if (r.steps.length === 0) {
-            <p class="no-steps">No steps written down for this one yet.</p>
-          } @else {
-            <ol class="step-list">
-              @for (step of r.steps; track $index) {
-                <li>
-                  <span class="step-number tnum">{{ $index + 1 }}</span>
-                  <p>{{ step }}</p>
-                </li>
+            <!-- A part with a method of its own comes first: the sauce is made before it is used. -->
+            @for (part of componentSections(); track $index) {
+              @if (part.steps.length > 0) {
+                <section class="part-steps">
+                  <h3 class="part-title">{{ part.label }}</h3>
+                  <ng-container [ngTemplateOutlet]="stepRows" [ngTemplateOutletContext]="{ $implicit: part.steps }" />
+                </section>
               }
-            </ol>
-          }
+            }
+
+            @if (r.steps.length === 0) {
+              <p class="no-steps">No steps written down for this one yet.</p>
+            } @else {
+              <ng-container [ngTemplateOutlet]="stepRows" [ngTemplateOutletContext]="{ $implicit: steps() }" />
+            }
+
+            @if (hasMentions()) {
+              <p class="step-hint">Dotted words show their amount on hover or tap.</p>
+            }
+            @if (writable && methodNote()) {
+              <p class="step-hint method-note">
+                {{ methodNote() }}
+                <a [routerLink]="['/recipes', r.slug, 'edit']">Fill in the method</a>
+              </p>
+            }
+          </div>
 
           <!-- §6.2 — the notes panel renders when there are notes, or when one can be added. -->
           @if (r.notes.length > 0 || canSave() || noteError()) {
             <div class="notes" [class.is-empty]="r.notes.length === 0">
-              <div class="section-head notes-head">
+              <div class="notes-head">
                 <h3 class="section-title">Notes</h3>
+                @if (r.notes.length === 0) {
+                  <span class="notes-none">None yet</span>
+                }
+                @if (canSave() && !noteOpen()) {
+                  <button type="button" class="btn-chip add-note" (click)="openNote()">
+                    <mat-icon fontIcon="add" aria-hidden="true" /> Add a note
+                  </button>
+                }
               </div>
               @if (r.notes.length > 0) {
                 <ul>
@@ -336,7 +363,7 @@
                   }
                 </ul>
               }
-              @if (canSave()) {
+              @if (canSave() && noteOpen()) {
                 <form class="note-form" (ngSubmit)="addNote()">
                   <label class="note-field">
                     <span class="label">Add a note</span>
@@ -349,9 +376,12 @@
                       [attr.aria-describedby]="noteError() ? 'note-problem' : null"
                     ></textarea>
                   </label>
-                  <button type="submit" class="btn-outline" [disabled]="noteSaving() || !noteText.trim()">
-                    {{ noteSaving() ? 'Adding…' : 'Add note' }}
-                  </button>
+                  <div class="note-buttons">
+                    <button type="submit" class="btn-outline" [disabled]="noteSaving() || !noteText.trim()">
+                      {{ noteSaving() ? 'Adding…' : 'Add note' }}
+                    </button>
+                    <button type="button" class="btn-ghost" (click)="noteOpen.set(false)">Cancel</button>
+                  </div>
                 </form>
               }
               <!-- Outside the form: a 403 locks the device, which removes the form. -->
@@ -359,6 +389,36 @@
                 <p id="note-problem" class="note-error" role="alert">{{ noteError() }}</p>
               }
             </div>
+          }
+
+          <p class="rail-activity">
+            @if (r.cooked > 0) {
+              Cooked {{ r.cooked }} {{ r.cooked === 1 ? 'time' : 'times' }}
+              @if (r.lastCooked) {
+                · last on {{ r.lastCooked | date: 'MMM d' }}
+              }
+            } @else {
+              Not cooked here yet
+            }
+            @if (canSave() && !confirmingCooked()) {
+              · <button type="button" class="link-button" (click)="askCooked()">Mark as cooked</button>
+            }
+          </p>
+          @if (canSave() && confirmingCooked()) {
+            <div class="archive-confirm cooked-confirm">
+              <p>Cooked it today?</p>
+              <div class="archive-buttons">
+                <button type="button" class="btn-ghost" [disabled]="cookedSaving()" (click)="cancelCooked()">
+                  Cancel
+                </button>
+                <button type="button" class="btn-outline" [disabled]="cookedSaving()" (click)="markCooked()">
+                  {{ cookedSaving() ? 'Saving…' : 'Yes' }}
+                </button>
+              </div>
+            </div>
+          }
+          @if (cookedError()) {
+            <p class="cooked-error" role="alert">{{ cookedError() }}</p>
           }
         </section>
       </div>

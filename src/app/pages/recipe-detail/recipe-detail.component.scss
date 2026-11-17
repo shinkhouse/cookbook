@@ -2,27 +2,19 @@
     padding-bottom: var(--pad-section);
 }
 
-// §6.2 — full-bleed hero band.
+// §6.2 — full-bleed hero, cropped around the photo's focus point (set in Edit).
 .hero {
-    height: clamp(180px, 32vw, 340px);
-
-    // Most imported recipes carry no photo, and a full-height band of empty
-    // placeholder reads as a broken image rather than a design choice. Keep a
-    // band, lose the void.
-    &.is-empty {
-        height: clamp(72px, 9vw, 108px);
-    }
+    height: clamp(220px, 30vw, 420px);
     background: var(--surface);
     overflow: hidden;
 
     img {
+        display: block;
         width: 100%;
         height: 100%;
         object-fit: cover;
-        display: block;
     }
 }
-
 
 .detail-body {
     max-width: var(--max-detail);
@@ -35,6 +27,7 @@
     align-items: center;
     gap: 6px;
     min-height: var(--touch);
+    margin-top: 8px;
     color: var(--ink-3);
     font-size: var(--text-small);
     font-weight: 600;
@@ -51,15 +44,66 @@
     }
 }
 
+// ---- Head -------------------------------------------------------------------
+
+.detail-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 24px;
+    align-items: start;
+}
+
 h1 {
-    margin-top: 8px;
+    margin-top: 4px;
     font-size: var(--size-detail-h1);
     max-width: 24ch;
 }
 
-.detail-credit {
+.detail-meta,
+.detail-book {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
     margin: 10px 0 0;
+    color: var(--ink-3);
     font-size: var(--text-body);
+}
+
+.detail-credit {
+    font-size: var(--text-body);
+}
+
+.detail-book {
+    margin-top: 6px;
+    gap: 6px;
+
+    mat-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
+        color: var(--ink-4);
+    }
+}
+
+.meta-dot {
+    color: var(--ink-4);
+}
+
+.shelf {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shelf-link {
+    color: var(--navy);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+
+    &:hover {
+        color: var(--navy-deep);
+    }
 }
 
 .detail-source {
@@ -73,9 +117,16 @@ h1 {
 }
 
 .detail-desc {
-    margin: 14px 0 0;
+    max-width: 70ch;
+    margin: 16px 0 0;
     color: var(--ink-2);
     font-size: var(--text-body);
+    line-height: 1.6;
+}
+
+// The "More" under a long description is for a phone, which clamps it.
+.desc-more {
+    display: none;
 }
 
 .tags {
@@ -87,41 +138,162 @@ h1 {
 
 .tag {
     padding: 4px 12px;
-    border: 1px solid var(--rule);
+    border: 1px solid var(--rule-strong);
     border-radius: var(--radius-pill);
-    background: var(--surface);
+    background: var(--paper);
     color: var(--ink-3);
     font-size: var(--text-label);
     font-weight: 500;
 }
 
-.rail {
+// Round buttons: favorite, print, edit, more.
+.tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.detail-head > .tools {
+    padding-top: 14px;
+}
+
+.icon-button {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: var(--touch);
+    height: var(--touch);
+    padding: 0;
+    border: 1px solid var(--rule-strong);
+    border-radius: 50%;
+    background: var(--paper);
+    color: var(--ink-2);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        border-color: var(--navy);
+        color: var(--navy);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: progress;
+    }
+
+    &.is-on {
+        border-color: var(--navy);
+        color: var(--navy);
+    }
+
+    mat-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 20px;
+    }
+}
+
+// A read-only device sees the star but cannot change it.
+.fav-static {
+    align-self: center;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    color: var(--navy);
+}
+
+// Where the photo goes, while there is none. Only a writable build offers it.
+.photo-slot {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 4px;
+    width: 250px;
+    min-height: 180px;
+    padding: 16px;
+    border: 1.5px dashed var(--rule-strong);
+    border-radius: 10px;
+    background: var(--surface);
+    text-align: center;
+    text-decoration: none;
+
+    &:hover {
+        border-color: var(--navy);
+    }
+
+    mat-icon {
+        width: 26px;
+        height: 26px;
+        font-size: 26px;
+        color: var(--navy);
+    }
+}
+
+.photo-slot-title {
+    color: var(--navy);
+    font-size: var(--text-small);
+    font-weight: 700;
+}
+
+.photo-slot-note {
+    color: var(--ink-3);
+    font-size: var(--text-label);
+}
+
+// ---- Action row ----------------------------------------------------------------
+
+.actions {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--gutter);
-    margin: 26px 0 22px;
-    padding: 18px 0;
+    align-items: center;
+    gap: 12px 16px;
+    margin-top: 26px;
+    padding: 16px 0;
     border-top: 1px solid var(--rule);
     border-bottom: 1px solid var(--rule);
 }
 
-.rail-item {
-    min-width: 140px;
+.actions-main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
 
-    p {
-        margin: 0;
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 24px;
+    margin-left: auto;
+    color: var(--ink);
+    font-size: var(--text-body);
+}
+
+.meta-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    mat-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
+        color: var(--ink-3);
     }
 }
 
-.rail-value {
-    margin-top: 4px !important;
-    font-family: var(--font);
-    font-size: 1.5rem;
-    color: var(--ink);
+.meta-makes {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
 }
 
-.rail-note {
-    margin-top: 6px !important;
+.makes-unit {
+    color: var(--ink-2);
+}
+
+.scale-note {
     color: var(--ink-4);
     font-size: var(--text-label);
 }
@@ -129,27 +301,27 @@ h1 {
 .stepper {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    margin-top: 4px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+    background: var(--paper);
 
     button {
         display: grid;
         place-items: center;
-        width: 34px;
-        height: 34px;
-        border: 1px solid var(--rule-strong);
-        border-radius: var(--radius-pill);
-        background: var(--surface);
+        width: 38px;
+        height: 38px;
+        border: 0;
+        border-radius: 50%;
+        background: none;
         color: var(--ink-2);
         cursor: pointer;
 
         &:hover:not(:disabled) {
-            border-color: var(--navy);
             color: var(--navy);
         }
 
         &:disabled {
-            opacity: 0.4;
+            opacity: 0.35;
             cursor: not-allowed;
         }
 
@@ -161,19 +333,27 @@ h1 {
     }
 }
 
+.stepper-value {
+    min-width: 2ch;
+    font-family: var(--font);
+    font-size: var(--text-body);
+    font-weight: 700;
+    text-align: center;
+    color: var(--ink);
+}
+
 // A two-button segmented control; the pressed side is filled.
 .unit-toggle {
     display: inline-flex;
-    margin-top: 4px;
     border: 1px solid var(--rule-strong);
     border-radius: var(--radius-pill);
     overflow: hidden;
 
     button {
-        min-height: 44px;
+        min-height: 40px;
         padding: 6px 14px;
         border: 0;
-        background: var(--surface);
+        background: var(--paper);
         color: var(--ink-2);
         font-family: var(--font);
         font-size: var(--text-label);
@@ -181,52 +361,40 @@ h1 {
 
         &[aria-pressed='true'] {
             background: var(--navy);
-            color: var(--surface);
+            color: var(--paper);
         }
     }
-}
-
-.stepper-value {
-    min-width: 2ch;
-    font-family: var(--font);
-    font-size: 1.5rem;
-    text-align: center;
-    color: var(--ink);
 }
 
 .link-button {
     border: 0;
     background: none;
-    padding: 0 0 0 4px;
+    padding: 0;
     color: var(--navy);
     font-family: var(--font);
-    font-size: var(--text-label);
+    font-size: inherit;
     font-weight: 600;
     text-decoration: underline;
+    text-underline-offset: 3px;
     cursor: pointer;
-}
-
-.actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: calc(var(--pad-section) * 0.6);
 }
 
 .btn-primary,
 .btn-ghost,
-.btn-outline {
+.btn-outline,
+.btn-chip {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     min-height: var(--touch);
-    padding: 0 20px;
+    padding: 0 22px;
     border-radius: var(--radius-pill);
     font-family: var(--font);
     font-size: var(--text-small);
     font-weight: 600;
     text-decoration: none;
+    white-space: nowrap;
     cursor: pointer;
     transition:
         background var(--motion-drawer) var(--ease),
@@ -237,8 +405,14 @@ h1 {
         width: 19px;
         height: 19px;
     }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
 }
 
+// The one warm colour on the page.
 .btn-primary {
     border: 1px solid var(--ember);
     background: var(--ember);
@@ -253,12 +427,12 @@ h1 {
 
 .btn-ghost {
     border: 1px solid var(--rule-strong);
-    background: transparent;
-    color: var(--ink-3);
+    background: var(--paper);
+    color: var(--ink);
 
-    &:hover {
-        border-color: var(--ink-4);
-        color: var(--ink);
+    &:hover:not(:disabled) {
+        border-color: var(--navy);
+        color: var(--navy);
     }
 
     &.is-on {
@@ -270,26 +444,27 @@ h1 {
 
 .btn-outline {
     border: 1px solid var(--navy);
-    background: transparent;
+    background: var(--paper);
     color: var(--navy);
 }
 
-.btn-quiet {
-    color: var(--ink-4);
-}
-
-// A read-only device sees the star but cannot change it.
-.fav-static {
-    align-self: center;
-    font-size: 22px;
-    width: 22px;
-    height: 22px;
-    padding: 0 6px;
+.btn-chip {
+    min-height: 38px;
+    padding: 0 16px;
+    border: 1px solid var(--rule-strong);
+    background: var(--paper);
     color: var(--navy);
+    font-weight: 700;
+
+    mat-icon {
+        font-size: 17px;
+        width: 17px;
+        height: 17px;
+    }
 }
 
 .archive-confirm {
-    // A full-width row inside .actions, so it sits one flex gap below the buttons.
+    // A full-width row inside its flex parent, one gap below what came before.
     flex: 1 0 100%;
     padding: 16px;
     border: 1px solid var(--rule-strong);
@@ -309,34 +484,8 @@ h1 {
     }
 }
 
-.cooked-error {
-    flex: 1 0 100%;
-    margin: 0;
-    color: var(--mat-sys-error);
-    font-size: var(--text-small);
-}
-
-.cookbooks-panel {
-    margin-bottom: calc(var(--pad-section) * 0.6);
-
-    ul {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px 18px;
-        margin: 6px 0 0;
-        padding: 0;
-        list-style: none;
-    }
-
-    .link-button {
-        display: inline-flex;
-        align-items: center;
-        min-height: var(--touch);
-    }
-
-    .cooked-error {
-        margin-top: 6px;
-    }
+.cooked-confirm {
+    margin-top: 12px;
 }
 
 .archive-buttons {
@@ -345,39 +494,48 @@ h1 {
     gap: 10px;
 }
 
-// §3.4 — two-column region that wraps rather than switching at a breakpoint.
-.columns {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--gutter);
-    align-items: flex-start;
+.cooked-error {
+    flex: 1 0 100%;
+    margin: 8px 0 0;
+    color: var(--mat-sys-error);
+    font-size: var(--text-small);
 }
 
-.ingredients-card {
-    flex: 1 1 280px;
-    padding: 20px;
-    border: 1px solid var(--rule);
-    border-radius: var(--radius-card);
-    background: var(--surface);
-    box-shadow: var(--shadow-card);
-    // §6.2 — sticky ingredient card in the side-by-side layout.
-    position: sticky;
-    top: 92px;
+// The phone's one-list-at-a-time switch; a wider screen shows every list.
+.phone-tabs {
+    display: none;
+}
 
-    h2 {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 12px;
-        font-size: 1.5rem;
-    }
+// ---- Ingredients and steps --------------------------------------------------------
+
+.columns {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 8fr);
+    gap: 24px 56px;
+    align-items: start;
+    margin-top: 36px;
+}
+
+.section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.clear-checks {
+    font-size: var(--text-small);
+    font-weight: 500;
+}
+
+// A plain list, ruled like a printed card.
+.ingredients-card {
+    min-width: 0;
 }
 
 .checked-count {
-    margin: 14px 0 0 !important;
-    padding-top: 12px;
-    border-top: 1px solid var(--rule);
+    margin: 12px 0 0 !important;
     color: var(--navy) !important;
 }
 
@@ -387,14 +545,11 @@ h1 {
     list-style: none;
 
     li {
-        padding: 3px 0;
-        min-height: var(--touch);
         display: flex;
         align-items: center;
-
-        & + li {
-            border-top: 1px solid var(--rule);
-        }
+        min-height: var(--touch);
+        padding: 3px 0;
+        border-bottom: 1px solid var(--rule);
     }
 }
 
@@ -402,7 +557,7 @@ h1 {
     display: grid;
     // A fixed amount column so figures stack in a line down the list. The
     // tabular numerals do the rest — no monospace family needed.
-    grid-template-columns: 62px 1fr;
+    grid-template-columns: 72px 1fr;
     gap: 12px;
     align-items: baseline;
     font-size: var(--text-body);
@@ -412,8 +567,7 @@ h1 {
 .ing-amount {
     text-align: right;
     font-size: var(--text-small);
-    font-weight: 600;
-    color: var(--ink-4);
+    color: var(--ink-3);
     overflow-wrap: anywhere;
     line-height: 1.35;
 }
@@ -431,12 +585,18 @@ h1 {
     }
 }
 
-.steps {
-    flex: 2 1 420px;
+// Sub-component heading inside the list, for recipes built from parts.
+// Quieter than a section title — it divides a list, it does not open one.
+.ing-group {
+    margin: 22px 0 4px;
+    color: var(--navy);
+    font-size: var(--text-label);
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
 
-    h2 {
-        margin-bottom: 14px;
-        font-size: 1.75rem;
+    &:first-child {
+        margin-top: 4px;
     }
 }
 
@@ -444,21 +604,22 @@ h1 {
     margin: 0;
     padding: 0;
     list-style: none;
-    counter-reset: step;
 
     li {
         display: flex;
         gap: 16px;
         padding: 16px 0;
+        border-bottom: 1px solid var(--rule);
 
-        & + li {
-            border-top: 1px solid var(--rule);
+        &:first-child {
+            padding-top: 6px;
         }
 
         p {
             margin: 0;
-            color: var(--ink-2);
+            color: var(--ink);
             font-size: var(--text-body);
+            line-height: 1.6;
         }
     }
 }
@@ -477,6 +638,61 @@ h1 {
     font-weight: 700;
 }
 
+// An ingredient named in a step. Its amount shows on hover, or on focus,
+// which is what a tap gives it on a phone.
+.mention {
+    position: relative;
+    display: inline;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    text-decoration: underline dotted var(--ink-4);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 4px;
+    cursor: help;
+
+    &:hover,
+    &:focus-visible,
+    &:focus {
+        background: var(--navy-tint);
+        outline: none;
+    }
+
+    &:hover::after,
+    &:focus::after {
+        content: attr(data-amount);
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        z-index: 5;
+        padding: 4px 10px;
+        border-radius: var(--radius-card);
+        background: var(--navy-deep);
+        color: var(--paper);
+        font-size: var(--text-label);
+        font-weight: 600;
+        line-height: 1.4;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+}
+
+.step-hint {
+    margin: 12px 0 0;
+    color: var(--ink-4);
+    font-size: var(--text-label);
+
+    a {
+        color: var(--navy);
+        font-weight: 600;
+        text-underline-offset: 3px;
+    }
+}
+
 .no-steps {
     color: var(--ink-4);
     font-style: italic;
@@ -484,30 +700,41 @@ h1 {
 
 // §6.2 — notes panel, on the accent tint.
 .notes {
-    margin-top: 26px;
-    padding: 18px 20px;
-    border: 1px solid var(--navy-tint-edge);
-    border-radius: var(--radius-card);
+    margin-top: 28px;
+    padding: 18px 22px;
+    border-radius: 10px;
     background: var(--navy-tint);
 
-    .notes-head {
-        margin-bottom: 10px;
-    }
-
     ul {
-        margin: 0;
-        padding-left: 18px;
-        color: var(--ink-2);
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+        color: var(--ink);
     }
 
     li + li {
-        margin-top: 6px;
+        margin-top: 8px;
     }
+}
 
-    // Padding above the form only when there are notes above it.
-    ul + .note-form {
-        margin-top: 16px;
+.notes-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+
+    .section-title {
+        margin: 0;
     }
+}
+
+.notes-none {
+    color: var(--ink-3);
+    font-size: var(--text-body);
+}
+
+.add-note {
+    margin-left: auto;
 }
 
 .note-form {
@@ -515,6 +742,12 @@ h1 {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
+    margin-top: 14px;
+}
+
+.note-buttons {
+    display: flex;
+    gap: 8px;
 }
 
 .note-field {
@@ -547,6 +780,13 @@ h1 {
     font-size: var(--text-small);
 }
 
+// How often it has been made, and the way to say so.
+.rail-activity {
+    margin: 16px 0 0;
+    color: var(--ink-4);
+    font-size: var(--text-label);
+}
+
 .not-found {
     display: grid;
     justify-items: center;
@@ -562,84 +802,297 @@ h1 {
     color: var(--ink-2);
 }
 
-// Sub-component heading inside the ingredient card, for recipes built from
-// parts. Quieter than a section title — it divides a list, it does not open one.
-.ing-group {
-    margin: 16px 0 2px;
+// An embedded part's name, over its list and over its own steps.
+.part-title {
+    margin: 28px 0 6px;
     color: var(--navy);
-    font-size: var(--text-label);
-    font-weight: 700;
-    letter-spacing: 0.13em;
+    font-size: 1.125rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
+}
 
-    &:first-of-type {
+.ingredients-card > .component-section:first-child .part-title {
+    margin-top: 4px;
+}
+
+.part-steps {
+    margin-bottom: 18px;
+}
+
+.section-head + .part-steps .part-title {
+    margin-top: 0;
+}
+
+@media (max-width: 900px) {
+    .columns {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+// ---- Phone ---------------------------------------------------------------------------
+// Screen only: a printed page is narrower than this too, and must keep every list.
+
+@media screen and (max-width: 760px) {
+    .detail {
+        position: relative;
+        // Room for the fixed Start cooking bar.
+        padding-bottom: 104px;
+    }
+
+    .hero {
+        height: 210px;
+    }
+
+    // Over the photo: back on the left, favorite and more on the right.
+    .has-photo .back,
+    .has-photo .detail-head > .tools {
+        position: absolute;
+        top: 12px;
+        z-index: 2;
+    }
+
+    .has-photo .back {
+        left: 12px;
+        justify-content: center;
+        width: var(--touch);
+        margin: 0;
+        border-radius: 50%;
+        background: var(--paper);
+        box-shadow: var(--shadow-card);
+        color: var(--ink);
+
+        .back-text {
+            display: none;
+        }
+    }
+
+    .has-photo .detail-head > .tools {
+        right: 12px;
+        padding: 0;
+
+        .icon-button {
+            border-color: transparent;
+            box-shadow: var(--shadow-card);
+        }
+
+        .tool-wide {
+            display: none;
+        }
+    }
+
+    .has-photo .detail-head {
+        padding-top: 18px;
+    }
+
+    .detail-head {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    // The credit and each cookbook on lines of their own; a dot would start a line.
+    .detail-meta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .detail-meta .meta-dot {
+        display: none;
+    }
+
+    h1 {
+        font-size: clamp(1.75rem, 8vw, 2.25rem);
+    }
+
+    .detail-desc:not(.is-open) {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .desc-more {
+        display: inline;
         margin-top: 4px;
     }
+
+    .photo-slot {
+        width: 100%;
+        min-height: 0;
+        grid-auto-flow: column;
+        justify-content: start;
+        gap: 10px;
+        padding: 12px 14px;
+        text-align: left;
+
+        mat-icon {
+            width: 22px;
+            height: 22px;
+            font-size: 22px;
+        }
+    }
+
+    // Start cooking and the list stay in reach at the foot of the screen.
+    .actions-main {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 20;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--rule);
+        background: var(--paper);
+
+        .btn-primary {
+            min-height: 52px;
+            font-size: var(--text-body);
+        }
+
+        .btn-ghost {
+            min-height: 52px;
+        }
+    }
+
+    .actions {
+        gap: 12px;
+        margin-top: 18px;
+        padding: 12px 0;
+    }
+
+    // Time, servings and units on one line, as on a recipe card.
+    .meta {
+        width: 100%;
+        margin-left: 0;
+        justify-content: space-between;
+        gap: 8px 12px;
+        font-size: var(--text-small);
+    }
+
+    .meta-time mat-icon {
+        display: none;
+    }
+
+    .meta-makes {
+        gap: 6px;
+    }
+
+    .stepper button {
+        width: 30px;
+        height: 32px;
+    }
+
+    .unit-toggle button {
+        min-height: 34px;
+        padding: 4px 10px;
+    }
+
+    // Without a photo to sit on, favorite and more go beside the back link.
+    .detail:not(.has-photo) .detail-body {
+        position: relative;
+    }
+
+    .detail:not(.has-photo) .actions > .tools {
+        position: absolute;
+        top: 8px;
+        right: var(--pad-section);
+    }
+
+    .phone-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        margin-top: 18px;
+        padding: 4px;
+        border-radius: var(--radius-pill);
+        background: var(--surface-sunk);
+
+        button {
+            min-height: 42px;
+            border: 0;
+            border-radius: var(--radius-pill);
+            background: none;
+            color: var(--ink-3);
+            font-family: var(--font);
+            font-size: var(--text-small);
+            font-weight: 700;
+            cursor: pointer;
+
+            &[aria-selected='true'] {
+                background: var(--paper);
+                box-shadow: var(--shadow-card);
+                color: var(--navy);
+            }
+        }
+    }
+
+    .tab-count {
+        font-weight: 500;
+    }
+
+    .columns {
+        margin-top: 12px;
+    }
+
+    // The tabs name the list, so the big headings step aside.
+    .ingredients-col .section-head h2,
+    .steps-body > .section-head {
+        display: none;
+    }
+
+    .ingredients-col .section-head {
+        justify-content: flex-end;
+        margin: 0;
+    }
+
+    [data-tab='ingredients'] .steps,
+    [data-tab='steps'] .ingredients-col,
+    [data-tab='notes'] .ingredients-col,
+    [data-tab='notes'] .steps-body,
+    [data-tab='steps'] .notes {
+        display: none;
+    }
+
+    .notes {
+        margin-top: 12px;
+    }
 }
 
-// An embedded recipe: a titled section below the main columns, laid out the
-// same way — its ingredients beside its steps.
-.component-section {
-    margin-top: 40px;
-
-    .section-title {
-        font-size: 1.5rem;
-    }
-
-    .step-list {
-        flex: 2 1 420px;
-    }
-
-    // The parent's own columns follow the last component.
-    &:last-of-type {
-        margin-bottom: 40px;
-    }
-}
-
-// A quiet note, not a warning: the recipe still works, it is just incomplete.
-.gap-note {
-    display: flex;
-    align-items: flex-start;
-    gap: 9px;
-    max-width: 62ch;
-    margin: 0 0 18px;
-    padding: 11px 14px;
-    border: 1px solid var(--rule);
-    border-radius: var(--radius-card);
-    background: var(--surface);
-    color: var(--ink-3);
-    font-size: var(--text-small);
-
-    mat-icon {
-        flex: none;
-        font-size: 19px;
-        width: 19px;
-        height: 19px;
-        color: var(--ink-4);
+// In the printed cookbook, how often a recipe got made is the app's record,
+// not part of the recipe; and a prompt to add a photo or a method is a note
+// for the kitchen, not the page.
+:host-context(.book-recipe) {
+    .rail-activity,
+    .photo-slot,
+    .method-note {
+        display: none;
     }
 }
 
 // Print: the recipe as a card. Chosen units and servings are already in the
 // DOM, so the page prints what is on screen minus the controls.
-// In the printed cookbook, how often a recipe got made is the app's record,
-// not part of the recipe.
-:host-context(.book-recipe) .rail-activity {
-    display: none;
-}
-
 @media print {
     .hero,
-    .actions,
+    .actions-main,
+    .tools,
     .back,
+    .photo-slot,
+    .desc-more,
     .stepper button,
-    .rail-note .link-button,
-    .gap-note,
+    .scale-note .link-button,
+    .unit-toggle,
+    .phone-tabs,
+    .step-hint,
+    .clear-checks,
     .notes.is-empty,
+    .add-note,
     .note-form,
     .note-error,
     .cooked-error,
-    .cookbooks-panel,
-    .rail-units,
+    .archive-confirm,
+    .rail-activity,
     .checked-count,
     .ingredient-list mat-checkbox ::ng-deep .mdc-checkbox {
         display: none !important;
@@ -659,16 +1112,51 @@ h1 {
         max-width: none;
     }
 
-    // `.steps h2` sets the screen size more specifically than `.section-title`,
-    // so it is named here too or Instructions prints larger than Ingredients.
+    // `.steps h2` is named too so nothing more specific can print Instructions
+    // larger than Ingredients.
     .section-title,
     .steps h2 {
         font-size: 1.25rem;
     }
 
-    .rail-value,
-    .stepper-value {
-        font-size: 1.15rem;
+    .detail-body {
+        max-width: none;
+        padding: 0;
+    }
+
+    .detail-head {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .detail-desc {
+        margin-top: 8px;
+        line-height: 1.45;
+    }
+
+    .actions {
+        margin-top: 10px;
+        padding: 6px 0;
+    }
+
+    .meta {
+        margin-left: 0;
+    }
+
+    .stepper {
+        border: 0;
+    }
+
+    .tags {
+        margin-top: 10px;
+    }
+
+    .columns {
+        margin-top: 14px;
+    }
+
+    // A dotted word is plain text on paper.
+    .mention {
+        text-decoration: none;
     }
 
     .step-number {
@@ -678,28 +1166,8 @@ h1 {
 
     .step-list li {
         gap: 12px;
-    }
-
-    .detail-body {
-        max-width: none;
-        padding: 0;
-    }
-
-    .rail {
-        margin: 10px 0;
-        padding: 8px 0;
-    }
-
-    .tags {
-        margin-top: 10px;
-    }
-
-    .ingredients-card {
-        position: static;
-        box-shadow: none;
-        padding: 0;
-        border: 0;
-        background: none;
+        padding: 4px 0;
+        break-inside: avoid;
     }
 
     .ingredient-list li {
@@ -717,24 +1185,15 @@ h1 {
         }
     }
 
-    .step-list li {
-        padding: 4px 0;
-        break-inside: avoid;
-    }
-
     .notes {
         margin-top: 14px;
         padding: 10px 14px;
         break-inside: avoid;
     }
 
-    .component-section {
-        margin-top: 20px;
-        break-inside: avoid-page;
-    }
-
-    .component-section:last-of-type {
-        margin-bottom: 20px;
+    .part-title {
+        margin-top: 14px;
+        font-size: 1rem;
     }
 }
 

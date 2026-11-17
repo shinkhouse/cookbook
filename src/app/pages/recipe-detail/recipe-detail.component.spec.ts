@@ -17,6 +17,18 @@ import { RecipeDetailComponent } from './recipe-detail.component';
 
 const SLUG = 'grandmas-chili';
 
+/** Opens the More menu and returns the item with this label, which lives in the overlay. */
+function menuItem(fixture: ComponentFixture<RecipeDetailComponent>, label: string): HTMLElement | undefined {
+  const trigger = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button[aria-label="More"]');
+  if (!document.querySelector('.mat-mdc-menu-panel')) {
+    trigger?.click();
+    fixture.detectChanges();
+  }
+  return Array.from(document.querySelectorAll<HTMLElement>('.mat-mdc-menu-panel .mat-mdc-menu-item')).find(
+    (item) => item.textContent?.trim() === label,
+  );
+}
+
 describe('RecipeDetailComponent archive', () => {
   let fake: FakeRecipeRepository;
   let fixture: ComponentFixture<RecipeDetailComponent>;
@@ -42,13 +54,15 @@ describe('RecipeDetailComponent archive', () => {
   const confirm = (): HTMLElement | null => el().querySelector('.archive-confirm');
 
   async function openConfirm(): Promise<void> {
-    byText('Archive')!.click();
+    menuItem(fixture, 'Archive')!.click();
     fixture.detectChanges();
+    await fixture.whenStable();
   }
 
-  it('has no archive button when the build is not writable', async () => {
+  it('has no archive item when the build is not writable', async () => {
     await setup(false);
-    expect(byText('Archive')).toBeUndefined();
+    expect(menuItem(fixture, 'Archive')).toBeUndefined();
+    expect(menuItem(fixture, 'Print')).toBeDefined();
   });
 
   it('asks before archiving, and Cancel hides the question', async () => {
@@ -60,7 +74,6 @@ describe('RecipeDetailComponent archive', () => {
     byText('Cancel')!.click();
     fixture.detectChanges();
     expect(confirm()).toBeNull();
-    expect(byText('Archive')).toBeDefined();
   });
 
   it('archives and goes back to the library', async () => {
@@ -178,15 +191,14 @@ describe('RecipeDetailComponent edit link', () => {
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
-  const edit = (el: HTMLElement): HTMLAnchorElement | undefined =>
-    Array.from(el.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Edit');
+  const edit = (el: HTMLElement): HTMLAnchorElement | null => el.querySelector('a[aria-label="Edit"]');
 
   it('links to the editor when writable', async () => {
     expect(edit(await render(true))?.getAttribute('href')).toBe(`/recipes/${SLUG}/edit`);
   });
 
   it('has no Edit link when not writable', async () => {
-    expect(edit(await render(false))).toBeUndefined();
+    expect(edit(await render(false))).toBeNull();
   });
 });
 
@@ -235,12 +247,13 @@ describe('RecipeDetailComponent printed source', () => {
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
-  const page = (el: HTMLElement) => el.querySelector('.detail-page')?.textContent?.trim();
+  const page = (el: HTMLElement) => el.querySelector('.detail-page')?.textContent?.replace(/\s+/g, ' ').trim();
   const credit = (el: HTMLElement) => el.querySelector('.detail-credit')?.textContent?.trim();
 
   it('names the book and the page the recipe is printed on', async () => {
     const el = await render({ sourcePage: 112, cookbooks: ['goddard', 'sam'] });
-    expect(page(el)).toBe('Goddard Family Cookbook, page 112');
+    expect(page(el)).toMatch(/^Goddard Family Cookbook\s*·\s*page 112$/);
+    expect(el.querySelector('.detail-page a')?.textContent?.trim()).toBe('Goddard Family Cookbook');
   });
 
   it('still gives the page when the book is no longer in the app', async () => {
@@ -258,6 +271,22 @@ describe('RecipeDetailComponent printed source', () => {
   it('keeps the credit line when there is one', async () => {
     const el = await render({ contributor: 'Lisa Reisig', subtitle: 'From Lisa, daughter of Elda Mae' });
     expect(credit(el)).toBe('From Lisa, daughter of Elda Mae');
+  });
+
+  it('names the other cookbooks beside the credit, each opening its shelf in the library', async () => {
+    const el = await render({ subtitle: 'In memory of Bernadine', cookbooks: ['goddard', 'sams'] }, [
+      { id: 'goddard', name: 'Goddard Family Cookbook' },
+      { id: 'sams', name: "Sam's Cookbook" },
+    ]);
+    const links = Array.from(el.querySelectorAll<HTMLAnchorElement>('.detail-meta .shelf-link'));
+    expect(links.map((a) => a.textContent?.trim())).toEqual(['Goddard Family Cookbook', "Sam's Cookbook"]);
+    links[1].click();
+    expect([...TestBed.inject(RecipeStore).selectedCookbooks()]).toEqual(['sams']);
+  });
+
+  it('leaves the printed book out of the credit line, which has its own', async () => {
+    const el = await render({ sourcePage: 9, cookbooks: ['goddard'] });
+    expect(el.querySelectorAll('.detail-meta .shelf-link').length).toBe(0);
   });
 });
 
@@ -294,12 +323,15 @@ describe('RecipeDetailComponent embedded recipes', () => {
     fixture.detectChanges();
   });
 
-  it('shows a titled section per component, skipping a missing one', () => {
+  it('lists each part under its own name, skipping a missing one, with its steps on their own', () => {
     const sections = el().querySelectorAll('.component-section');
     expect(sections.length).toBe(1);
     expect(text(sections[0].querySelector('h3'))).toBe('For the sauce');
-    expect(text(sections[0])).toContain('Melt the butter.');
     expect(text(sections[0])).toContain('butter');
+    const steps = el().querySelectorAll('.part-steps');
+    expect(steps.length).toBe(1);
+    expect(text(steps[0].querySelector('h3'))).toBe('For the sauce');
+    expect(text(steps[0])).toContain('Melt the butter.');
   });
 
   it('scales component ingredients with the parent servings', () => {
@@ -318,14 +350,17 @@ describe('RecipeDetailComponent embedded recipes', () => {
     expect(el().querySelectorAll('.is-checked').length).toBe(1);
   });
 
-  it('puts the component sections before the parent\'s own ingredients and steps', () => {
-    const section = el().querySelector('.component-section')!;
-    const own = el().querySelector('.detail-body > .columns')!;
-    expect(section.compareDocumentPosition(own) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  it("lists a part after the recipe's own ingredients, and its steps before the recipe's own", () => {
+    const ownList = el().querySelector('.ingredients-card > .ingredient-list')!;
+    const part = el().querySelector('.component-section')!;
+    expect(ownList.compareDocumentPosition(part) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const partSteps = el().querySelector('.part-steps')!;
+    const ownSteps = el().querySelector('.steps-body > .step-list')!;
+    expect(partSteps.compareDocumentPosition(ownSteps) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('keeps a parent ingredient\'s check apart from a component\'s', () => {
-    const own = () => el().querySelector<HTMLInputElement>('.detail-body > .columns input[type=checkbox]')!;
+    const own = () => el().querySelector<HTMLInputElement>('.ingredients-card > .ingredient-list input[type=checkbox]')!;
     const part = () => el().querySelector<HTMLInputElement>('.component-section input[type=checkbox]')!;
     own().click();
     fixture.detectChanges();
@@ -380,14 +415,12 @@ describe('RecipeDetailComponent units', () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
 
-  it('puts the units toggle in its own labelled rail item', async () => {
+  it('labels the units toggle as a group of its own', async () => {
     await setup();
     const group = el.querySelector('.unit-toggle') as HTMLElement;
-    const item = group.closest('.rail-item') as HTMLElement;
-    expect(item.querySelector('.label')?.textContent?.trim()).toBe('Units');
-    expect(item.querySelector('.stepper')).toBeNull();
-    expect(group.parentElement).toBe(item);
-    expect(group.getAttribute('aria-labelledby')).toBe(item.querySelector('.label')!.id);
+    expect(group.getAttribute('role')).toBe('group');
+    expect(group.getAttribute('aria-label')).toBe('Units');
+    expect(group.querySelector('.stepper')).toBeNull();
   });
 
   it('offers a two-button US | Metric group with aria-pressed', async () => {
@@ -433,11 +466,10 @@ describe('RecipeDetailComponent print', () => {
     fixture.componentRef.setInput('slug', SLUG);
     fixture.detectChanges();
     const print = spyOn(window, 'print');
-    const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
-      (b) => b.textContent?.trim() === 'Print',
-    );
-    button!.click();
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button[aria-label="Print"]')!.click();
     expect(print).toHaveBeenCalledTimes(1);
+    menuItem(fixture, 'Print')!.click();
+    expect(print).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -467,7 +499,18 @@ describe('RecipeDetailComponent notes', () => {
   const addButton = (): HTMLButtonElement | undefined =>
     Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Add note');
 
-  function type(text: string): void {
+  /**
+   * Opens the field the "Add a note" button hides until wanted, and waits for
+   * ngModel's first write, which would otherwise wipe what is typed next.
+   */
+  async function open(): Promise<void> {
+    Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Add a note')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  async function type(text: string): Promise<void> {
+    if (!field()) await open();
     const f = field()!;
     f.value = text;
     f.dispatchEvent(new Event('input'));
@@ -498,21 +541,23 @@ describe('RecipeDetailComponent notes', () => {
     expect(field()).toBeNull();
   });
 
-  it('offers a labelled field, disabled until there is text', async () => {
+  it('says there are none yet, and opens a labelled field disabled until there is text', async () => {
     await setup(true);
+    expect(el().querySelector('.notes-none')?.textContent?.trim()).toBe('None yet');
+    expect(field()).toBeNull();
+    await open();
     expect(el().querySelector('label')?.textContent).toBeDefined();
-    expect(el().textContent).toContain('Add a note');
     expect(field()!.labels?.[0]?.textContent).toContain('Add a note');
     expect(addButton()!.disabled).toBeTrue();
-    type('   ');
+    await type('   ');
     expect(addButton()!.disabled).toBeTrue();
-    type('more cumin');
+    await type('more cumin');
     expect(addButton()!.disabled).toBeFalse();
   });
 
   it('adds a note and shows it', async () => {
     await setup(true);
-    type('more cumin');
+    await type('more cumin');
     addButton()!.click();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -522,7 +567,7 @@ describe('RecipeDetailComponent notes', () => {
 
   it('shows the error and keeps the text on failure', async () => {
     await setup(true);
-    type('more cumin');
+    await type('more cumin');
     fake.failNext({ status: 409, error: { message: 'This recipe has too many notes.' } });
     addButton()!.click();
     await fixture.whenStable();
@@ -534,7 +579,7 @@ describe('RecipeDetailComponent notes', () => {
 
   it('keeps the text and says so when the recipe is gone', async () => {
     await setup(true);
-    type('more cumin');
+    await type('more cumin');
     spyOn(TestBed.inject(RecipeStore), 'addNote').and.resolveTo(false);
     addButton()!.click();
     await fixture.whenStable();
@@ -545,8 +590,9 @@ describe('RecipeDetailComponent notes', () => {
 
   it('explains a lost unlock after the form hides on a 403', async () => {
     await setup(false, true);
+    await open();
     expect(field()).not.toBeNull();
-    type('more cumin');
+    await type('more cumin');
     fake.failNext({ status: 403 });
     addButton()!.click();
     await fixture.whenStable();
@@ -557,7 +603,7 @@ describe('RecipeDetailComponent notes', () => {
 
   it('uses the lockout minutes from the device store on a 429', async () => {
     await setup(true);
-    type('x');
+    await type('x');
     fake.failNext(new HttpErrorResponse({ status: 429, headers: new HttpHeaders({ 'Retry-After': '60' }) }));
     addButton()!.click();
     await fixture.whenStable();
@@ -591,22 +637,22 @@ describe('RecipeDetailComponent mark as cooked', () => {
   const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
   const button = (label: string): HTMLButtonElement | undefined =>
     Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.trim() === label);
-  const rail = (): string => (el().querySelector('.rail')?.textContent ?? '').replace(/\s+/g, ' ');
+  const rail = (): string => (el().querySelector('.rail-activity')?.textContent ?? '').replace(/\s+/g, ' ');
 
   it('marks cooked after Yes and shows the new count and date', async () => {
     await setup(true);
     const before = Recipes[0].cooked;
-    expect(rail()).not.toContain('Last cooked');
+    expect(rail()).toContain(`Cooked ${before} times`);
+    expect(rail()).not.toContain('last on');
     button('Mark as cooked')!.click();
     fixture.detectChanges();
     expect(el().textContent).toContain('Cooked it today?');
     button('Yes')!.click();
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(rail()).toContain(`Times cooked${before + 1}`);
-    expect(rail()).toContain('Last cooked');
+    expect(rail()).toContain(`Cooked ${before + 1} times`);
     const stamp = TestBed.inject(RecipeStore).bySlug(SLUG)!.lastCooked!;
-    expect(rail()).toContain(new DatePipe('en-US').transform(stamp, 'mediumDate')!);
+    expect(rail()).toContain(`last on ${new DatePipe('en-US').transform(stamp, 'MMM d')}`);
     expect(el().textContent).not.toContain('Cooked it today?');
   });
 
@@ -677,7 +723,7 @@ describe('RecipeDetailComponent favorite', () => {
 
   const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
   const button = (label: string): HTMLButtonElement | undefined =>
-    Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.includes(label));
+    Array.from(el().querySelectorAll('button')).find((b) => b.getAttribute('aria-label')?.includes(label));
 
   it('toggles favorite on an unlocked device', async () => {
     await setup(true);
@@ -703,117 +749,13 @@ describe('RecipeDetailComponent favorite', () => {
   it('shows a static star on a locked device, and nothing when not a favorite', async () => {
     await setup(false, true);
     expect(button('favorites')).toBeUndefined();
-    const star = el().querySelector('.actions .fav-static');
+    const star = el().querySelector('.tools .fav-static');
     expect(star?.getAttribute('aria-label')).toBe('Favorite');
     expect(star?.getAttribute('fontIcon')).toBe('star');
     TestBed.resetTestingModule();
     await setup(false, false);
     expect(el().querySelector('.fav-static')).toBeNull();
     expect(button('favorites')).toBeUndefined();
-  });
-});
-
-describe('RecipeDetailComponent cookbooks panel', () => {
-  const SLUG = Recipes[0].slug;
-  let fake: FakeRecipeRepository;
-  let fixture: ComponentFixture<RecipeDetailComponent>;
-
-  async function setup(
-    writable: boolean,
-    books = [
-      { id: 'sams', name: "Sam's" },
-      { id: 'bobs', name: "Bob's" },
-    ],
-  ): Promise<void> {
-    fake = new FakeRecipeRepository([{ ...Recipes[0], cookbooks: ['sams'] }]);
-    fake.writable = writable;
-    TestBed.configureTestingModule({
-      imports: [RecipeDetailComponent],
-      providers: [
-        provideRouter([]),
-        ...provideFakeRecipes(fake),
-        ...provideFakeCookbooks(new FakeCookbookRepository(books)),
-      ],
-    });
-    await TestBed.inject(RecipeStore).whenLoaded();
-    await TestBed.inject(CookbookStore).whenLoaded();
-    fixture = TestBed.createComponent(RecipeDetailComponent);
-    fixture.componentRef.setInput('slug', SLUG);
-    fixture.detectChanges();
-  }
-
-  const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
-  const panel = (): HTMLElement | null => el().querySelector('.cookbooks-panel');
-  const boxes = (): HTMLInputElement[] =>
-    Array.from(el().querySelectorAll('.cookbooks-panel input[type="checkbox"]'));
-  const settle = async (): Promise<void> => {
-    await fixture.whenStable();
-    await new Promise((resolve) => setTimeout(resolve));
-    fixture.detectChanges();
-  };
-
-  it('lists every cookbook, checked where the recipe belongs', async () => {
-    await setup(true);
-    expect(panel()?.textContent).toContain('Cookbooks');
-    expect(boxes().map((b) => b.checked)).toEqual([true, false]);
-    expect(panel()?.textContent).toContain("Bob's");
-  });
-
-  it('files the recipe into a cookbook when ticked', async () => {
-    await setup(true);
-    const add = spyOn(TestBed.inject(RecipeStore), 'addToCookbook').and.callThrough();
-    boxes()[1].click();
-    await settle();
-    expect(add).toHaveBeenCalledOnceWith(SLUG, 'bobs');
-    expect(boxes().map((b) => b.checked)).toEqual([true, true]);
-  });
-
-  it('takes the recipe out when unticked', async () => {
-    await setup(true);
-    const remove = spyOn(TestBed.inject(RecipeStore), 'removeFromCookbook').and.callThrough();
-    boxes()[0].click();
-    await settle();
-    expect(remove).toHaveBeenCalledOnceWith(SLUG, 'sams');
-    expect(boxes().map((b) => b.checked)).toEqual([false, false]);
-  });
-
-  it('disables the checkbox while its toggle is saving', async () => {
-    await setup(true);
-    let release!: (v: boolean) => void;
-    spyOn(TestBed.inject(RecipeStore), 'addToCookbook').and.returnValue(
-      new Promise<boolean>((r) => (release = r)),
-    );
-    boxes()[1].click();
-    fixture.detectChanges();
-    expect(boxes()[1].disabled).toBeTrue();
-    expect(boxes()[0].disabled).toBeFalse();
-    release(true);
-    await settle();
-    expect(boxes()[1].disabled).toBeFalse();
-  });
-
-  it('reverts and explains a failed toggle', async () => {
-    await setup(true);
-    fake.failNext({ status: 0 });
-    boxes()[1].click();
-    await settle();
-    expect(boxes().map((b) => b.checked)).toEqual([true, false]);
-    expect(panel()?.querySelector('[role="alert"]')?.textContent).toContain(
-      "Couldn't reach the recipe server",
-    );
-  });
-
-  it('links to Add cookbook when there are none', async () => {
-    await setup(true, []);
-    const link = panel()?.querySelector('a');
-    expect(link?.textContent?.trim()).toBe('Add cookbook');
-    expect(link?.getAttribute('href')).toMatch(/\/cookbooks\/new$/);
-    expect(boxes().length).toBe(0);
-  });
-
-  it('is not rendered when read-only', async () => {
-    await setup(false);
-    expect(panel()).toBeNull();
   });
 });
 
@@ -846,7 +788,163 @@ describe('RecipeDetailComponent photo', () => {
 
     img()!.dispatchEvent(new Event('error'));
     fixture.detectChanges();
-    expect(img()).toBeNull();
-    expect(el.querySelector('.hero app-no-photo svg')).not.toBeNull();
+    expect(el.querySelector('.hero')).toBeNull();
+    // With no photo to show, a writable build offers to add one.
+    expect(el.querySelector('.photo-slot')?.getAttribute('href')).toBe(`/recipes/${SLUG}/edit`);
+  });
+
+  it('crops the photo around its focus point', async () => {
+    const fake = new FakeRecipeRepository(
+      Recipes.map((r) => (r.slug === SLUG ? { ...r, photo: PHOTO, photoFocus: { x: 20, y: 75 } } : r)),
+    );
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake), ...provideFakeCookbooks()],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    const fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+    const img = (fixture.nativeElement as HTMLElement).querySelector<HTMLImageElement>('.hero img')!;
+    expect(img.style.objectPosition).toBe('20% 75%');
+  });
+});
+
+describe('RecipeDetailComponent without a photo', () => {
+  async function render(writable: boolean): Promise<ComponentFixture<RecipeDetailComponent>> {
+    const fake = new FakeRecipeRepository(
+      Recipes.map((r) => (r.slug === SLUG ? { ...r, photo: undefined } : r)),
+    );
+    fake.writable = writable;
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake), ...provideFakeCookbooks()],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    const fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('has no hero, and offers to add a photo where the build can', async () => {
+    const el = (await render(true)).nativeElement as HTMLElement;
+    expect(el.querySelector('.hero')).toBeNull();
+    expect(el.querySelector('.photo-slot-title')?.textContent?.trim()).toBe('Add a photo');
+    expect(el.querySelector('.photo-slot-note')?.textContent?.trim()).toBe('next time you make it');
+  });
+
+  it('offers nothing in its place on a read-only build', async () => {
+    const el = (await render(false)).nativeElement as HTMLElement;
+    expect(el.querySelector('.photo-slot')).toBeNull();
+  });
+
+  it('puts the favorite and More in the action row, with print and edit in the menu', async () => {
+    const fixture = await render(true);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.actions .tools button[aria-label="More"]')).not.toBeNull();
+    expect(el.querySelector('button[aria-label="Print"]')).toBeNull();
+    expect(menuItem(fixture, 'Print')).toBeDefined();
+    expect(menuItem(fixture, 'Edit')?.getAttribute('href')).toBe(`/recipes/${SLUG}/edit`);
+  });
+});
+
+describe('RecipeDetailComponent steps', () => {
+  const base = Recipes.find((r) => r.slug === SLUG)!;
+  const STEW: Recipe = {
+    ...base,
+    servings: 4,
+    servingsUnit: 'bowls',
+    ingredients: [
+      { qty: 1, unit: 'can', name: 'tomato juice', aisle: 'pantry' },
+      { qty: 2, unit: 'tbsp', name: 'dried onion', aisle: 'pantry' },
+      { qty: null, unit: '', name: 'salt', aisle: 'pantry' },
+    ],
+    steps: ['Add in tomato juice to thin sauce.', 'Brown the dried onions with salt.'],
+    components: [],
+  };
+  let fixture: ComponentFixture<RecipeDetailComponent>;
+  const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+
+  async function setup(recipe: Recipe = STEW, writable = true): Promise<void> {
+    const fake = new FakeRecipeRepository([recipe]);
+    fake.writable = writable;
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake), ...provideFakeCookbooks()],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', recipe.slug);
+    fixture.detectChanges();
+  }
+
+  const mentions = () =>
+    Array.from(el().querySelectorAll<HTMLElement>('.mention')).map((m) => [m.textContent, m.dataset['amount']]);
+
+  it('dots each ingredient a step names, carrying its amount, and leaves the text intact', async () => {
+    await setup();
+    expect(mentions()).toEqual([
+      ['tomato juice', '1 can tomato juice'],
+      ['dried onions', '2 tbsp dried onion'],
+    ]);
+    expect(el().querySelector('.step-list li p')?.textContent).toBe('Add in tomato juice to thin sauce.');
+    expect(el().querySelector('.step-hint')?.textContent).toContain('Dotted words show their amount on hover or tap.');
+  });
+
+  it('scales the amount a dotted word shows with the servings', async () => {
+    await setup();
+    (el().querySelector('[aria-label="One more serving"]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(mentions()[1][1]).toBe('2½ tbsp dried onion');
+  });
+
+  it('says what the recipe makes', async () => {
+    await setup();
+    expect(el().querySelector('.makes-unit')?.textContent?.trim()).toBe('bowls');
+  });
+
+  it('points a thin method at the editor, on a writable build only', async () => {
+    const thin = {
+      ...STEW,
+      ingredients: Array.from({ length: 8 }, (_, i) => ({ qty: 1, unit: '', name: `thing ${i}`, aisle: 'pantry' as const })),
+      steps: ['Mix all together.'],
+    };
+    await setup(thin);
+    const note = el().querySelector('.method-note');
+    expect(note?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Just one step for 8 ingredients. Fill in the method');
+    expect(note?.querySelector('a')?.getAttribute('href')).toBe(`/recipes/${SLUG}/edit`);
+    TestBed.resetTestingModule();
+    await setup(thin, false);
+    expect(el().querySelector('.method-note')).toBeNull();
+  });
+
+  it('clears every check at once', async () => {
+    await setup();
+    const boxes = () => Array.from(el().querySelectorAll<HTMLInputElement>('.ingredient-list input[type=checkbox]'));
+    boxes()[0].click();
+    boxes()[1].click();
+    fixture.detectChanges();
+    const clear = el().querySelector<HTMLButtonElement>('.clear-checks')!;
+    expect(clear.textContent?.trim()).toBe('Clear checks');
+    clear.click();
+    fixture.detectChanges();
+    expect(boxes().some((b) => b.checked)).toBeFalse();
+    expect(el().querySelector('.clear-checks')).toBeNull();
+  });
+
+  it('switches the phone list with tabs that count each one', async () => {
+    await setup();
+    const tabs = Array.from(el().querySelectorAll<HTMLButtonElement>('.phone-tabs button'));
+    expect(tabs.map((t) => t.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+      'Ingredients · 3',
+      'Steps · 2',
+      `Notes · ${STEW.notes.length}`,
+    ]);
+    expect(el().querySelector('.detail')?.getAttribute('data-tab')).toBe('ingredients');
+    tabs[1].click();
+    fixture.detectChanges();
+    expect(el().querySelector('.detail')?.getAttribute('data-tab')).toBe('steps');
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
   });
 });

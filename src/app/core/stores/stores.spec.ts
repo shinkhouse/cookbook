@@ -808,6 +808,14 @@ describe('CookbookStore', () => {
   it('reports false when removing an id that is not there', async () => {
     expect(await cookbooks.remove('nope')).toBe(false);
   });
+
+  it('keeps the recipe store told which cookbooks exist', async () => {
+    expect([...recipes.cookbookIds()!]).toEqual([DEFAULT_COOKBOOK_ID]);
+    await cookbooks.add({ id: 'grandmas', name: "Grandma's Cookbook" });
+    expect(recipes.cookbookIds()!.has('grandmas')).toBe(true);
+    await cookbooks.remove('grandmas');
+    expect(recipes.cookbookIds()!.has('grandmas')).toBe(false);
+  });
 });
 
 describe('PrefsStore', () => {
@@ -1718,6 +1726,7 @@ describe('RecipeStore recipes in no cookbook', () => {
           new FakeRecipeRepository([
             fixture('filed', { cookbooks: [DEFAULT_COOKBOOK_ID] }),
             fixture('loose', { cookbooks: [] }),
+            fixture('orphan', { cookbooks: ['deleted-book'] }),
           ]),
         ),
       ],
@@ -1727,6 +1736,14 @@ describe('RecipeStore recipes in no cookbook', () => {
   });
 
   afterEach(() => localStorage.clear());
+
+  it('counts a recipe as unfiled once none of its cookbooks exists, its ids left as they were', () => {
+    store.cookbookIds.set(new Set([DEFAULT_COOKBOOK_ID]));
+    store.selectedCookbooks.set(new Set([NO_COOKBOOK]));
+    expect(store.results().map((r) => r.slug)).toEqual(['loose', 'orphan']);
+    expect(store.bySlug('orphan')?.cookbooks).toEqual(['deleted-book']);
+    expect(store.isUnfiled(store.bySlug('filed')!)).toBe(false);
+  });
 
   it('chooses the recipes filed nowhere when NO_COOKBOOK is the selection', () => {
     store.selectedCookbooks.set(new Set([NO_COOKBOOK]));

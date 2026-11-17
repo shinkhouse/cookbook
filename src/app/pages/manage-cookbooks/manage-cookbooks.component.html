@@ -1,0 +1,73 @@
+<div class="manage">
+  <header class="manage-head">
+    <a class="back" routerLink="/">
+      <mat-icon fontIcon="arrow_back" aria-hidden="true" />
+      All recipes
+    </a>
+    <h1>Cookbooks</h1>
+    <p class="lede">
+      Rename a cookbook, or delete it. Deleting a cookbook keeps its recipes; any filed only
+      there show under “Not in a cookbook”.
+    </p>
+  </header>
+
+  @if (error()) {
+    <p class="problem" role="alert">{{ error() }}</p>
+  }
+
+  <ul class="cookbook-list">
+    @for (c of cookbooks.cookbooks(); track c.id) {
+      <li class="cookbook-row">
+        <form class="rename" (ngSubmit)="rename(c)">
+          <label class="name">
+            <span class="sr-only">Name of {{ c.name }}</span>
+            <input
+              type="text"
+              [name]="'name-' + c.id"
+              required
+              maxlength="80"
+              autocomplete="off"
+              [ngModel]="nameOf(c)"
+              (ngModelChange)="edit(c.id, $event)"
+              [attr.aria-invalid]="clashes(c) ? 'true' : null"
+            />
+          </label>
+          <span class="count tnum">
+            @if (counted()) {
+              {{ count(c.id) | number }} {{ count(c.id) === 1 ? 'recipe' : 'recipes' }}
+            }
+          </span>
+          <button type="submit" class="btn-outline" [disabled]="!canRename(c)">Save</button>
+          <button type="button" class="btn-ghost" [disabled]="busy()" (click)="confirming.set(c.id)">Delete</button>
+        </form>
+        @if (clashes(c)) {
+          <p class="hint">Another cookbook has that name.</p>
+        }
+
+        @if (confirming() === c.id) {
+          <div class="delete-confirm">
+            <p>
+              Delete “{{ c.name }}”?
+              @if (counted()) {
+                Its {{ count(c.id) | number }} {{ count(c.id) === 1 ? 'recipe stays' : 'recipes stay' }} in the app.
+              } @else {
+                Its recipes stay in the app.
+              }
+            </p>
+            <div class="confirm-buttons">
+              <button type="button" class="btn-ghost" [disabled]="busy()" (click)="confirming.set(null)">Cancel</button>
+              <button type="button" class="btn-danger" [disabled]="busy()" (click)="remove(c)">
+                {{ busy() ? 'Deleting…' : 'Delete cookbook' }}
+              </button>
+            </div>
+          </div>
+        }
+      </li>
+    }
+  </ul>
+
+  <a class="add" routerLink="/cookbooks/new">
+    <mat-icon fontIcon="add" aria-hidden="true" />
+    Add a cookbook
+  </a>
+</div>

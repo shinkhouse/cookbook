@@ -1,0 +1,183 @@
+// Laid out like Add a cookbook, its neighbour: same column, head and fields.
+.manage {
+    max-width: var(--max-detail);
+    margin: 0 auto;
+    padding: var(--pad-section);
+}
+
+.back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--touch);
+    color: var(--ink-3);
+    font-size: var(--text-small);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+        color: var(--navy);
+    }
+
+    mat-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
+    }
+}
+
+.manage-head {
+    margin-bottom: 22px;
+
+    h1 {
+        margin-top: 6px;
+        font-size: var(--size-detail-h1);
+    }
+}
+
+.lede {
+    max-width: 56ch;
+    margin: 10px 0 0;
+    color: var(--ink-3);
+    font-size: var(--text-body);
+}
+
+.cookbook-list {
+    max-width: 720px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cookbook-row {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+}
+
+.rename {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.name {
+    flex: 1 1 240px;
+}
+
+input[type='text'] {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: var(--text-body);
+
+    &[aria-invalid='true'] {
+        border-color: var(--mat-sys-error);
+    }
+}
+
+.count {
+    min-width: 7.5em;
+    color: var(--ink-3);
+    font-size: var(--text-small);
+}
+
+.hint {
+    margin: 6px 0 0;
+    color: var(--mat-sys-error);
+    font-size: var(--text-small);
+}
+
+.btn-outline,
+.btn-ghost,
+.btn-danger {
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: var(--radius-pill);
+    font-family: var(--font);
+    font-size: var(--text-small);
+    font-weight: 600;
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+}
+
+.btn-outline {
+    border: 1px solid var(--navy);
+    background: transparent;
+    color: var(--navy);
+
+    &:hover:not(:disabled) {
+        background: var(--navy);
+        color: var(--paper);
+    }
+}
+
+.btn-ghost {
+    border: 1px solid var(--rule-strong);
+    background: transparent;
+    color: var(--ink-2);
+
+    &:hover:not(:disabled) {
+        border-color: var(--ink-4);
+        color: var(--ink);
+    }
+}
+
+// Deleting is the one irreversible step here, so its button says so in red.
+.btn-danger {
+    border: 1px solid var(--mat-sys-error);
+    background: var(--mat-sys-error);
+    color: var(--paper);
+}
+
+.delete-confirm {
+    margin-top: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+
+    p {
+        margin: 0;
+        color: var(--ink-2);
+        font-size: var(--text-small);
+    }
+}
+
+.confirm-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.problem {
+    margin: 0 0 12px;
+    color: var(--mat-sys-error);
+    font-size: var(--text-small);
+}
+
+.add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--touch);
+    margin-top: 18px;
+    color: var(--navy);
+    font-size: var(--text-small);
+    font-weight: 700;
+    text-decoration: none;
+
+    mat-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
+    }
+}

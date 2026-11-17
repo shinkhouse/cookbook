@@ -163,7 +163,7 @@ export class LibraryComponent {
   protected readonly canFile = this.recipes.writable;
 
   protected readonly unfiledCount = computed(
-    () => this.recipes.recipes().filter((r) => r.cookbooks.length === 0).length,
+    () => this.recipes.recipes().filter((r) => this.recipes.isUnfiled(r)).length,
   );
 
   protected toggleShelf(): void {

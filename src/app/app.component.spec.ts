@@ -60,6 +60,8 @@ describe('read-only build', () => {
     root.querySelectorAll('a[href$="/recipes/new"]');
   const cookbookLinks = (root: ParentNode): NodeListOf<Element> =>
     root.querySelectorAll('a[href$="/cookbooks/new"]');
+  const manageLinks = (root: ParentNode): NodeListOf<Element> =>
+    root.querySelectorAll('a[href$="/cookbooks"]');
 
   async function openAddMenu(fixture: ComponentFixture<AppComponent>): Promise<void> {
     (fixture.nativeElement.querySelector('button.btn-primary') as HTMLButtonElement).click();
@@ -80,6 +82,9 @@ describe('read-only build', () => {
     expect(recipe[0].textContent?.trim()).toBe('Add recipe');
     expect(cookbook.length).toBe(1);
     expect(cookbook[0].textContent?.trim()).toBe('Add cookbook');
+    const manage = manageLinks(document.body);
+    expect(manage.length).toBe(1);
+    expect(manage[0].textContent?.trim()).toBe('Manage cookbooks');
   });
 
   it('wide layout offers neither when not writable', () => {
@@ -95,6 +100,7 @@ describe('read-only build', () => {
     await openDrawer(fixture);
     expect(addLinks(document.body).length).toBe(1);
     expect(cookbookLinks(document.body).length).toBe(1);
+    expect(manageLinks(document.body).length).toBe(1);
   });
 
   it('narrow layout leaves both out of the open drawer when not writable', async () => {

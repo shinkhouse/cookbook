@@ -54,7 +54,7 @@ export class CookbookStore {
     this._status.set('loading');
     const run = this.repo.list().then(
       (loaded) => {
-        this._cookbooks.set(loaded);
+        this.setCookbooks(loaded);
         this._status.set('ready');
       },
       () => this._status.set('error'),
@@ -92,7 +92,7 @@ export class CookbookStore {
   async add(cookbook: Cookbook): Promise<string> {
     const id = this.uniqueId(cookbook.id);
     const stored = await this.repo.create({ ...cookbook, id });
-    this._cookbooks.update((list) => [...list, stored]);
+    this.setCookbooks([...this._cookbooks(), stored]);
     return id;
   }
 
@@ -119,8 +119,14 @@ export class CookbookStore {
    */
   async remove(id: string): Promise<boolean> {
     const removed = await this.repo.remove(id);
-    this._cookbooks.update((list) => list.filter((c) => c.id !== id));
+    this.setCookbooks(this._cookbooks().filter((c) => c.id !== id));
     return removed;
+  }
+
+  /** The list, and the recipe store told which ids now exist (see RecipeStore.cookbookIds). */
+  private setCookbooks(list: readonly Cookbook[]): void {
+    this._cookbooks.set(list);
+    this.recipes.cookbookIds.set(new Set(list.map((c) => c.id)));
   }
 
   private uniqueId(desired: string): string {

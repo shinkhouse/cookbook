@@ -120,6 +120,19 @@ export class RecipeStore {
   readonly selectedCookbooks = signal<ReadonlySet<string>>(new Set());
 
   /**
+   * The ids of the cookbooks that exist, kept current by CookbookStore; null
+   * until it has loaded. Deleting a cookbook edits no recipe, so its id stays
+   * on them; this is how "filed in no cookbook" still finds them.
+   */
+  readonly cookbookIds = signal<ReadonlySet<string> | null>(null);
+
+  /** True for a recipe filed in no cookbook that still exists. */
+  isUnfiled(recipe: Recipe): boolean {
+    const known = this.cookbookIds();
+    return !recipe.cookbooks.some((id) => !known || known.has(id));
+  }
+
+  /**
    * Tag list derived from the data rather than hardcoded (§4.1), deduped and
    * alphabetised. Stored lowercase; display title-cases via `tagLabel`.
    */
@@ -411,7 +424,7 @@ export class RecipeStore {
       // OR within the gap facet, matching how the tag facets behave.
       if (gaps.size > 0 && !gapKeys(r).some((k) => gaps.has(k))) return false;
       // OR within the cookbook facet; a recipe filed nowhere matches NO_COOKBOOK.
-      const filed = r.cookbooks.length > 0 ? r.cookbooks.some((id) => cookbooks.has(id)) : cookbooks.has(NO_COOKBOOK);
+      const filed = this.isUnfiled(r) ? cookbooks.has(NO_COOKBOOK) : r.cookbooks.some((id) => cookbooks.has(id));
       if (cookbooks.size > 0 && !filed) return false;
       return true;
     });

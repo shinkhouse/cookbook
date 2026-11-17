@@ -1,26 +1,32 @@
-<div class="book-tools">
-  <div class="book-orders" role="group" aria-label="Arrange the book by">
-    <span class="tools-label">Arrange by</span>
-    @for (o of orders; track o.id) {
-      <a
-        routerLink="."
-        [queryParams]="{ order: o.id }"
-        [attr.aria-current]="o.id === current() ? 'page' : null"
-      >{{ o.label }}</a>
-    }
+@if (!loaded()) {
+  <p class="book-loading">Loading the recipes…</p>
+} @else if (chosen(); as book) {
+  <div class="book-tools">
+    <a class="tools-back" routerLink="." [queryParams]="{ cookbook: null }" queryParamsHandling="merge">
+      Choose another cookbook
+    </a>
+    <div class="book-orders" role="group" aria-label="Arrange the book by">
+      <span class="tools-label">Arrange by</span>
+      @for (o of orders; track o.id) {
+        <a
+          routerLink="."
+          [queryParams]="{ order: o.id }"
+          queryParamsHandling="merge"
+          [attr.aria-current]="o.id === current() ? 'page' : null"
+        >{{ o.label }}</a>
+      }
+    </div>
+    <button type="button" class="btn-print" (click)="print()">Print</button>
+    <p class="tools-hint">
+      Printing from here leaves the page numbers blank. For a numbered PDF, run
+      <code>npm run book -- --cookbook {{ book.id }}</code> in the cookbook folder.
+    </p>
   </div>
-  <button type="button" class="btn-print" (click)="print()">Print</button>
-  <p class="tools-hint">
-    Printing from here leaves the page numbers blank. For a numbered PDF, run
-    <code>npm run book</code> in the cookbook folder.
-  </p>
-</div>
 
-@if (ready()) {
-  <article class="book" data-book-ready>
+  <article class="book" data-book-ready [attr.data-book-title]="book.name">
     <section class="book-cover">
-      <h1>My Cookbooks</h1>
-      <p class="cover-count">{{ count() }} recipes</p>
+      <h1>{{ book.name }}</h1>
+      <p class="cover-count">{{ count() }} {{ count() === 1 ? 'recipe' : 'recipes' }}</p>
       <p class="cover-date">{{ today | date: 'MMMM y' }}</p>
     </section>
 
@@ -59,5 +65,29 @@
     }
   </article>
 } @else {
-  <p class="book-loading">Loading the recipes…</p>
+  <!-- Nothing is drawn until a cookbook is chosen: the whole collection at once stalls the page. -->
+  <section class="book-choose" aria-labelledby="choose-title">
+    <h1 id="choose-title">Print a cookbook</h1>
+    @if (unknown()) {
+      <p class="choose-problem" role="alert">There's no cookbook called “{{ cookbook() }}”. Choose one below.</p>
+    }
+    <p class="choose-lede">Choose which cookbook to print. Each one is a book of its own.</p>
+    <ul class="choose-list">
+      @for (c of choices(); track c.book.id) {
+        <li>
+          <a
+            routerLink="."
+            [queryParams]="{ cookbook: c.book.id }"
+            queryParamsHandling="merge"
+            [attr.data-cookbook-id]="c.book.id"
+          >
+            <span class="choose-name">{{ c.book.name }}</span>
+            <span class="choose-count tnum">{{ c.count }} {{ c.count === 1 ? 'recipe' : 'recipes' }}</span>
+          </a>
+        </li>
+      } @empty {
+        <li class="choose-empty">No cookbooks yet.</li>
+      }
+    </ul>
+  </section>
 }

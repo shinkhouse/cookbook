@@ -1,13 +1,14 @@
 /**
- * Makes the printed cookbook: every recipe in one PDF, with a cover, a
+ * Makes a printed cookbook: one cookbook's recipes in one PDF, with a cover, a
  * contents page that gives each recipe's page, and page numbers in the footers.
  *
  * It prints the app's /book page through Google Chrome, so the app must be
  * running (`npm start`, with the API on 3152) and Chrome installed.
  *
- *     npm run book                              # A–Z, to ~/Desktop/My Cookbooks.pdf
- *     npm run book -- --order cookbook          # or meal, cuisine
- *     npm run book -- --out ~/Desktop/book.pdf  # somewhere else
+ *     npm run book                                       # lists the cookbooks to choose from
+ *     npm run book -- --cookbook goddard-family-cookbook # A–Z, to ~/Desktop/<its name>.pdf
+ *     npm run book -- --cookbook sams-cookbook --order meal   # or cuisine
+ *     npm run book -- --cookbook sams-cookbook --out ~/Desktop/book.pdf
  *     npm run book -- --url http://localhost:4320/cookbook/book
  *
  * Chrome cannot number a contents page, so the book is printed once to learn
@@ -23,13 +24,15 @@ import { parseArgs } from 'node:util';
 import { PDFArray, PDFDict, PDFDocument, PDFName, PDFRef, StandardFonts, rgb } from 'pdf-lib';
 import { chromium } from 'playwright-core';
 
-const ORDERS = ['title', 'cookbook', 'meal', 'cuisine'];
+const ORDERS = ['title', 'meal', 'cuisine'];
 
 const { values: args } = parseArgs({
   options: {
+    cookbook: { type: 'string' },
     order: { type: 'string', default: 'title' },
     url: { type: 'string', default: 'http://localhost:4200/cookbook/book' },
-    out: { type: 'string', default: join(homedir(), 'Desktop', 'My Cookbooks.pdf') },
+    // Named after the cookbook when not given.
+    out: { type: 'string' },
   },
 });
 
@@ -58,7 +61,7 @@ async function destinationPages(bytes) {
   return pages;
 }
 
-async function stampFooters(bytes) {
+async function stampFooters(bytes, title) {
   const doc = await PDFDocument.load(bytes);
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const size = 9;
@@ -69,14 +72,30 @@ async function stampFooters(bytes) {
     // Centred in the bottom margin, which the app's @page rule makes 1.5cm.
     page.drawText(label, { x: (page.getWidth() - width) / 2, y: 20, size, font, color: FOOTER_INK });
   });
-  doc.setTitle('My Cookbooks');
+  doc.setTitle(title);
   return { bytes: await doc.save(), pages: doc.getPageCount() };
+}
+
+/** The page's cookbook chooser, as "  id  (Name, n recipes)" lines. */
+async function listCookbooks(page) {
+  await page
+    .waitForSelector('.book-choose', { timeout: 30_000 })
+    .catch(() => fail('The cookbooks never loaded. Is the API running on 3152?'));
+  const choices = await page.$$eval('[data-cookbook-id]', (links) =>
+    links.map((a) => ({
+      id: a.getAttribute('data-cookbook-id'),
+      name: a.querySelector('.choose-name')?.textContent.trim(),
+      count: a.querySelector('.choose-count')?.textContent.trim(),
+    })),
+  );
+  return choices.map((c) => `  ${c.id}  (${c.name}, ${c.count})`).join('\n');
 }
 
 async function main() {
   if (!ORDERS.includes(args.order)) fail(`--order must be one of ${ORDERS.join(', ')}.`);
   const url = new URL(args.url);
   url.searchParams.set('order', args.order);
+  if (args.cookbook) url.searchParams.set('cookbook', args.cookbook);
 
   const browser = await chromium
     .launch({ channel: 'chrome', headless: true })
@@ -87,10 +106,18 @@ async function main() {
     await page
       .goto(url.href, { waitUntil: 'load' })
       .catch(() => fail(`Could not open ${url.href}. Is the app running (npm start)?`));
-    await page
-      .waitForSelector('[data-book-ready]', { timeout: 30_000 })
-      .catch(() => fail('The book never finished loading. Is the API running on 3152?'));
+
+    // A book is one cookbook; with none named, say which there are.
+    if (!args.cookbook) {
+      fail(`Choose a cookbook with --cookbook <id>:\n${await listCookbooks(page)}`);
+    }
+    const found = await Promise.race([
+      page.waitForSelector('[data-book-ready]', { timeout: 120_000 }).then(() => true),
+      page.waitForSelector('.choose-problem', { timeout: 120_000 }).then(() => false),
+    ]).catch(() => fail('The book never finished loading. Is the API running on 3152?'));
+    if (!found) fail(`There is no cookbook "${args.cookbook}". Choose one of:\n${await listCookbooks(page)}`);
     await page.evaluate(() => document.fonts.ready);
+    const title = await page.$eval('[data-book-ready]', (el) => el.getAttribute('data-book-title'));
 
     const anchors = await page.$$eval('[data-book-page]', (els) =>
       els.map((el) => el.getAttribute('data-book-page')),
@@ -117,10 +144,11 @@ async function main() {
     }
     if (!printed) fail('The contents kept moving the recipes to other pages; no PDF was written.');
 
-    const book = await stampFooters(printed);
-    const out = resolve(args.out.replace(/^~(?=$|\/)/, homedir()));
+    const book = await stampFooters(printed, title);
+    const name = `${title.replace(/[\/:*?"<>|]+/g, '-')}.pdf`;
+    const out = resolve((args.out ?? join(homedir(), 'Desktop', name)).replace(/^~(?=$|\/)/, homedir()));
     await writeFile(out, book.bytes);
-    console.log(`${anchors.length} recipes on ${book.pages} pages, arranged by ${args.order}.`);
+    console.log(`${title}: ${anchors.length} recipes on ${book.pages} pages, arranged by ${args.order}.`);
     console.log(`Wrote ${out}`);
   } finally {
     await browser.close();

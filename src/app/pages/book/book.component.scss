@@ -11,6 +11,81 @@
     padding: var(--pad-section) var(--pad-section) 0;
 }
 
+.tools-back {
+    flex: 1 1 100%;
+    color: var(--ink-3);
+    font-size: var(--text-small);
+    font-weight: 600;
+
+    &:hover {
+        color: var(--navy);
+    }
+}
+
+// Which cookbook to print: a short list, since nothing else is drawn until one is chosen.
+.book-choose {
+    max-width: var(--max-list);
+    margin: 0 auto;
+    padding: var(--pad-section);
+
+    h1 {
+        margin: 0 0 8px;
+        font-size: var(--size-detail-h1);
+    }
+}
+
+.choose-lede {
+    margin: 0 0 20px;
+    color: var(--ink-3);
+    font-size: var(--text-body);
+}
+
+.choose-problem {
+    margin: 0 0 12px;
+    color: var(--mat-sys-error);
+    font-size: var(--text-small);
+}
+
+.choose-list {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+    list-style: none;
+
+    a {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: var(--touch-large);
+        padding: 14px 4px;
+        border-bottom: 1px solid var(--rule);
+        color: var(--ink);
+        text-decoration: none;
+
+        &:hover .choose-name {
+            color: var(--navy);
+            text-decoration: underline;
+        }
+    }
+}
+
+.choose-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.choose-count {
+    flex: none;
+    color: var(--ink-3);
+    font-size: var(--text-small);
+}
+
+.choose-empty {
+    padding: 14px 4px;
+    color: var(--ink-3);
+}
+
 .book-orders {
     display: flex;
     flex-wrap: wrap;
@@ -145,7 +220,8 @@
 
 @media print {
     .book-tools,
-    .book-loading {
+    .book-loading,
+    .book-choose {
         display: none;
     }
 

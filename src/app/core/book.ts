@@ -2,12 +2,14 @@ import { facetTags } from './facets';
 import { Recipe } from './model/recipes.model';
 import { tagLabel } from './stores/recipe.store';
 
-/** How the printed cookbook is arranged: one A–Z run, or grouped. */
-export type BookOrder = 'title' | 'cookbook' | 'meal' | 'cuisine';
+/**
+ * How a printed cookbook is arranged: one A–Z run, or grouped. A book is one
+ * cookbook, so there is no grouping by cookbook.
+ */
+export type BookOrder = 'title' | 'meal' | 'cuisine';
 
 export const BOOK_ORDERS: readonly { id: BookOrder; label: string }[] = [
   { id: 'title', label: 'A–Z' },
-  { id: 'cookbook', label: 'Cookbook' },
   { id: 'meal', label: 'Meal' },
   { id: 'cuisine', label: 'Cuisine' },
 ];
@@ -28,27 +30,26 @@ const byTitle = (a: Recipe, b: Recipe) =>
   a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
 
 /**
- * The cookbook's sections, in print order. Each recipe is printed once: under
- * its first cookbook on the shelf, or its first meal or cuisine in the order
- * the library's filters use, with anything unplaced in a last "Other" section.
- * Component recipes are left out, since each prints inside its parent.
+ * The recipes a cookbook's book prints: those filed in it, less the component
+ * recipes, which each print inside their parent.
  */
-export function bookSections(
-  recipes: readonly Recipe[],
-  order: BookOrder,
-  cookbooks: readonly { id: string; name: string }[],
-): BookSection[] {
+export function bookRecipes(recipes: readonly Recipe[], cookbookId: string): Recipe[] {
+  return recipes.filter((r) => !r.component && r.cookbooks.includes(cookbookId));
+}
+
+/**
+ * The book's sections, in print order. Each recipe is printed once: under its
+ * first meal or cuisine in the order the library's filters use, with anything
+ * unplaced in a last "Other" section. Component recipes are left out, since
+ * each prints inside its parent.
+ */
+export function bookSections(recipes: readonly Recipe[], order: BookOrder): BookSection[] {
   const printable = recipes.filter((r) => !r.component);
   if (order === 'title') return [{ label: null, recipes: [...printable].sort(byTitle) }];
 
   // Group keys in the order their sections should run, with their headings.
-  const groups: { key: string; label: string }[] =
-    order === 'cookbook'
-      ? cookbooks.map((c) => ({ key: c.id, label: c.name }))
-      : facetTags(order).map((tag) => ({ key: tag, label: tagLabel(tag) }));
-
-  const keysOf = (r: Recipe): string[] =>
-    order === 'cookbook' ? r.cookbooks : r.tags.map((t) => t.toLowerCase());
+  const groups = facetTags(order).map((tag) => ({ key: tag, label: tagLabel(tag) }));
+  const keysOf = (r: Recipe): string[] => r.tags.map((t) => t.toLowerCase());
 
   const placed = new Map<string, Recipe[]>();
   for (const recipe of printable) {

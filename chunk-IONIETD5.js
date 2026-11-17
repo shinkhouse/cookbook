@@ -1,1 +1,0 @@
-import{z as n}from"./chunk-VED6SDNW.js";function r(t,o){return`${n.apiBase}/photos?src=${encodeURIComponent(t)}&w=${o}`}function i(t,o){return o.map(e=>`${r(t,e)} ${e}w`).join(", ")}function s(t){return!!t&&/^https?:\/\//i.test(t)}export{r as a,i as b,s as c};

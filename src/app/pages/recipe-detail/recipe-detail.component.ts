@@ -83,6 +83,24 @@ export class RecipeDetailComponent {
   protected readonly cookbookSaving = signal<string | null>(null);
   protected readonly cookbookError = signal('');
   private readonly cookbookRevision = signal(0);
+  /**
+   * The credit line. Book recipes carry it as their subtitle already; the
+   * contributor stands in when a recipe has only that.
+   */
+  protected readonly credit = computed(() => {
+    const r = this.recipe();
+    return r?.subtitle || (r?.contributor ? `From ${r.contributor}` : '');
+  });
+
+  /** "Goddard Family Cookbook, page 112", for a recipe from a printed book. */
+  protected readonly printedSource = computed(() => {
+    const r = this.recipe();
+    if (!r?.sourcePage) return '';
+    // The import filed it in its book first; a later filing is appended after.
+    const book = this.cookbooks.byId(r.cookbooks[0] ?? '');
+    return book ? `${book.name}, page ${r.sourcePage}` : `Page ${r.sourcePage} of the printed book`;
+  });
+
   protected readonly cookbookRows = computed(() =>
     this.cookbooks.cookbooks().map((book) => ({ book, key: `${book.id}/${this.cookbookRevision()}` })),
   );

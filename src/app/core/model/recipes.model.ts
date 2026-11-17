@@ -65,6 +65,13 @@ export interface Recipe {
   /** Where the recipe was imported from. An http(s) URL; the page links to it. */
   sourceUrl?: string;
   /**
+   * For a recipe imported from a printed cookbook, the page it is on in that
+   * book: the recipe's first cookbook, the one the import filed it in.
+   */
+  sourcePage?: number;
+  /** Who gave the recipe to the printed cookbook, as the book credits them. */
+  contributor?: string;
+  /**
    * True for a sub-recipe ("the sauce") that exists only to be embedded in a
    * parent. It is a full recipe document and is listed and searchable like any
    * other recipe; `componentsOf` is how a parent finds it.

@@ -11,6 +11,7 @@ import {
 } from '../../core/testing/fake-repositories';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { Recipes } from '../../core/mock/recipes.mock';
+import { Recipe } from '../../core/model/recipes.model';
 import { photoSrcset, photoUrl } from '../../core/photos';
 import { RecipeDetailComponent } from './recipe-detail.component';
 
@@ -215,6 +216,48 @@ describe('RecipeDetailComponent source link', () => {
 
   it('has no Source link when it is not set', async () => {
     expect(source(await render())).toBeUndefined();
+  });
+});
+
+describe('RecipeDetailComponent printed source', () => {
+  async function render(extra: Partial<Recipe>, books = [{ id: 'goddard', name: 'Goddard Family Cookbook' }]): Promise<HTMLElement> {
+    const base = Recipes.find((r) => r.slug === SLUG)!;
+    const { subtitle: _, ...plain } = base;
+    const fake = new FakeRecipeRepository([{ ...plain, ...extra }]);
+    TestBed.configureTestingModule({
+      imports: [RecipeDetailComponent],
+      providers: [provideRouter([]), ...provideFakeRecipes(fake), ...provideFakeCookbooks(new FakeCookbookRepository(books))],
+    });
+    await TestBed.inject(RecipeStore).whenLoaded();
+    await TestBed.inject(CookbookStore).whenLoaded();
+    const fixture = TestBed.createComponent(RecipeDetailComponent);
+    fixture.componentRef.setInput('slug', SLUG);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+  const page = (el: HTMLElement) => el.querySelector('.detail-page')?.textContent?.trim();
+  const credit = (el: HTMLElement) => el.querySelector('.detail-credit')?.textContent?.trim();
+
+  it('names the book and the page the recipe is printed on', async () => {
+    const el = await render({ sourcePage: 112, cookbooks: ['goddard', 'sam'] });
+    expect(page(el)).toBe('Goddard Family Cookbook, page 112');
+  });
+
+  it('still gives the page when the book is no longer in the app', async () => {
+    expect(page(await render({ sourcePage: 7, cookbooks: ['gone'] }))).toBe('Page 7 of the printed book');
+  });
+
+  it('shows no page for a recipe that has none', async () => {
+    expect(page(await render({ cookbooks: ['goddard'] }))).toBeUndefined();
+  });
+
+  it('credits the contributor when there is no credit line', async () => {
+    expect(credit(await render({ contributor: 'Lisa Reisig' }))).toBe('From Lisa Reisig');
+  });
+
+  it('keeps the credit line when there is one', async () => {
+    const el = await render({ contributor: 'Lisa Reisig', subtitle: 'From Lisa, daughter of Elda Mae' });
+    expect(credit(el)).toBe('From Lisa, daughter of Elda Mae');
   });
 });
 

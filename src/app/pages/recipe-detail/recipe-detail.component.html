@@ -23,8 +23,12 @@
 
       <h1>{{ r.title }}</h1>
 
-      @if (r.subtitle) {
-        <p class="credit detail-credit">{{ r.subtitle }}</p>
+      @if (credit()) {
+        <p class="credit detail-credit">{{ credit() }}</p>
+      }
+
+      @if (printedSource()) {
+        <p class="detail-source detail-page">{{ printedSource() }}</p>
       }
 
       @if (r.sourceUrl) {

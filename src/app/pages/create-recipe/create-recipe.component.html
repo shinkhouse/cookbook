@@ -219,16 +219,29 @@
         <section class="details" id="details" aria-label="Details">
           <div class="field">
             <span class="field-label">Photo</span>
-            <div class="photo-frame" [class.has-photo]="photo() && !photoBroken()">
-              @if (photo() && !photoBroken()) {
-                <img [src]="photo()" alt="" (error)="photoBroken.set(true)" />
-              } @else {
-                <p class="photo-empty">
-                  <mat-icon fontIcon="image" aria-hidden="true" />
-                  {{ photo() ? 'The photo didn’t load' : 'No photo yet' }}
-                </p>
-              }
-              <div class="photo-actions">
+            @if (photo() && !photoBroken()) {
+              <div
+                class="photo-frame"
+                [class.is-focusing]="focusing()"
+                (click)="setFocus($event)"
+              >
+                <img [src]="photo()" alt="" [style.object-position]="focusPosition()" (error)="photoBroken.set(true)" />
+                @if (focusing()) {
+                  <p class="focus-hint">Click what the crop should keep in view</p>
+                } @else if (photoFocus(); as f) {
+                  <span class="focus-dot" [style.left.%]="f.x" [style.top.%]="f.y" aria-hidden="true"></span>
+                }
+                <div class="photo-actions" (click)="$event.stopPropagation()">
+                  <button type="button" class="btn-chip" (click)="photoDraft.set(photo())">Replace</button>
+                  <button type="button" class="btn-chip" [class.is-on]="focusing()" (click)="focusing.set(!focusing())">
+                    {{ focusing() ? 'Cancel' : 'Set focus' }}
+                  </button>
+                  <button type="button" class="btn-chip" (click)="removePhoto()">Remove</button>
+                </div>
+              </div>
+            } @else {
+              <div class="photo-none">
+                <span>{{ photo() ? 'The photo didn’t load' : 'No photo yet' }}</span>
                 <button type="button" class="btn-chip" (click)="photoDraft.set(photo())">
                   {{ photo() ? 'Replace' : 'Add a photo' }}
                 </button>
@@ -236,7 +249,7 @@
                   <button type="button" class="btn-chip" (click)="removePhoto()">Remove</button>
                 }
               </div>
-            </div>
+            }
             @if (photoDraft() !== null) {
               <div class="photo-url">
                 <input
@@ -264,9 +277,7 @@
             />
           </label>
           @if (editing()) {
-            <p class="hint slug-hint">
-              <mat-icon fontIcon="lock" aria-hidden="true" />/{{ slug() }} — stays the same if you rename
-            </p>
+            <p class="hint slug-hint">/{{ slug() }} — stays the same if you rename</p>
           } @else if (slug()) {
             <p class="hint slug-hint">Will live at /{{ slug() }}</p>
           }
@@ -286,13 +297,13 @@
               }
             </div>
             <div class="field">
-              <label class="field-label" for="source">Source link</label>
+              <label class="field-label" for="source">Source link <span class="optional">· optional</span></label>
               <input
                 id="source"
                 type="url"
                 [value]="sourceUrl()"
-                (input)="sourceUrl.set($any($event.target).value.trim())"
-                placeholder="https://"
+                (input)="setSource($any($event.target).value)"
+                placeholder="Paste a link — the credit fills in from it"
                 [attr.aria-invalid]="sourceValid() ? null : 'true'"
               />
               @if (!sourceValid()) {
@@ -301,20 +312,74 @@
             </div>
           </div>
 
+          <div class="field-row field-row-book">
+            <div class="field">
+              <span class="field-label" id="cookbooks-label">Cookbooks</span>
+              <div class="cookbook-picker">
+                <button
+                  type="button"
+                  class="picker-button"
+                  aria-labelledby="cookbooks-label"
+                  [attr.aria-expanded]="cookbooksOpen()"
+                  (click)="cookbooksOpen.set(!cookbooksOpen())"
+                >
+                  <span class="picker-text" [class.is-empty]="cookbookIds().length === 0">{{ cookbookSummary() }}</span>
+                  <mat-icon [fontIcon]="cookbooksOpen() ? 'expand_less' : 'expand_more'" aria-hidden="true" />
+                </button>
+                @if (cookbooksOpen()) {
+                  <ul class="picker-panel" role="group" aria-labelledby="cookbooks-label">
+                    @for (c of cookbooks.cookbooks(); track c.id) {
+                      <li>
+                        <label class="picker-option">
+                          <input type="checkbox" [checked]="cookbookIds().includes(c.id)" (change)="toggleCookbook(c.id)" />
+                          {{ c.name }}
+                        </label>
+                      </li>
+                    } @empty {
+                      <li class="hint">No cookbooks yet.</li>
+                    }
+                  </ul>
+                }
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label" for="page">Page <span class="optional">· optional</span></label>
+              <input
+                id="page"
+                type="number"
+                min="1"
+                [value]="sourcePage() ?? ''"
+                (input)="setPage($any($event.target).value)"
+                placeholder="In the printed book"
+              />
+            </div>
+          </div>
+
           <div class="field-row field-row-3">
             <div class="field">
               <label class="field-label" for="makes">Makes</label>
-              <div class="stepper">
-                <button type="button" (click)="stepServings(-1)" [disabled]="servings() <= 1" aria-label="Fewer">−</button>
+              <div class="makes">
+                <div class="stepper">
+                  <button type="button" (click)="stepServings(-1)" [disabled]="servings() <= 1" aria-label="Fewer">−</button>
+                  <input
+                    id="makes"
+                    type="number"
+                    min="1"
+                    [value]="servings()"
+                    (input)="servings.set(+$any($event.target).value || 1)"
+                  />
+                  <button type="button" (click)="stepServings(1)" aria-label="More">+</button>
+                </div>
                 <input
-                  id="makes"
-                  type="number"
-                  min="1"
-                  [value]="servings()"
-                  (input)="servings.set(+$any($event.target).value || 1)"
+                  type="text"
+                  class="makes-unit"
+                  aria-label="Of what"
+                  [value]="servingsUnit()"
+                  (input)="servingsUnit.set($any($event.target).value)"
+                  placeholder="servings"
                 />
-                <button type="button" (click)="stepServings(1)" aria-label="More">+</button>
               </div>
+              <p class="hint">Servings, loaves, dozen, bars…</p>
             </div>
             <label class="field">
               <span class="field-label">Duration</span>
@@ -326,12 +391,12 @@
               />
             </label>
             <label class="field">
-              <span class="field-label">Card blurb <span class="optional">· optional</span></span>
+              <span class="field-label">Card blurb</span>
               <input
                 type="text"
                 [value]="blurb()"
                 (input)="blurb.set($any($event.target).value)"
-                placeholder="One line for the library card"
+                placeholder="Optional"
               />
             </label>
           </div>
@@ -432,8 +497,11 @@
             <button type="button" class="btn-chip" (click)="pasteOpen.set(!pasteOpen())" [attr.aria-expanded]="pasteOpen()">
               Paste several
             </button>
+            <button type="button" class="btn-chip" (click)="addHeading(part())">
+              <mat-icon fontIcon="add" aria-hidden="true" /> Heading
+            </button>
             <button type="button" class="btn-chip" (click)="addIngredient(part())">
-              <mat-icon fontIcon="add" aria-hidden="true" /> Add
+              <mat-icon fontIcon="add" aria-hidden="true" /> Ingredient
             </button>
           </div>
 
@@ -443,7 +511,7 @@
                 #pasteBox
                 rows="5"
                 aria-label="Ingredients, one per line"
-                placeholder="2 tbsp olive oil&#10;1 onion, chopped&#10;Salt and pepper"
+                placeholder="2 tbsp olive oil&#10;1 onion, chopped&#10;Dressing:&#10;1 cup mayonnaise"
               ></textarea>
               <div class="paste-actions">
                 <button type="button" class="btn-outline" (click)="pasteIngredients(pasteBox.value, part())">Add these</button>
@@ -459,6 +527,28 @@
           }
           <ul class="ing-list">
             @for (ing of listOf(part()); track $index; let i = $index; let last = $last; let first = $first) {
+              @if (headingAt(listOf(part()), i); as heading) {
+                <li class="heading-row">
+                  <span class="heading-tag" aria-hidden="true">Heading</span>
+                  <input
+                    type="text"
+                    class="heading-input"
+                    [id]="'heading-' + (part() ?? 'main') + '-' + i"
+                    aria-label="Heading"
+                    [value]="heading"
+                    (change)="renameHeading(i, $any($event.target).value, part())"
+                  />
+                  <button
+                    type="button"
+                    class="row-menu"
+                    (click)="removeHeading(i, part())"
+                    [attr.aria-label]="'Remove the heading ' + heading"
+                    title="Remove the heading (its rows stay)"
+                  >
+                    <mat-icon fontIcon="close" aria-hidden="true" />
+                  </button>
+                </li>
+              }
               <li
                 class="ing-item"
                 [id]="rowId(part(), i)"
@@ -530,6 +620,11 @@
               <li class="empty-row hint">No ingredients yet.</li>
             }
           </ul>
+          @if (hasHeadings(part())) {
+            <p class="hint list-hint">
+              Headings group ingredients inside this recipe. Use “Add a part” when a group has its own steps.
+            </p>
+          }
         </section>
 
         <mat-menu #ingredientMenu="matMenu" xPosition="before">
@@ -557,7 +652,7 @@
           </div>
           <ol class="step-list">
             @for (step of stepsOf(part()); track $index; let i = $index; let last = $last; let first = $first) {
-              <li class="step-row">
+              <li class="step-row" [id]="stepId(part(), i)">
                 <span class="step-num" aria-hidden="true">{{ i + 1 }}</span>
                 <textarea
                   class="grow-text"
@@ -577,6 +672,15 @@
                 >
                   <mat-icon fontIcon="more_horiz" aria-hidden="true" />
                 </button>
+                @if (stepChecksByRow().get(stepId(part(), i)); as check) {
+                  <div class="check-band step-band">
+                    <span class="check-text">{{ check.message }}</span>
+                    @if (check.fix; as fix) {
+                      <button type="button" class="check-fix" (click)="applyStepFix(check)">{{ fix.label }}</button>
+                    }
+                    <button type="button" class="check-keep" (click)="keep(check.id)">Keep</button>
+                  </div>
+                }
               </li>
             } @empty {
               <li class="empty-row hint">No steps yet.</li>
@@ -678,7 +782,7 @@
           <div class="preview-card" aria-hidden="true">
             <div class="preview-photo">
               @if (photo() && !photoBroken()) {
-                <img [src]="photo()" alt="" />
+                <img [src]="photo()" alt="" [style.object-position]="focusPosition()" />
               } @else {
                 <app-no-photo />
               }
@@ -694,17 +798,6 @@
               <span class="preview-cook">Cook this</span>
             </div>
           </div>
-          @if (!editing() && cookbooks.cookbooks().length > 0) {
-            <label class="file-in">
-              <span class="field-label">Save into</span>
-              <select class="file-in-select" (change)="fileIn.set($any($event.target).value)">
-                <option value="" [selected]="!fileIn()">Not in a cookbook</option>
-                @for (c of cookbooks.cookbooks(); track c.id) {
-                  <option [value]="c.id" [selected]="c.id === fileIn()">{{ c.name }}</option>
-                }
-              </select>
-            </label>
-          }
         </section>
 
         <section class="checklist" id="checklist" aria-labelledby="checklist-title">
@@ -712,7 +805,7 @@
             @if (!canSave()) {
               Not ready to save
             } @else if (editing() && checklist().length > 0) {
-              Worth a look before saving
+              Worth a look
             } @else {
               Ready to save
             }
@@ -724,8 +817,8 @@
 
           <ul class="checklist-items">
             @for (item of requirements(); track item.text) {
-              <li class="req" [class.is-missing]="!item.ok">
-                <mat-icon [fontIcon]="item.ok ? 'check' : 'close'" aria-hidden="true" />
+              <li class="req" [class.is-missing]="item.ok === false" [class.is-aside]="item.ok === null">
+                <mat-icon [fontIcon]="item.ok ? 'check' : item.ok === null ? 'radio_button_unchecked' : 'close'" aria-hidden="true" />
                 <span>
                   {{ item.text }}
                   @if (item.aside) {
@@ -747,7 +840,12 @@
             @for (item of checklist(); track item.id) {
               <li class="check-item">
                 <span class="bang" aria-hidden="true">!</span>
-                <button type="button" class="check-link" (click)="show(item)">{{ item.text }}</button>
+                <span>
+                  <button type="button" class="check-link" (click)="show(item)">{{ item.text }}</button>
+                  @if (item.action; as action) {
+                    <button type="button" class="check-action" (click)="action.run()">{{ action.label }}</button>
+                  }
+                </span>
               </li>
             }
           </ul>

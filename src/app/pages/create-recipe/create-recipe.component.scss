@@ -300,6 +300,12 @@ textarea {
         color: var(--navy);
     }
 
+    &.is-on {
+        border-color: var(--navy);
+        background: var(--navy);
+        color: var(--paper);
+    }
+
     mat-icon {
         width: 16px;
         height: 16px;
@@ -536,7 +542,104 @@ textarea {
 }
 
 .field-row-3 {
-    grid-template-columns: 150px 150px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.field-row-book {
+    grid-template-columns: minmax(0, 1fr) 168px;
+}
+
+.makes {
+    display: grid;
+    grid-template-columns: 116px minmax(0, 1fr);
+    gap: 8px;
+}
+
+// A multi-select for the cookbooks: a button like a select, opening a list of boxes.
+.cookbook-picker {
+    position: relative;
+}
+
+.picker-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 10px 8px 12px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-card);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: var(--text-small);
+    text-align: left;
+    cursor: pointer;
+
+    &[aria-expanded="true"] {
+        border-color: var(--navy);
+        outline: 2px solid var(--navy-tint-edge);
+    }
+
+    mat-icon {
+        flex: none;
+        width: 20px;
+        height: 20px;
+        margin-left: auto;
+        font-size: 20px;
+        color: var(--ink-3);
+    }
+}
+
+.picker-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &.is-empty {
+        color: var(--ink-4);
+    }
+}
+
+.picker-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    z-index: 10;
+    margin: 0;
+    padding: 6px;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    background: var(--paper);
+    box-shadow: var(--shadow-lift);
+    list-style: none;
+
+    .hint {
+        margin: 6px 8px;
+    }
+}
+
+.picker-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: var(--radius-card);
+    color: var(--ink);
+    font-size: var(--text-small);
+    cursor: pointer;
+
+    &:hover {
+        background: var(--surface);
+    }
+
+    input {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        accent-color: var(--navy);
+    }
 }
 
 .label-row {
@@ -566,6 +669,56 @@ textarea {
         height: 100%;
         object-fit: cover;
     }
+}
+
+// No photo: a quiet line to add one, not a big empty frame.
+.photo-none {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 96px;
+    border: 1px dashed var(--rule-strong);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink-3);
+    font-size: var(--text-small);
+}
+
+.photo-frame.is-focusing {
+    cursor: crosshair;
+    outline: 2px solid var(--navy);
+    outline-offset: 2px;
+}
+
+.focus-hint {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    margin: 0;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    background: rgb(22 32 46 / 0.75);
+    color: var(--paper);
+    font-size: var(--text-label);
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+// Shown on hover only, so a set focus does not sit on the photo as a mark.
+.photo-frame:not(:hover) .focus-dot {
+    opacity: 0;
+}
+
+.focus-dot {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--paper);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgb(22 32 46 / 0.4);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
 }
 
 .photo-empty {
@@ -843,7 +996,7 @@ textarea {
 .ing-head,
 .ing-row {
     display: grid;
-    grid-template-columns: 18px 96px minmax(0, 1fr) 112px 32px;
+    grid-template-columns: 18px 118px minmax(0, 1fr) 112px 32px;
     gap: 6px;
     align-items: center;
 }
@@ -869,6 +1022,50 @@ textarea {
     margin: 0;
     padding: 0;
     list-style: none;
+}
+
+// A heading over the rows that share its group: "DRESSING".
+.heading-row {
+    display: grid;
+    grid-template-columns: 18px auto minmax(0, 1fr) 32px;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+    padding-bottom: 2px;
+    border-bottom: 2px solid var(--navy);
+
+    &:first-child {
+        margin-top: 0;
+    }
+}
+
+.heading-tag {
+    grid-column: 2;
+    color: var(--ink-4);
+    font-size: var(--text-caption);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.heading-input {
+    padding: 6px 4px !important;
+    border-color: transparent !important;
+    background: transparent !important;
+    color: var(--navy) !important;
+    font-size: 1rem !important;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+
+    &:focus-visible {
+        border-color: var(--navy) !important;
+        background: var(--paper) !important;
+    }
+}
+
+.list-hint {
+    margin-top: 12px;
 }
 
 .ing-item {
@@ -1005,6 +1202,11 @@ textarea {
     grid-template-columns: 26px minmax(0, 1fr) 32px;
     gap: 10px;
     align-items: start;
+}
+
+.step-band {
+    grid-column: 2 / -1;
+    margin: 0;
 }
 
 .step-num {
@@ -1231,6 +1433,27 @@ textarea {
     }
 }
 
+.req.is-aside {
+    color: var(--ink-3);
+
+    mat-icon {
+        color: var(--ink-4);
+    }
+}
+
+.check-action {
+    margin-left: 6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--navy);
+    font-family: var(--font);
+    font-size: var(--text-label);
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 .req.is-missing {
     color: var(--problem-ink);
 
@@ -1368,6 +1591,14 @@ textarea {
         grid-template-columns: 1fr 1fr;
     }
 
+    .field-row-book {
+        grid-template-columns: minmax(0, 1fr) 110px;
+    }
+
+    .field-row-3 > :first-child {
+        grid-column: 1 / -1;
+    }
+
     .field-row-3 > :last-child {
         grid-column: 1 / -1;
     }
@@ -1386,7 +1617,7 @@ textarea {
 
     // Amount and name on top; the aisle and the menu under them.
     .ing-row {
-        grid-template-columns: 16px 84px minmax(0, 1fr) 32px;
+        grid-template-columns: 16px 104px minmax(0, 1fr) 32px;
         grid-template-areas:
             "drag amount name menu"
             ". aisle aisle .";

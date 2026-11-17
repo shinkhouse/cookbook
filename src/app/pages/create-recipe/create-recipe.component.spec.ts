@@ -7,10 +7,10 @@ import {
   provideFakeRecipes,
 } from '../../core/testing/fake-repositories';
 import { ImportClient, ImportPreview } from '../../core/import-client';
-import { Recipe } from '../../core/model/recipes.model';
+import { Ingredient, Recipe } from '../../core/model/recipes.model';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
-import { BOOKMARKLET_HREF, CreateRecipeComponent, RowCheck, parseAmount } from './create-recipe.component';
+import { BOOKMARKLET_HREF, CreateRecipeComponent, RowCheck, StepRowCheck, parseAmount } from './create-recipe.component';
 
 const CONFLICT = 'A recipe with that name already exists. Change the title and try again.';
 
@@ -478,7 +478,7 @@ describe('CreateRecipeComponent edit mode', () => {
 type Section = {
   slug: string | null;
   title: string;
-  ingredients: { qty: number | null; unit: string; name: string; aisle: string }[];
+  ingredients: { qty: number | null; unit: string; name: string; aisle: string; group?: string }[];
   steps: string[];
 };
 type Full = {
@@ -603,9 +603,11 @@ describe('CreateRecipeComponent import and sections', () => {
     expect(page.time()).toBe('1 hr');
     expect(page.tagsText()).toBe('dinner, soup');
     expect(page.steps()).toEqual(['Sweat the leeks.', 'Simmer.']);
-    expect(page.ingredients().map((i) => [i.qty, i.unit, i.name])).toEqual([
-      [2, 'tbsp', 'olive oil'],
-      [3, '', 'leeks'],
+    expect(page.ingredients().map((i) => [i.qty, i.unit, i.name, i.group])).toEqual([
+      [2, 'tbsp', 'olive oil', undefined],
+      [3, '', 'leeks', undefined],
+      [2, 'slice', 'bread', 'For the croutons'],
+      [1, 'cup', 'cream', 'For the cream'],
     ]);
     const draft = page.draft();
     expect(draft.sourceUrl).toBe('https://example.com/soup');
@@ -618,18 +620,15 @@ describe('CreateRecipeComponent import and sections', () => {
     expect(page.tagsText()).toBe('main dish, pasta, chicken');
   });
 
-  it('turns each named group into a section draft with no steps', async () => {
+  it('keeps each named group as a heading over its rows, not a part', async () => {
     await setup();
     await importIt();
-    const sections = page.sections();
-    expect(sections.map((s) => s.title)).toEqual(['For the croutons', 'For the cream']);
-    expect(sections.every((s) => s.slug === null && s.steps.length === 0)).toBeTrue();
-    expect(sections[1].ingredients.map((i) => [i.qty, i.unit, i.name])).toEqual([[1, 'cup', 'cream']]);
-    expect([...el().querySelectorAll('.part-tab')].map((t) => t.textContent?.trim())).toEqual([
-      'Main recipe',
+    expect(page.sections()).toEqual([]);
+    expect([...el().querySelectorAll<HTMLInputElement>('.heading-input')].map((h) => h.value)).toEqual([
       'For the croutons',
       'For the cream',
     ]);
+    expect(el().querySelector('.checklist')?.textContent).toContain('2 headings kept');
   });
 
   it('saves nothing by importing', async () => {
@@ -937,7 +936,7 @@ describe('CreateRecipeComponent import and sections', () => {
     expect(page.canSave()).toBeTrue();
   });
 
-  it('keeps several named headings as sections and can save with ingredients only there', async () => {
+  it('keeps several named groups as headings and can save', async () => {
     await setup();
     await importIt({
       ...PREVIEW,
@@ -946,8 +945,11 @@ describe('CreateRecipeComponent import and sections', () => {
         { name: 'Filling', lines: ['1 cup cheese'] },
       ],
     });
-    expect(page.ingredients()).toEqual([]);
-    expect(page.sections().map((x) => x.title)).toEqual(['Dough', 'Filling']);
+    expect(page.ingredients().map((i) => [i.name, i.group])).toEqual([
+      ['flour', 'Dough'],
+      ['cheese', 'Filling'],
+    ]);
+    expect(page.sections()).toEqual([]);
     expect(page.canSave()).toBeTrue();
   });
 
@@ -1032,15 +1034,16 @@ describe('CreateRecipeComponent import and sections', () => {
     );
   });
 
-  it('caps sections at 20, on import with a notice and on Add section', async () => {
+  it('keeps every imported group, and stops Add a part at 20 parts', async () => {
     await setup();
     const groups = Array.from({ length: 23 }, (_, i) => ({ name: `Part ${i}`, lines: ['1 egg'] }));
     await importIt({ ...PREVIEW, ingredientGroups: [{ name: null, lines: ['1 leek'] }, ...groups] });
+    expect(page.ingredients().length).toBe(24);
+    expect(page.sections()).toEqual([]);
+    for (let n = 0; n < 21; n++) page.addSection();
+    fixture.detectChanges();
     expect(page.sections().length).toBe(20);
-    expect(page.notice()).toContain('3 ingredient groups were left out');
     expect(page.atSectionLimit()).toBeTrue();
-    page.addSection();
-    expect(page.sections().length).toBe(20);
     const btn = Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.includes('Add a part'));
     expect(btn?.disabled).toBeTrue();
   });
@@ -1048,9 +1051,10 @@ describe('CreateRecipeComponent import and sections', () => {
   it('keeps a field the user edited after the import that wrote it', async () => {
     await setup();
     await importIt();
-    page.setSectionTitle(0, 'Croutons');
+    page.blurb.set('Typed by hand.');
+    (page as unknown as { desc: { set(v: string): void } }).desc.set('Warming, and quick.');
     page.onPaste('Toast\n\nIngredients\n1 slice bread\n\nSteps\nToast it.');
-    expect(page.sections().map((x) => x.title)).toEqual(['Croutons', 'For the cream']);
+    expect(page.desc()).toBe('Warming, and quick.');
     expect(page.draft().sourceUrl).toBeUndefined();
   });
 
@@ -1147,7 +1151,7 @@ describe('CreateRecipeComponent filing and duplicates', () => {
     title: { set(v: string): void };
     ingredients: { set(v: unknown[]): void };
     sourceUrl: { set(v: string): void };
-    fileIn: { set(v: string): void; (): string };
+    cookbookIds: { set(v: string[]): void; (): string[] };
     draft(): Recipe;
     save(): Promise<void>;
     setTab(tab: string): void;
@@ -1176,7 +1180,7 @@ describe('CreateRecipeComponent filing and duplicates', () => {
   let page: Filing;
   let fake: FakeRecipeRepository;
 
-  async function setup(shelf: string[] = [], lastFiled?: string): Promise<HTMLElement> {
+  async function setup(shelf: string[] = [], lastFiled?: string | string[]): Promise<HTMLElement> {
     localStorage.clear();
     if (lastFiled) localStorage.setItem('cookbook.fileIn', JSON.stringify(lastFiled));
     fake = new FakeRecipeRepository([STORED]);
@@ -1201,41 +1205,55 @@ describe('CreateRecipeComponent filing and duplicates', () => {
   }
   afterEach(() => localStorage.clear());
 
-  const select = (el: HTMLElement) => el.querySelector<HTMLSelectElement>('select.file-in-select')!;
+  const picker = (el: HTMLElement) => el.querySelector<HTMLButtonElement>('.picker-button')!;
   const warning = (el: HTMLElement) =>
     el.querySelector('.duplicate span:last-child')?.textContent?.replace(/\s+/g, ' ').trim();
 
   it('files a new recipe in the cookbook open in the library', async () => {
     const el = await setup(['stokes']);
-    expect(page.fileIn()).toBe('stokes');
-    expect(select(el).value).toBe('stokes');
+    expect(page.cookbookIds()).toEqual(['stokes']);
+    expect(picker(el).textContent?.trim()).toBe('Stokes Recipes');
     page.title.set('Pie');
     expect(page.draft().cookbooks).toEqual(['stokes']);
   });
 
-  it('falls back to the cookbook the last new recipe went into', async () => {
-    expect((await setup([], 'sam'), page.fileIn())).toBe('sam');
+  it('falls back to the cookbooks the last new recipe went into, as stored before or now', async () => {
+    expect((await setup([], 'sam'), page.cookbookIds())).toEqual(['sam']);
+    TestBed.resetTestingModule();
+    expect((await setup([], ['sam', 'stokes']), page.cookbookIds())).toEqual(['sam', 'stokes']);
   });
 
   it('leaves it unfiled with all cookbooks open and none remembered', async () => {
     const el = await setup();
-    expect(select(el).value).toBe('');
+    expect(picker(el).textContent?.trim()).toBe('Not in a cookbook');
     expect(page.draft().cookbooks).toEqual([]);
   });
 
   it('does not take a cookbook that no longer exists', async () => {
     await setup(['gone'], 'also-gone');
-    expect(page.fileIn()).toBe('');
+    expect(page.cookbookIds()).toEqual([]);
   });
 
-  it('remembers the cookbook a saved recipe went into', async () => {
+  it('files in several cookbooks from the picker', async () => {
+    const el = await setup(['sam']);
+    picker(el).click();
+    fixture.detectChanges();
+    const boxes = [...el.querySelectorAll<HTMLInputElement>('.picker-option input')];
+    expect(boxes.map((b) => b.checked)).toEqual([true, false]);
+    boxes[1].click();
+    fixture.detectChanges();
+    expect(page.cookbookIds()).toEqual(['sam', 'stokes']);
+    expect(picker(el).textContent?.trim()).toBe("Sam's Cookbook, Stokes Recipes");
+  });
+
+  it('remembers the cookbooks a saved recipe went into', async () => {
     await setup();
-    page.fileIn.set('stokes');
+    page.cookbookIds.set(['stokes']);
     page.title.set('Pie');
     page.ingredients.set([{ qty: 1, unit: '', name: 'flour', aisle: 'pantry' }]);
     await page.save();
     expect((await fake.list()).find((r) => r.slug === 'pie')?.cookbooks).toEqual(['stokes']);
-    expect(JSON.parse(localStorage.getItem('cookbook.fileIn')!)).toBe('stokes');
+    expect(JSON.parse(localStorage.getItem('cookbook.fileIn')!)).toEqual(['stokes']);
   });
 
   it('warns that a recipe from the same page is already in the collection', async () => {
@@ -1359,6 +1377,7 @@ describe('CreateRecipeComponent form tools', () => {
   it('shows a check under its row and in the checklist, and Fix applies it', async () => {
     const el = await setup();
     page.ingredients.set([row('peaches, quartered'), row('gochujang, plus')]);
+    page.steps.set(['Roast.']);
     fixture.detectChanges();
     expect([...el.querySelectorAll('.check-band .check-text')].map((b) => b.textContent?.trim())).toEqual([
       'Peaches are usually in Produce.',
@@ -1472,5 +1491,151 @@ describe('CreateRecipeComponent form tools', () => {
     await page.deleteRecipe();
     expect(archive).toHaveBeenCalledOnceWith('old-soup');
     expect(navigate).toHaveBeenCalledWith(['/']);
+  });
+});
+
+describe('CreateRecipeComponent headings, fields and fixes', () => {
+  type V2 = {
+    ingredients: { set(v: Ingredient[]): void; (): Ingredient[] };
+    steps: { set(v: string[]): void; (): string[] };
+    subtitle: { set(v: string): void; (): string };
+    servings: { set(v: number): void };
+    servingsUnit: { set(v: string): void };
+    photo: { set(v: string): void };
+    photoFocus: { set(v: { x: number; y: number } | null): void; (): { x: number; y: number } | null };
+    title: { set(v: string): void };
+    draft(): Recipe;
+    rowChecks(): RowCheck[];
+    stepChecks(): StepRowCheck[];
+    applyFix(check: RowCheck): void;
+    applyStepFix(check: StepRowCheck): void;
+    addHeading(owner?: number): void;
+    renameHeading(first: number, name: string, owner?: number): void;
+    removeHeading(first: number, owner?: number): void;
+    addIngredient(owner?: number): void;
+    moveIngredient(from: number, to: number, owner?: number): void;
+    pasteIngredients(text: string, owner?: number): void;
+    setSource(text: string): void;
+    setPage(text: string): void;
+    removePhoto(): void;
+  };
+  const row = (name: string, group?: string): Ingredient => ({
+    qty: 1,
+    unit: '',
+    name,
+    aisle: 'pantry',
+    ...(group ? { group } : {}),
+  });
+  const shape = () => page.ingredients().map((i) => [i.name, i.group ?? null]);
+
+  let page: V2;
+  let fixture: ComponentFixture<CreateRecipeComponent>;
+
+  async function setup(): Promise<HTMLElement> {
+    TestBed.configureTestingModule({
+      imports: [CreateRecipeComponent],
+      providers: [
+        provideRouter([]),
+        ...provideFakeRecipes(new FakeRecipeRepository([])),
+        ...provideFakeCookbooks(),
+        { provide: ImportClient, useValue: fakeImport() },
+      ],
+    });
+    fixture = TestBed.createComponent(CreateRecipeComponent);
+    page = fixture.componentInstance as unknown as V2;
+    fixture.detectChanges();
+    await TestBed.inject(RecipeStore).whenLoaded();
+    await fixture.whenStable();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('shows a heading above the first row of its group, and renames the whole group', async () => {
+    const el = await setup();
+    page.ingredients.set([row('broccoli'), row('mayo', 'Dressing'), row('vinegar', 'Dressing')]);
+    fixture.detectChanges();
+    expect([...el.querySelectorAll<HTMLInputElement>('.heading-input')].map((h) => h.value)).toEqual(['Dressing']);
+    page.renameHeading(1, 'Sauce');
+    expect(shape()).toEqual([['broccoli', null], ['mayo', 'Sauce'], ['vinegar', 'Sauce']]);
+  });
+
+  it('adds a heading with a row under it, and new rows continue the last heading', async () => {
+    await setup();
+    page.ingredients.set([row('broccoli')]);
+    page.addHeading();
+    page.addIngredient();
+    expect(shape()).toEqual([['broccoli', null], ['', 'New heading'], ['', 'New heading']]);
+  });
+
+  it('removes a heading, and its rows join the group above', async () => {
+    await setup();
+    page.ingredients.set([row('a', 'Cake'), row('b', 'Frosting'), row('c', 'Frosting')]);
+    page.removeHeading(1);
+    expect(shape()).toEqual([['a', 'Cake'], ['b', 'Cake'], ['c', 'Cake']]);
+    page.renameHeading(0, '  ');
+    expect(shape()).toEqual([['a', null], ['b', null], ['c', null]]);
+  });
+
+  it('moves a row into the group of the row it lands on', async () => {
+    await setup();
+    page.ingredients.set([row('a'), row('b', 'Dressing'), row('c', 'Dressing')]);
+    page.moveIngredient(0, 2);
+    expect(shape()).toEqual([['b', 'Dressing'], ['c', 'Dressing'], ['a', 'Dressing']]);
+  });
+
+  it('reads "Dressing:" in a paste as a heading over the lines after it', async () => {
+    await setup();
+    page.pasteIngredients('1 head broccoli\nDressing:\n1 cup mayo\n2 tbsp vinegar');
+    expect(shape()).toEqual([['broccoli', null], ['mayo', 'Dressing'], ['vinegar', 'Dressing']]);
+  });
+
+  it('fills an empty credit from a pasted source link, but never one typed by hand', async () => {
+    await setup();
+    page.setSource('https://cooking.nytimes.com/recipes/1-soup');
+    expect(page.subtitle()).toBe('From NYT Cooking');
+    page.setSource('https://www.sipandsanity.com/soup');
+    expect(page.subtitle()).toBe('From sipandsanity.com');
+    page.subtitle.set('From Grandma');
+    page.setSource('https://example.com/x');
+    expect(page.subtitle()).toBe('From Grandma');
+  });
+
+  it('saves the page, the yield unit and the focus point, and leaves out what means nothing', async () => {
+    await setup();
+    page.title.set('Bread');
+    page.setPage('216');
+    page.servingsUnit.set('loaves');
+    page.photo.set('https://example.com/p.jpg');
+    page.photoFocus.set({ x: 40, y: 25 });
+    expect(page.draft()).toEqual(
+      jasmine.objectContaining({ sourcePage: 216, servingsUnit: 'loaves', photoFocus: { x: 40, y: 25 } }),
+    );
+    page.setPage('0');
+    page.servingsUnit.set('Servings');
+    page.removePhoto();
+    const draft = page.draft();
+    expect('sourcePage' in draft || 'servingsUnit' in draft || 'photoFocus' in draft).toBeFalse();
+  });
+
+  it('joins a row cut in two by the scan', async () => {
+    await setup();
+    page.ingredients.set([
+      { qty: 1, unit: 'cup', name: 'cooked grains (my favorites are: rice,', aisle: 'pantry' },
+      { qty: 7, unit: '', name: '-grain cereal)', aisle: 'pantry' },
+    ]);
+    page.applyFix(page.rowChecks()[0]);
+    expect(page.ingredients()).toEqual([
+      { qty: 1, unit: 'cup', name: 'cooked grains (my favorites are: rice, 7-grain cereal)', aisle: 'pantry' },
+    ]);
+  });
+
+  it('splits a one-step method, and adds what a step uses to the list', async () => {
+    await setup();
+    page.ingredients.set([row('broccoli')]);
+    page.steps.set(['Chop the broccoli. Toss with the sour cream.']);
+    page.applyStepFix(page.stepChecks()[0]);
+    expect(page.steps()).toEqual(['Chop the broccoli.', 'Toss with the sour cream.']);
+    const missing = page.stepChecks().find((c) => c.kind === 'not-listed')!;
+    page.applyStepFix(missing);
+    expect(page.ingredients().map((i) => i.name)).toEqual(['broccoli', 'sour cream']);
   });
 });

@@ -19,7 +19,8 @@ import { vocabularyTags } from '../../core/facets';
 import { Ingredient, Recipe } from '../../core/model/recipes.model';
 import { ImportClient, ImportPreview, photoProblem } from '../../core/import-client';
 import { parseIngredient } from '../../core/ingredient-parser';
-import { IngredientCheck, checkIngredient, checkNotes } from '../../core/recipe-checks';
+import { IngredientCheck, StepCheck, amountText, checkIngredients, checkNotes, checkSteps, joinRows } from '../../core/recipe-checks';
+import { methodGap } from '../../core/recipe-health';
 import { parseJsonLd, parseRecipeText, slugify, splitFrontMatter } from '../../core/recipe-text';
 import { formatQty } from '../../core/scale';
 import { Storage } from '../../core/storage';
@@ -41,8 +42,31 @@ type FilledFrom = Tab | 'html';
 export const BOOKMARKLET_HREF =
   "javascript:location.href='http://localhost:4200/cookbook/recipes/new?url='+encodeURIComponent(location.href)";
 
-/** The cookbook the last new recipe was filed in, so the next one goes there too. */
+/** The cookbooks the last new recipe was filed in, so the next one goes there too. */
 const FILE_IN_KEY = 'cookbook.fileIn';
+
+/** What a few sites are called, for the credit a pasted link fills in. */
+const SITE_NAMES: Record<string, string> = {
+  'cooking.nytimes.com': 'NYT Cooking',
+  'themodernproper.com': 'The Modern Proper',
+  'allrecipes.com': 'Allrecipes',
+  'seriouseats.com': 'Serious Eats',
+  'bonappetit.com': 'Bon Appétit',
+  'food52.com': 'Food52',
+  'smittenkitchen.com': 'Smitten Kitchen',
+  'budgetbytes.com': 'Budget Bytes',
+  'foodnetwork.com': 'Food Network',
+  'epicurious.com': 'Epicurious',
+};
+
+/** "NYT Cooking" for a known site, else its address: "sipandsanity.com". */
+export function siteName(url: string): string {
+  const host = new URL(url).host.replace(/^www\./, '').toLowerCase();
+  return SITE_NAMES[host] ?? host;
+}
+
+/** Ingredient group names that only say "the ingredients", which need no heading. */
+const PLAIN_GROUPS = /^(ingredients?|main|for the (recipe|dish))$/i;
 
 /**
  * A page address reduced to what identifies the page: no scheme, `www.`,
@@ -142,6 +166,13 @@ export interface RowCheck extends IngredientCheck {
   index: number;
 }
 
+/** A check on a step, placed the same way. */
+export interface StepRowCheck extends StepCheck {
+  id: string;
+  owner: Owner;
+  index: number;
+}
+
 /** One line of the checklist beside the form. */
 interface ChecklistItem {
   id: string;
@@ -149,6 +180,8 @@ interface ChecklistItem {
   /** The element to bring into view, and the part tab it is on. */
   target: string;
   owner: Owner;
+  /** A fix short enough to offer in the list itself: "Split". */
+  action?: { label: string; run: () => void };
 }
 
 /** The API refuses a recipe with more embedded components than this. */
@@ -159,6 +192,10 @@ const MAX_SECTIONS = 20;
   imports: [RouterLink, MatIconModule, MatMenuModule, NgTemplateOutlet, DatePipe, NoPhotoComponent],
   templateUrl: './create-recipe.component.html',
   styleUrl: './create-recipe.component.scss',
+  host: {
+    '(document:click)': 'closePicker($event)',
+    '(document:keydown.escape)': 'cookbooksOpen.set(false)',
+  },
 })
 export class CreateRecipeComponent {
   /** Bound from the route on `recipes/:slug/edit`; absent when adding. */
@@ -215,6 +252,8 @@ export class CreateRecipeComponent {
   protected readonly title = signal('');
   protected readonly subtitle = signal('');
   protected readonly servings = signal(4);
+  /** What the yield counts when not servings: "loaves". '' is servings. */
+  protected readonly servingsUnit = signal('');
   protected readonly time = signal('');
   protected readonly blurb = signal('');
   protected readonly desc = signal('');
@@ -224,7 +263,11 @@ export class CreateRecipeComponent {
   protected readonly notes = signal<string[]>([]);
   protected readonly sections = signal<SectionDraft[]>([]);
   protected readonly photo = signal('');
+  /** The point of the photo a crop keeps; null is the middle. */
+  protected readonly photoFocus = signal<{ x: number; y: number } | null>(null);
   protected readonly sourceUrl = signal('');
+  /** The page of the printed cookbook, for a recipe from one. */
+  protected readonly sourcePage = signal<number | null>(null);
   /**
    * References on the stored recipe whose component no longer resolves. They
    * have no section to edit, but saving must not quietly drop them.
@@ -262,16 +305,27 @@ export class CreateRecipeComponent {
   );
 
   /**
-   * The cookbook a new recipe is filed in, '' for none: the shelf open in the
-   * library, or else the one the last new recipe went into. Recomputed when
-   * the cookbooks load, since until then no id can be checked.
+   * The cookbooks the recipe is filed in. Editing starts from where it is
+   * filed; a new recipe from the shelf open in the library, or else where the
+   * last new recipe went. Recomputed when the cookbooks load, since until then
+   * no id can be checked.
    */
-  protected readonly fileIn = linkedSignal(() => {
+  protected readonly cookbookIds = linkedSignal<string[]>(() => {
     const ids = new Set(this.cookbooks.cookbooks().map((c) => c.id));
+    const original = this.original();
+    if (original) return [...original.cookbooks];
     const shelf = [...untracked(this.recipes.selectedCookbooks)];
-    if (shelf.length === 1 && ids.has(shelf[0])) return shelf[0];
-    const last = untracked(() => this.storage.read<string>(FILE_IN_KEY, ''));
-    return ids.has(last) ? last : '';
+    if (shelf.length === 1 && ids.has(shelf[0])) return [shelf[0]];
+    const last = untracked(() => this.storage.read<unknown>(FILE_IN_KEY, []));
+    // Stored as one id before a recipe could be filed in several.
+    return (Array.isArray(last) ? last : [last]).filter((id): id is string => typeof id === 'string' && ids.has(id));
+  });
+  protected readonly cookbooksOpen = signal(false);
+
+  /** "Crowded Closet Cookbook", or "Sam's Cookbook, Stokes Recipes", for the picker's button. */
+  protected readonly cookbookSummary = computed(() => {
+    const names = this.cookbookIds().map((id) => this.cookbooks.byId(id)?.name ?? id);
+    return names.length ? names.join(', ') : 'Not in a cookbook';
   });
 
   /**
@@ -308,18 +362,29 @@ export class CreateRecipeComponent {
       steps: this.steps(),
       notes: this.notes(),
       ...(this.photo() ? { photo: this.photo() } : {}),
+      ...(this.photo() && this.photoFocus() ? { photoFocus: this.photoFocus()! } : {}),
       ...(this.sourceUrl() ? { sourceUrl: this.sourceUrl() } : {}),
-      // Editing keeps the recipe where it is filed; the recipe page refiles it.
-      cookbooks: this.original()?.cookbooks ?? (this.fileIn() ? [this.fileIn()] : []),
+      ...(this.sourcePage() ? { sourcePage: this.sourcePage()! } : {}),
+      ...(this.unitWord() ? { servingsUnit: this.unitWord() } : {}),
+      cookbooks: this.cookbookIds(),
     };
     // The spread above would otherwise keep a stored value the form cleared.
     if (!this.subtitle().trim()) delete draft.subtitle;
     if (!this.photo()) delete draft.photo;
+    if (!this.photo() || !this.photoFocus()) delete draft.photoFocus;
     if (!this.sourceUrl()) delete draft.sourceUrl;
+    if (!this.sourcePage()) delete draft.sourcePage;
+    if (!this.unitWord()) delete draft.servingsUnit;
     return draft;
   });
 
   protected readonly draftJson = computed(() => JSON.stringify(this.draft(), null, 2));
+
+  /** The yield unit worth storing: "servings" is what no unit means already. */
+  private readonly unitWord = computed(() => {
+    const unit = this.servingsUnit().trim();
+    return /^servings?$/i.test(unit) ? '' : unit;
+  });
 
   /** Everything a save would write, to tell an edited form from the one loaded. */
   private readonly snapshot = computed(() => JSON.stringify([this.draft(), this.sections()]));
@@ -339,11 +404,11 @@ export class CreateRecipeComponent {
       ...this.sections().map((s, n): [Owner, Ingredient[]] => [n, s.ingredients]),
     ];
     return lists.flatMap(([owner, list]) =>
-      list.flatMap((ing, index) =>
-        checkIngredient(ing)
-          .map((check) => ({ ...check, owner, index, id: `${owner ?? 'main'}|${check.kind}|${ing.name}` }))
-          .filter((check) => !kept.has(check.id)),
-      ),
+      checkIngredients(list).flatMap((check, index): RowCheck[] => {
+        if (!check) return [];
+        const id = `${owner ?? 'main'}|${check.kind}|${list[index].name}`;
+        return kept.has(id) ? [] : [{ ...check, owner, index, id }];
+      }),
     );
   });
 
@@ -357,6 +422,29 @@ export class CreateRecipeComponent {
     return byRow;
   });
 
+  /** Every step check still standing, keyed like the rows. */
+  protected readonly stepChecks = computed<StepRowCheck[]>(() => {
+    const kept = this.kept();
+    const everything = [...this.ingredients(), ...this.sections().flatMap((s) => s.ingredients)];
+    const lists: [Owner, string[]][] = [
+      [undefined, this.steps()],
+      ...this.sections().map((s, n): [Owner, string[]] => [n, s.steps]),
+    ];
+    return lists.flatMap(([owner, steps]) =>
+      checkSteps(steps, everything).flatMap((check, index): StepRowCheck[] => {
+        if (!check) return [];
+        const id = `${owner ?? 'main'}|${check.kind}|${steps[index]}`;
+        return kept.has(id) ? [] : [{ ...check, owner, index, id }];
+      }),
+    );
+  });
+
+  protected readonly stepChecksByRow = computed(() => {
+    const byRow = new Map<string, StepRowCheck>();
+    for (const check of this.stepChecks()) byRow.set(this.stepId(check.owner, check.index), check);
+    return byRow;
+  });
+
   protected readonly noteChecks = computed(() =>
     checkNotes(
       [...this.ingredients(), ...this.sections().flatMap((s) => s.ingredients)],
@@ -365,47 +453,76 @@ export class CreateRecipeComponent {
     ).filter((c) => !this.kept().has(`note|${c.summary}`)),
   );
 
-  protected readonly checkCount = computed(() => this.rowChecks().length + this.noteChecks().length);
+  protected readonly checkCount = computed(
+    () => this.rowChecks().length + this.stepChecks().length + this.noteChecks().length,
+  );
+
+  /**
+   * A method too short for its ingredient list, said as the recipe page says
+   * it (`methodGap`), with the one-step split offered beside it when there is one.
+   */
+  private readonly methodItem = computed<ChecklistItem | null>(() => {
+    const split = this.stepChecks().find((c) => c.owner === undefined && c.kind === 'one-step');
+    const text = methodGap(this.draft()) || split?.summary;
+    if (!text) return null;
+    return {
+      id: 'method',
+      text,
+      target: 'steps',
+      owner: undefined,
+      ...(split ? { action: { label: 'Split', run: () => this.applyStepFix(split) } } : {}),
+    };
+  });
 
   /** The checklist beside the form: each check, said briefly, pointing at its row. */
   protected readonly checklist = computed<ChecklistItem[]>(() => {
     const parts = this.sections();
-    const items: ChecklistItem[] = this.rowChecks().map((c) => ({
-      id: c.id,
-      text: c.owner === undefined ? c.summary : `${parts[c.owner]?.title || 'Untitled part'}: ${c.summary}`,
-      target: this.rowId(c.owner, c.index),
-      owner: c.owner,
-    }));
+    const named = (owner: Owner, text: string) =>
+      owner === undefined ? text : `${parts[owner]?.title || 'Untitled part'}: ${text}`;
+    const method = this.methodItem();
+    const items: ChecklistItem[] = method ? [method] : [];
+    for (const c of this.rowChecks()) {
+      items.push({ id: c.id, text: named(c.owner, c.summary), target: this.rowId(c.owner, c.index), owner: c.owner });
+    }
+    for (const c of this.stepChecks()) {
+      // The one-step split is already the method line above.
+      if (method && c.owner === undefined && c.kind === 'one-step') continue;
+      items.push({ id: c.id, text: named(c.owner, c.summary), target: this.stepId(c.owner, c.index), owner: c.owner });
+    }
     for (const c of this.noteChecks()) {
       items.push({ id: `note|${c.summary}`, text: c.summary, target: 'notes', owner: undefined });
     }
     return items;
   });
 
+  /** "Dressing heading kept", or "2 headings kept", when the list has any. */
+  private readonly headingNote = computed(() => {
+    const names = [...new Set(this.ingredients().map((i) => i.group).filter((g): g is string => !!g))];
+    if (names.length === 0) return '';
+    return names.length === 1 ? `${names[0]} heading kept` : `${names.length} headings kept`;
+  });
+
   /** What saving needs and has; unmet, these are the only things that block it. */
   protected readonly requirements = computed(() => {
-    const items: { ok: boolean; text: string; aside?: string }[] = [];
+    const items: { ok: boolean | null; text: string; aside?: string }[] = [];
     const title = !!this.title().trim();
     const ingredientCount =
       this.ingredients().length + this.sections().reduce((n, s) => n + s.ingredients.length, 0);
+    const headings = this.headingNote();
     if (this.editing()) {
-      const present = [
-        ...(this.photo() ? ['photo'] : []),
-        ...(title ? ['title'] : []),
-        ...(this.time().trim() ? ['time'] : []),
-        'servings',
-      ];
-      items.push({ ok: true, text: present.join(', ').replace(/^./, (c) => c.toUpperCase()) });
       if (ingredientCount > 0) {
-        items.push({ ok: true, text: `${count(ingredientCount, 'ingredient')} · ${count(this.steps().length, 'step')}` });
+        items.push({ ok: true, text: [count(ingredientCount, 'ingredient'), headings].filter(Boolean).join(' · ') });
       }
     } else if (title && ingredientCount > 0) {
       items.push({ ok: true, text: `Title and ${count(ingredientCount, 'ingredient')}`, aside: '(all that’s required)' });
+      if (headings) items.push({ ok: true, text: headings.replace(/^./, (c) => c.toUpperCase()) });
     }
     if (!title) items.push({ ok: false, text: 'A title' });
     if (ingredientCount === 0) items.push({ ok: false, text: 'At least one ingredient' });
     if (this.sections().some((s) => !s.title.trim())) items.push({ ok: false, text: 'A name for each part' });
     if (!this.sourceValid()) items.push({ ok: false, text: 'A source link that starts with http:// or https://' });
+    // Not a problem, just the one thing a cook can add next time.
+    if (!this.photo()) items.push({ ok: null, text: 'No photo — add one next time you make it' });
     return items;
   });
 
@@ -484,6 +601,7 @@ export class CreateRecipeComponent {
     this.title.set(recipe.title);
     this.subtitle.set(recipe.subtitle ?? '');
     this.servings.set(recipe.servings);
+    this.servingsUnit.set(recipe.servingsUnit ?? '');
     this.time.set(recipe.time);
     this.blurb.set(recipe.blurb);
     this.desc.set(recipe.desc);
@@ -492,7 +610,9 @@ export class CreateRecipeComponent {
     this.steps.set([...recipe.steps]);
     this.notes.set([...recipe.notes]);
     this.photo.set(recipe.photo ?? '');
+    this.photoFocus.set(recipe.photoFocus ?? null);
     this.sourceUrl.set(recipe.sourceUrl ?? '');
+    this.sourcePage.set(recipe.sourcePage ?? null);
     const sections: SectionDraft[] = [];
     const unresolved: { slug: string; label?: string }[] = [];
     for (const ref of recipe.components ?? []) {
@@ -714,12 +834,6 @@ export class CreateRecipeComponent {
     try {
       const preview = await read();
       this.applyPreview(preview);
-      const dropped = this.droppedSections;
-      this.notice.set(
-        dropped > 0
-          ? `The recipe server allows ${MAX_SECTIONS} parts, so ${dropped} ingredient ${dropped === 1 ? 'group was' : 'groups were'} left out.`
-          : '',
-      );
       return true;
     } catch (err) {
       this.notice.set(
@@ -733,9 +847,6 @@ export class CreateRecipeComponent {
     }
   }
 
-  /** How many named groups the last import dropped to stay within the cap. */
-  private droppedSections = 0;
-
   private applyPreview(preview: ImportPreview): void {
     const parse = (lines: readonly string[]) =>
       lines.map((line) => ({ line, result: parseIngredient(line) }));
@@ -747,33 +858,25 @@ export class CreateRecipeComponent {
         aisle: result.aisle,
       }));
 
-    const groups = preview.ingredientGroups ?? [];
-    const unnamed = groups.filter((g) => !g.name).flatMap((g) => g.lines);
-    const allNamed = groups.filter((g): g is { name: string; lines: string[] } => !!g.name);
-    // recipe-scrapers only yields an unnamed group for lines before the first
-    // heading. A lone heading ("Ingredients") is then the recipe's own list.
-    const lone = unnamed.length === 0 && allNamed.length === 1;
-    const own = parse(lone ? allNamed[0].lines : unnamed);
-    const kept = lone ? [] : allNamed.slice(0, MAX_SECTIONS);
-    this.droppedSections = lone ? 0 : allNamed.length - kept.length;
-    const named = kept.map((g) => ({ name: g.name, parsed: parse(g.lines) }));
+    // Named groups ("Dressing") become headings in the one list: the page
+    // gives them no steps of their own, which is what a part would be for.
+    // A lone group, or one called "Ingredients", is just the list itself.
+    const groups = (preview.ingredientGroups ?? []).filter((g) => g.lines.length > 0);
+    const named = groups.filter((g) => g.name && !PLAIN_GROUPS.test(g.name.trim()));
+    const headed = named.length > 0 && groups.length > 1;
+    const ingredients = groups.flatMap((g) => {
+      const group = headed && g.name && !PLAIN_GROUPS.test(g.name.trim()) ? g.name.trim() : undefined;
+      return toIngredients(parse(g.lines)).map((i) => (group ? { ...i, group } : i));
+    });
 
     // Only what the page supplied is written, so an empty description never
     // wipes one typed by hand. Tags are put in the filters' words.
     const tags = vocabularyTags(preview.tags ?? []).join(', ');
-    const sections: SectionDraft[] = named.map((g) => ({
-      slug: null,
-      title: g.name,
-      ingredients: toIngredients(g.parsed),
-      steps: [],
-      ownTitle: null,
-      hadLabel: true,
-    }));
     // A credit typed by hand outranks the site's name.
     const credit = preview.siteName && this.untouched('subtitle') ? `From ${preview.siteName}` : '';
     this.fill({
       title: preview.title ?? '',
-      ingredients: toIngredients(own),
+      ingredients,
       steps: [...(preview.steps ?? [])],
       ...(credit ? { subtitle: credit } : {}),
       ...(preview.description ? { desc: preview.description } : {}),
@@ -787,7 +890,6 @@ export class CreateRecipeComponent {
       // image, so whatever an earlier import or edit left there is cleared.
       ...(preview.sourceUrl ? { sourceUrl: preview.sourceUrl } : {}),
       ...(preview.sourceUrl === '' ? { sourceUrl: '', ...(preview.image ? {} : { photo: '' }) } : {}),
-      ...(sections.length > 0 ? { sections } : {}),
     });
     this.part.set(undefined);
   }
@@ -852,12 +954,62 @@ export class CreateRecipeComponent {
     const address = (this.photoDraft() ?? '').trim();
     if (!isWebAddress(address)) return;
     this.photo.set(address);
+    this.photoFocus.set(null);
     this.photoDraft.set(null);
   }
 
   protected removePhoto(): void {
     this.photo.set('');
+    this.photoFocus.set(null);
     this.photoDraft.set(null);
+    this.focusing.set(false);
+  }
+
+  /** True while the next click on the photo sets what its crop keeps. */
+  protected readonly focusing = signal(false);
+
+  /** The photo's crop, as CSS: "50% 30%". */
+  protected readonly focusPosition = computed(() => {
+    const f = this.photoFocus();
+    return f ? `${f.x}% ${f.y}%` : '50% 50%';
+  });
+
+  /** Sets the focus where the photo was clicked, as whole percentages across and down. */
+  protected setFocus(event: MouseEvent): void {
+    if (!this.focusing()) return;
+    const frame = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const at = (n: number) => Math.round(Math.min(100, Math.max(0, n)));
+    this.photoFocus.set({
+      x: at(((event.clientX - frame.left) / frame.width) * 100),
+      y: at(((event.clientY - frame.top) / frame.height) * 100),
+    });
+    this.focusing.set(false);
+  }
+
+  /** A pasted source link fills an empty credit with the site's name. */
+  protected setSource(text: string): void {
+    const url = text.trim();
+    this.sourceUrl.set(url);
+    if (!isWebAddress(url) || !this.untouched('subtitle')) return;
+    const credit = `From ${siteName(url)}`;
+    this.subtitle.set(credit);
+    this.lastFill.set('subtitle', credit);
+    this.filledCredit.set(credit);
+  }
+
+  /** A page number, or nothing for anything that is not a whole page. */
+  protected setPage(text: string): void {
+    const page = Number(text);
+    this.sourcePage.set(text.trim() && Number.isInteger(page) && page > 0 && page <= 10000 ? page : null);
+  }
+
+  protected toggleCookbook(id: string): void {
+    this.cookbookIds.update((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  }
+
+  protected closePicker(event: Event): void {
+    if (!this.cookbooksOpen()) return;
+    if (!(event.target as Element | null)?.closest?.('.cookbook-picker')) this.cookbooksOpen.set(false);
   }
 
   // ---- Parts -----------------------------------------------------------------
@@ -924,11 +1076,74 @@ export class CreateRecipeComponent {
     return `ing-${owner ?? 'main'}-${index}`;
   }
 
+  /** Adds a row at the end, under the last heading if there is one. */
   protected addIngredient(owner?: Owner): void {
-    this.editIngredients(owner, (list) => [
-      ...list,
-      { qty: null, unit: '', name: '', aisle: 'pantry' as Aisle },
-    ]);
+    this.editIngredients(owner, (list) => {
+      const group = list.at(-1)?.group;
+      return [...list, { qty: null, unit: '', name: '', aisle: 'pantry' as Aisle, ...(group ? { group } : {}) }];
+    });
+  }
+
+  // ---- Headings ----------------------------------------------------------------
+  //
+  // A heading is not a row of its own: it is the `group` its ingredients share,
+  // shown above the first of them. That keeps the stored shape the recipe page,
+  // cook mode and the shopping list already read.
+
+  /** The heading to show above row i: its group, where the group starts. */
+  protected headingAt(list: readonly Ingredient[], i: number): string {
+    const group = list[i]?.group;
+    return group && (i === 0 || list[i - 1].group !== group) ? group : '';
+  }
+
+  protected hasHeadings(owner: Owner): boolean {
+    return this.listOf(owner).some((i) => !!i.group);
+  }
+
+  /** The rows under the heading that starts at `first`. */
+  private runOf(list: readonly Ingredient[], first: number): number {
+    let end = first;
+    while (end < list.length && list[end].group === list[first].group) end++;
+    return end;
+  }
+
+  /** Starts a heading at the end, with a row under it ready to fill. */
+  protected addHeading(owner?: Owner): void {
+    const taken = new Set(this.listOf(owner).map((i) => i.group));
+    let name = 'New heading';
+    for (let n = 2; taken.has(name); n++) name = `New heading ${n}`;
+    this.editIngredients(owner, (list) => [...list, { qty: null, unit: '', name: '', aisle: 'pantry', group: name }]);
+    const first = this.listOf(owner).length - 1;
+    setTimeout(() => {
+      const box = document.getElementById(`heading-${owner ?? 'main'}-${first}`) as HTMLInputElement | null;
+      box?.focus();
+      box?.select();
+    });
+  }
+
+  protected renameHeading(first: number, name: string, owner?: Owner): void {
+    const next = name.trim();
+    if (!next) {
+      this.removeHeading(first, owner);
+      return;
+    }
+    this.editIngredients(owner, (list) => {
+      const end = this.runOf(list, first);
+      return list.map((item, i) => (i >= first && i < end ? { ...item, group: next } : item));
+    });
+  }
+
+  /** Takes a heading away; its rows join whatever is above them. */
+  protected removeHeading(first: number, owner?: Owner): void {
+    this.editIngredients(owner, (list) => {
+      const end = this.runOf(list, first);
+      const above = list[first - 1]?.group;
+      return list.map((item, i) => {
+        if (i < first || i >= end) return item;
+        const { group: _, ...rest } = item;
+        return above ? { ...rest, group: above } : rest;
+      });
+    });
   }
 
   protected setAmount(index: number, text: string, owner?: Owner): void {
@@ -968,26 +1183,37 @@ export class CreateRecipeComponent {
     this.editIngredients(owner, (list) => list.filter((_, i) => i !== index));
   }
 
+  /** Moves a row to where row `to` is, into that row's heading. */
   protected moveIngredient(from: number, to: number, owner?: Owner): void {
     this.editIngredients(owner, (list) => {
       if (to < 0 || to >= list.length || from === to) return list;
       const next = [...list];
-      const [row] = next.splice(from, 1);
-      next.splice(to, 0, row);
+      const [moved] = next.splice(from, 1);
+      const { group: _, ...plain } = moved;
+      const group = list[to].group;
+      next.splice(to, 0, group ? { ...plain, group } : plain);
       return next;
     });
   }
 
-  /** Adds a row for each pasted line, read the way the paste tab reads them. */
+  /**
+   * Adds a row for each pasted line, read the way the paste tab reads them. A
+   * line ending in a colon ("Dressing:") is a heading over the lines after it.
+   */
   protected pasteIngredients(text: string, owner?: Owner): void {
-    const rows = text
-      .split('\n')
-      .map((line) => line.replace(/^\s*[-*•]\s*/, '').trim())
-      .filter(Boolean)
-      .map((line): Ingredient => {
-        const p = parseIngredient(line);
-        return { qty: p.qty, unit: p.unit, name: p.name || line, aisle: p.aisle };
-      });
+    let group = this.listOf(owner).at(-1)?.group;
+    const rows: Ingredient[] = [];
+    for (const raw of text.split('\n')) {
+      const line = raw.replace(/^\s*[-*•]\s*/, '').trim();
+      if (!line) continue;
+      const heading = /^([^\d].*?):$/.exec(line);
+      if (heading) {
+        group = heading[1].trim();
+        continue;
+      }
+      const p = parseIngredient(line);
+      rows.push({ qty: p.qty, unit: p.unit, name: p.name || line, aisle: p.aisle, ...(group ? { group } : {}) });
+    }
     if (rows.length > 0) this.editIngredients(owner, (list) => [...list, ...rows]);
     this.pasteOpen.set(false);
   }
@@ -995,14 +1221,14 @@ export class CreateRecipeComponent {
   protected applyFix(check: RowCheck): void {
     const change = check.fix?.change;
     if (!change) return;
-    this.editIngredients(check.owner, (list) =>
-      list.flatMap((item, i) => {
-        if (i !== check.index) return [item];
-        if (change.type === 'name') return [{ ...item, name: change.name }];
-        if (change.type === 'aisle') return [{ ...item, aisle: change.aisle }];
-        return change.rows;
-      }),
-    );
+    this.editIngredients(check.owner, (list) => {
+      const at = check.index;
+      if (change.type === 'replace') return [...list.slice(0, at), ...change.rows, ...list.slice(at + 1)];
+      // A join keeps the upper row's amount and aisle, and reads the lower one into its name.
+      const upper = change.with === 'next' ? at : at - 1;
+      if (upper < 0 || upper + 1 >= list.length) return list;
+      return [...list.slice(0, upper), joinRows(list[upper], list[upper + 1]), ...list.slice(upper + 2)];
+    });
   }
 
   protected keep(id: string): void {
@@ -1037,6 +1263,23 @@ export class CreateRecipeComponent {
   }
 
   // ---- Steps --------------------------------------------------------------------
+
+  /** The element id of a step, which the checklist scrolls to. */
+  protected stepId(owner: Owner, index: number): string {
+    return `step-${owner ?? 'main'}-${index}`;
+  }
+
+  protected applyStepFix(check: StepRowCheck): void {
+    const fix = check.fix;
+    if (fix?.steps) {
+      const replacement = fix.steps;
+      this.editSteps(check.owner, (list) => [...list.slice(0, check.index), ...replacement, ...list.slice(check.index + 1)]);
+    }
+    if (fix?.ingredient) {
+      const row = fix.ingredient;
+      this.editIngredients(check.owner, (list) => [...list, row]);
+    }
+  }
 
   protected addStep(owner?: Owner): void {
     this.editSteps(owner, (list) => [...list, '']);
@@ -1162,7 +1405,7 @@ export class CreateRecipeComponent {
         return;
       }
       const slug = await this.recipes.add(cleaned);
-      this.storage.write(FILE_IN_KEY, this.fileIn());
+      this.storage.write(FILE_IN_KEY, this.cookbookIds());
       void this.router.navigate(['/recipes', slug]);
     } catch (err) {
       // Stay here with the draft untouched so nothing typed is lost.
@@ -1273,9 +1516,7 @@ export class CreateRecipeComponent {
   }
 
   protected amountLabel(ingredient: Ingredient): string {
-    if (ingredient.qty === null) return ingredient.unit;
-    const amount = formatQty(ingredient.qty);
-    return ingredient.unit ? `${amount} ${ingredient.unit}` : amount;
+    return amountText(ingredient);
   }
 
   /**

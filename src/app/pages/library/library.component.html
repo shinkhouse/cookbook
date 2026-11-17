@@ -279,6 +279,7 @@
                       [src]="cardPhoto(recipe)"
                       alt=""
                       [attr.loading]="i < eagerPhotos ? 'eager' : 'lazy'"
+                      [style.object-position]="recipe.photoFocus ? recipe.photoFocus.x + '% ' + recipe.photoFocus.y + '%' : null"
                       [attr.fetchpriority]="i === 0 ? 'high' : null"
                       (error)="onPhotoError(recipe)"
                     />

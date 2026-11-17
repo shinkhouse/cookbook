@@ -803,10 +803,10 @@ describe('RecipeDetailComponent cookbooks panel', () => {
     );
   });
 
-  it('links to Add a cookbook when there are none', async () => {
+  it('links to Add cookbook when there are none', async () => {
     await setup(true, []);
     const link = panel()?.querySelector('a');
-    expect(link?.textContent?.trim()).toBe('Add a cookbook');
+    expect(link?.textContent?.trim()).toBe('Add cookbook');
     expect(link?.getAttribute('href')).toMatch(/\/cookbooks\/new$/);
     expect(boxes().length).toBe(0);
   });

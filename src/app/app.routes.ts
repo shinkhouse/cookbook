@@ -5,7 +5,7 @@ import { RecipeStore } from './core/stores/recipe.store';
 /**
  * Names the tab after the recipe. Without this the routes that carry no title
  * kept whatever the previous page set, so opening a recipe from the create flow
- * left the tab reading "Add a recipe". It waits for the collection so a
+ * left the tab reading "Add recipe". It waits for the collection so a
  * reload on a recipe URL gets the recipe's name rather than the fallback.
  */
 const recipeTitle =
@@ -41,14 +41,14 @@ export const routes: Routes = [
     canMatch: [() => inject(RecipeStore).writable || inject(Router).createUrlTree(['/'])],
     loadComponent: () =>
       import('./pages/create-recipe/create-recipe.component').then((m) => m.CreateRecipeComponent),
-    title: 'Add a recipe',
+    title: 'Add recipe',
   },
   {
     path: 'cookbooks/new',
     canMatch: [() => inject(RecipeStore).writable || inject(Router).createUrlTree(['/'])],
     loadComponent: () =>
       import('./pages/create-cookbook/create-cookbook.component').then((m) => m.CreateCookbookComponent),
-    title: 'Add a cookbook',
+    title: 'Add cookbook',
   },
   {
     path: 'cookbooks',

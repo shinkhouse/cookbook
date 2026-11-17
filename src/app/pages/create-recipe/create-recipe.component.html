@@ -221,6 +221,18 @@
                 </label>
               </div>
 
+              @if (!editing() && cookbooks.cookbooks().length > 0) {
+                <label class="field">
+                  <span class="field-label">Cookbook</span>
+                  <select (change)="fileIn.set($any($event.target).value)">
+                    <option value="" [selected]="!fileIn()">Not in a cookbook</option>
+                    @for (c of cookbooks.cookbooks(); track c.id) {
+                      <option [value]="c.id" [selected]="c.id === fileIn()">{{ c.name }}</option>
+                    }
+                  </select>
+                </label>
+              }
+
               <label class="field">
                 <span class="field-label">Card blurb</span>
                 <input
@@ -486,6 +498,14 @@
           @if (draft().sourceUrl; as source) {
             <p class="preview-source hint">From {{ source }}</p>
           }
+        }
+
+        @if (duplicate(); as dup) {
+          <p class="hint duplicate" role="status">
+            <a [routerLink]="['/recipes', dup.recipe.slug]">{{ dup.recipe.title }}</a>
+            is already in the collection{{ dup.samePage ? ', from the same page' : '' }}. Saving
+            adds a second copy.
+          </p>
         }
 
         <div class="preview-actions">

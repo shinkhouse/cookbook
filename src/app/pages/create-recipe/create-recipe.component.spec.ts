@@ -1,8 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { FakeRecipeRepository, provideFakeRecipes } from '../../core/testing/fake-repositories';
+import {
+  FakeCookbookRepository,
+  FakeRecipeRepository,
+  provideFakeCookbooks,
+  provideFakeRecipes,
+} from '../../core/testing/fake-repositories';
 import { ImportClient, ImportPreview } from '../../core/import-client';
 import { Recipe } from '../../core/model/recipes.model';
+import { CookbookStore } from '../../core/stores/cookbook.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
 import { BOOKMARKLET_HREF, CreateRecipeComponent } from './create-recipe.component';
 
@@ -77,6 +83,7 @@ describe('CreateRecipeComponent', () => {
       providers: [
         provideRouter([]),
         ...provideFakeRecipes(fake),
+        ...provideFakeCookbooks(),
         { provide: ImportClient, useValue: fakeImport() },
       ],
     });
@@ -292,6 +299,7 @@ describe('CreateRecipeComponent edit mode', () => {
       providers: [
         provideRouter([]),
         ...provideFakeRecipes(fake),
+        ...provideFakeCookbooks(),
         { provide: ImportClient, useValue: fakeImport() },
       ],
     });
@@ -395,6 +403,7 @@ describe('CreateRecipeComponent edit mode', () => {
       providers: [
         provideRouter([]),
         ...provideFakeRecipes(slow),
+        ...provideFakeCookbooks(),
         { provide: ImportClient, useValue: fakeImport() },
       ],
     });
@@ -507,6 +516,7 @@ describe('CreateRecipeComponent import and sections', () => {
       providers: [
         provideRouter([]),
         ...provideFakeRecipes(fake),
+        ...provideFakeCookbooks(),
         { provide: ImportClient, useValue: importer },
       ],
     });
@@ -1082,3 +1092,123 @@ const STOCK: Recipe = {
   cookbooks: [],
   component: true,
 };
+
+describe('CreateRecipeComponent filing and duplicates', () => {
+  type Filing = {
+    title: { set(v: string): void };
+    ingredients: { set(v: unknown[]): void };
+    sourceUrl: { set(v: string): void };
+    fileIn: { set(v: string): void; (): string };
+    draft(): Recipe;
+    save(): Promise<void>;
+    setTab(tab: string): void;
+  };
+  const BOOKS = [
+    { id: 'sam', name: "Sam's Cookbook" },
+    { id: 'stokes', name: 'Stokes Recipes' },
+  ];
+  const STORED: Recipe = {
+    slug: 'chicken-au-poivre',
+    title: 'Chicken au Poivre',
+    tags: [],
+    time: '',
+    servings: 4,
+    cooked: 0,
+    blurb: '',
+    desc: '',
+    ingredients: [{ qty: 1, unit: '', name: 'chicken', aisle: 'meat' }],
+    steps: ['Sear.'],
+    notes: [],
+    cookbooks: ['sam'],
+    sourceUrl: 'https://cooking.nytimes.com/recipes/1017518-chicken-au-poivre',
+  };
+
+  let fixture: ComponentFixture<CreateRecipeComponent>;
+  let page: Filing;
+  let fake: FakeRecipeRepository;
+
+  async function setup(shelf: string[] = [], lastFiled?: string): Promise<HTMLElement> {
+    localStorage.clear();
+    if (lastFiled) localStorage.setItem('cookbook.fileIn', JSON.stringify(lastFiled));
+    fake = new FakeRecipeRepository([STORED]);
+    TestBed.configureTestingModule({
+      imports: [CreateRecipeComponent],
+      providers: [
+        provideRouter([]),
+        ...provideFakeRecipes(fake),
+        ...provideFakeCookbooks(new FakeCookbookRepository(BOOKS)),
+        { provide: ImportClient, useValue: {} },
+      ],
+    });
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const recipes = TestBed.inject(RecipeStore);
+    await recipes.whenLoaded();
+    recipes.selectedCookbooks.set(new Set(shelf));
+    fixture = TestBed.createComponent(CreateRecipeComponent);
+    page = fixture.componentInstance as unknown as Filing;
+    await TestBed.inject(CookbookStore).whenLoaded();
+    page.setTab('manual');
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+  afterEach(() => localStorage.clear());
+
+  const select = (el: HTMLElement) => el.querySelector<HTMLSelectElement>('select')!;
+  const warning = (el: HTMLElement) => el.querySelector('.duplicate')?.textContent?.replace(/\s+/g, ' ').trim();
+
+  it('files a new recipe in the cookbook open in the library', async () => {
+    const el = await setup(['stokes']);
+    expect(page.fileIn()).toBe('stokes');
+    expect(select(el).value).toBe('stokes');
+    page.title.set('Pie');
+    expect(page.draft().cookbooks).toEqual(['stokes']);
+  });
+
+  it('falls back to the cookbook the last new recipe went into', async () => {
+    expect((await setup([], 'sam'), page.fileIn())).toBe('sam');
+  });
+
+  it('leaves it unfiled with all cookbooks open and none remembered', async () => {
+    const el = await setup();
+    expect(select(el).value).toBe('');
+    expect(page.draft().cookbooks).toEqual([]);
+  });
+
+  it('does not take a cookbook that no longer exists', async () => {
+    await setup(['gone'], 'also-gone');
+    expect(page.fileIn()).toBe('');
+  });
+
+  it('remembers the cookbook a saved recipe went into', async () => {
+    await setup();
+    page.fileIn.set('stokes');
+    page.title.set('Pie');
+    page.ingredients.set([{ qty: 1, unit: '', name: 'flour', aisle: 'pantry' }]);
+    await page.save();
+    expect((await fake.list()).find((r) => r.slug === 'pie')?.cookbooks).toEqual(['stokes']);
+    expect(JSON.parse(localStorage.getItem('cookbook.fileIn')!)).toBe('stokes');
+  });
+
+  it('warns that a recipe from the same page is already in the collection', async () => {
+    const el = await setup();
+    page.sourceUrl.set('https://www.cooking.nytimes.com/recipes/1017518-chicken-au-poivre/?smid=share');
+    page.title.set('Peppered Chicken');
+    fixture.detectChanges();
+    expect(warning(el)).toBe('Chicken au Poivre is already in the collection, from the same page. Saving adds a second copy.');
+    expect(el.querySelector('.duplicate a')?.getAttribute('href')).toBe('/recipes/chicken-au-poivre');
+  });
+
+  it('warns about a recipe with the same title, ignoring case', async () => {
+    const el = await setup();
+    page.title.set('  chicken AU poivre ');
+    fixture.detectChanges();
+    expect(warning(el)).toBe('Chicken au Poivre is already in the collection. Saving adds a second copy.');
+  });
+
+  it('says nothing for a recipe not in the collection', async () => {
+    const el = await setup();
+    page.title.set('Pie');
+    fixture.detectChanges();
+    expect(warning(el)).toBeUndefined();
+  });
+});

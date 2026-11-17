@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   input,
+  linkedSignal,
   signal,
   untracked,
 } from '@angular/core';
@@ -19,6 +20,8 @@ import { ImportClient, ImportPreview, photoProblem } from '../../core/import-cli
 import { parseIngredient } from '../../core/ingredient-parser';
 import { parseJsonLd, parseRecipeText, slugify, splitFrontMatter } from '../../core/recipe-text';
 import { formatQty } from '../../core/scale';
+import { Storage } from '../../core/storage';
+import { CookbookStore } from '../../core/stores/cookbook.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
 import { describePhotoError, describeWriteError } from '../../core/write-error';
 
@@ -30,6 +33,23 @@ type Tab = 'paste' | 'file' | 'url' | 'photo' | 'manual';
  */
 export const BOOKMARKLET_HREF =
   "javascript:location.href='http://localhost:4200/cookbook/recipes/new?url='+encodeURIComponent(location.href)";
+
+/** The cookbook the last new recipe was filed in, so the next one goes there too. */
+const FILE_IN_KEY = 'cookbook.fileIn';
+
+/**
+ * A page address reduced to what identifies the page: no scheme, `www.`,
+ * query, fragment or trailing slash. NYT links differ only in their `?smid=`.
+ */
+function pageKey(url: string | undefined): string {
+  if (!url) return '';
+  try {
+    const { host, pathname } = new URL(url);
+    return `${host.replace(/^www\./, '')}${pathname.replace(/\/+$/, '')}`.toLowerCase();
+  } catch {
+    return '';
+  }
+}
 
 /** The badge above the preview, per §6.4. */
 type Status = 'waiting' | 'check' | 'clean';
@@ -92,6 +112,8 @@ export class CreateRecipeComponent {
   readonly url = input<string | undefined>(undefined);
 
   protected readonly recipes = inject(RecipeStore);
+  protected readonly cookbooks = inject(CookbookStore);
+  private readonly storage = inject(Storage);
   private readonly router = inject(Router);
   /** Angular strips `javascript:` hrefs as unsafe; this one is a constant of ours. */
   protected readonly bookmarklet = inject(DomSanitizer).bypassSecurityTrustUrl(BOOKMARKLET_HREF);
@@ -179,6 +201,35 @@ export class CreateRecipeComponent {
       this.sections().every((s) => s.title.trim().length > 0),
   );
 
+  /**
+   * The cookbook a new recipe is filed in, '' for none: the shelf open in the
+   * library, or else the one the last new recipe went into. Recomputed when
+   * the cookbooks load, since until then no id can be checked.
+   */
+  protected readonly fileIn = linkedSignal(() => {
+    const ids = new Set(this.cookbooks.cookbooks().map((c) => c.id));
+    const shelf = [...untracked(this.recipes.selectedCookbooks)];
+    if (shelf.length === 1 && ids.has(shelf[0])) return shelf[0];
+    const last = untracked(() => this.storage.read<string>(FILE_IN_KEY, ''));
+    return ids.has(last) ? last : '';
+  });
+
+  /**
+   * A recipe already in the collection that this new one repeats: one from
+   * the same page, or else one with the same title. Saving is still allowed,
+   * since two recipes can share a name.
+   */
+  protected readonly duplicate = computed(() => {
+    if (this.editing()) return null;
+    const all = this.recipes.recipes();
+    const page = pageKey(this.sourceUrl());
+    const bySource = page ? all.find((r) => pageKey(r.sourceUrl) === page) : undefined;
+    if (bySource) return { recipe: bySource, samePage: true };
+    const title = this.title().trim().toLowerCase();
+    const byTitle = title ? all.find((r) => r.title.trim().toLowerCase() === title) : undefined;
+    return byTitle ? { recipe: byTitle, samePage: false } : null;
+  });
+
   protected readonly draft = computed<Recipe>(() => {
     const draft: Recipe = {
       // Edit mode keeps what the form has no field for: cooked, archived,
@@ -198,8 +249,8 @@ export class CreateRecipeComponent {
       notes: this.notes(),
       ...(this.photo() ? { photo: this.photo() } : {}),
       ...(this.sourceUrl() ? { sourceUrl: this.sourceUrl() } : {}),
-      // Unfiled until this screen offers a cookbook to file into.
-      cookbooks: this.original()?.cookbooks ?? [],
+      // Editing keeps the recipe where it is filed; the recipe page refiles it.
+      cookbooks: this.original()?.cookbooks ?? (this.fileIn() ? [this.fileIn()] : []),
     };
     // The spread above would otherwise keep a stored value the form cleared.
     if (!this.subtitle().trim()) delete draft.subtitle;
@@ -705,6 +756,7 @@ export class CreateRecipeComponent {
         return;
       }
       const slug = await this.recipes.add(cleaned);
+      this.storage.write(FILE_IN_KEY, this.fileIn());
       void this.router.navigate(['/recipes', slug]);
     } catch (err) {
       // Stay here with the draft untouched so nothing typed is lost.
@@ -756,7 +808,8 @@ export class CreateRecipeComponent {
         blurb: '',
         desc: '',
         notes: [],
-        cookbooks: [],
+        // Filed with its parent, so it does not turn up as unfiled.
+        cookbooks: parent.cookbooks,
         component: true,
       });
       // Remembered at once: if a later section or the parent fails, the retry

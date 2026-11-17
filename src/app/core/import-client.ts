@@ -12,6 +12,8 @@ export interface ImportPreview {
   time?: string;
   image?: string;
   tags?: string[];
+  /** The site's own name ("The Modern Proper"), for the credit line. */
+  siteName?: string;
   /** An unnamed group holds the recipe's own ingredients; a named one is a sub-recipe. */
   ingredientGroups: { name: string | null; lines: string[] }[];
   steps: string[];

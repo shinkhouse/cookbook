@@ -1,20 +1,47 @@
-<div class="create">
-  <header class="create-head">
-    <a class="back" routerLink="/">
-      <mat-icon fontIcon="arrow_back" aria-hidden="true" />
-      All recipes
-    </a>
+<!-- Save is always in reach: the bar stays under the site header as the form scrolls. -->
+<div class="action-bar">
+  <div class="action-bar-inner">
     @if (editing()) {
-      <h1>Edit recipe</h1>
-      <p class="lede">Changes are saved to the shared collection when you press Save.</p>
+      <a class="back" [routerLink]="original() ? ['/recipes', slug_()] : '/'">
+        <mat-icon fontIcon="arrow_back" aria-hidden="true" />
+        <span class="back-text">Back to recipe</span>
+      </a>
+      <span class="bar-divider" aria-hidden="true"></span>
+      <span class="bar-mode">Editing</span>
+      @if (dirty()) {
+        <span class="unsaved"><span class="unsaved-dot" aria-hidden="true"></span>Unsaved changes</span>
+      }
     } @else {
-      <h1>Add a recipe.</h1>
-      <p class="lede">
-        Paste it, drop a file, or type it out. Nothing is saved until you say so.
-      </p>
+      <a class="back" routerLink="/">
+        <mat-icon fontIcon="arrow_back" aria-hidden="true" />
+        <span class="back-text">All recipes</span>
+      </a>
+      <span class="bar-divider" aria-hidden="true"></span>
+      <span class="bar-mode">New recipe</span>
+      <span class="bar-note">· not saved yet</span>
     }
-  </header>
 
+    <div class="bar-actions">
+      @if (editing()) {
+        <a class="btn-outline bar-secondary" [routerLink]="original() ? ['/recipes', slug_()] : '/'">Discard</a>
+      } @else {
+        <button type="button" class="btn-outline bar-secondary" (click)="copyJson()">
+          <mat-icon fontIcon="content_copy" aria-hidden="true" /> Copy JSON
+        </button>
+      }
+      <button
+        type="button"
+        class="btn-primary"
+        (click)="save()"
+        [disabled]="!canSave() || saving() || recipes.status() !== 'ready'"
+      >
+        {{ saving() ? 'Saving…' : editing() ? 'Save changes' : 'Save recipe' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="create">
   @if (missing() && recipes.status() === 'error') {
     <div class="not-found" data-state="error" role="alert">
       <p class="hint">Couldn't load the recipe.</p>
@@ -26,109 +53,40 @@
       <a class="btn-outline" routerLink="/">Back to all recipes</a>
     </div>
   } @else {
-    @if (!editing()) {
-    <div class="tabs" role="tablist" aria-label="How to add a recipe">
-      @for (t of [
-        { id: 'paste', label: 'Paste text' },
-        { id: 'file', label: 'Markdown file' },
-        { id: 'url', label: 'From a URL' },
-        { id: 'photo', label: 'From a photo' },
-        { id: 'manual', label: 'Manual' }
-      ]; track t.id) {
-        <button
-          type="button"
-          role="tab"
-          class="tab"
-          [class.is-on]="tab() === t.id"
-          [attr.aria-selected]="tab() === t.id"
-          (click)="setTab($any(t.id))"
-        >
-          {{ t.label }}
-        </button>
-      }
-    </div>
-    }
+    @if (editing()) {
+      <h1 class="sr-only">Edit recipe</h1>
+    } @else {
+      <h1>Add recipe</h1>
 
-    <div class="columns">
-      <section class="panel">
-        @switch (editing() ? 'manual' : tab()) {
-          @case ('paste') {
-            <label class="field-label" for="paste-area">Paste the whole recipe</label>
-            <p class="hint">
-              First line becomes the title. An <em>Ingredients</em> or
-              <em>Steps</em> heading splits the sections; without one, lines
-              starting with an amount are read as ingredients.
-            </p>
-            <textarea
-              id="paste-area"
-              rows="18"
-              [value]="pasted()"
-              (input)="onPaste($any($event.target).value)"
-              placeholder="Grandma's Chili&#10;&#10;Ingredients&#10;1 lb hamburger&#10;1 can kidney beans&#10;&#10;Steps&#10;Brown the beef.&#10;Simmer for an hour."
-            ></textarea>
-          }
+      <!-- Where the form can be filled from. The fields below are always there to type into. -->
+      <section class="import" aria-labelledby="import-label">
+        <div class="import-choices">
+          <span class="import-label" id="import-label">Fill the form from</span>
+          <div class="choices" role="tablist" aria-labelledby="import-label">
+            @for (s of sources; track s.id) {
+              <button
+                type="button"
+                role="tab"
+                class="choice"
+                [class.is-on]="tab() === s.id"
+                [attr.aria-selected]="tab() === s.id"
+                (click)="setTab(s.id)"
+              >
+                <mat-icon [fontIcon]="s.icon" aria-hidden="true" />
+                {{ s.label }}
+              </button>
+            }
+          </div>
+          <span class="import-or">— or just type below</span>
+        </div>
 
-          @case ('file') {
-            <label class="field-label">Drop a markdown or text file</label>
-            <p class="hint">
-              Front matter fills in the title, servings and tags. Recipes written
-              inside a table are read too, which is what a Google Docs export
-              produces. Drop a folder to bulk import — the first file opens here,
-              the rest are added straight away.
-            </p>
-            <div
-              class="dropzone"
-              [class.is-active]="dropActive()"
-              (dragover)="onDragOver($event)"
-              (dragleave)="onDragLeave()"
-              (drop)="onDrop($event)"
-            >
-              <mat-icon fontIcon="upload_file" aria-hidden="true" />
-              <p>Drop <code>.md</code> or <code>.txt</code> here</p>
-              <label class="btn-outline file-pick">
-                Choose files
-                <input
-                  type="file"
-                  multiple
-                  accept=".md,.markdown,.txt"
-                  (change)="onFiles($any($event.target).files)"
-                />
-              </label>
-            </div>
-          }
-
-          @case ('photo') {
-            <label class="field-label" for="import-photo">Import from a photo</label>
-            <p class="hint">
-              Handwritten cards work. The photo is read by Claude on the local
-              recipe server; nothing is saved until you press Save.
-            </p>
-            <div class="editor-row import-row photo-row">
-              <input
-                id="import-photo"
-                type="file"
-                class="grow"
-                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                [disabled]="importing()"
-                (change)="importPhoto($any($event.target).files); $any($event.target).value = ''"
-              />
-              @if (importing()) {
-                <span class="hint import-status" role="status">Importing…</span>
-              }
-            </div>
-          }
-
+        @switch (tab()) {
           @case ('url') {
-            <label class="field-label" for="import-url">Import from a web address</label>
-            <p class="hint">
-              The recipe server reads the page and fills in the form. Nothing is
-              saved until you press Save.
-            </p>
-            <div class="editor-row import-row">
+            <div class="import-row">
               <input
                 id="import-url"
                 type="url"
-                class="grow"
+                aria-label="Recipe link"
                 [value]="importUrl()"
                 (input)="importUrl.set($any($event.target).value)"
                 (keydown.enter)="importFromUrl()"
@@ -140,404 +98,689 @@
                 (click)="importFromUrl()"
                 [disabled]="importing() || !importUrl().trim()"
               >
-                {{ importing() ? 'Importing…' : 'Import' }}
+                {{ importing() ? 'Importing…' : importedUrl() && importedUrl() === importUrl().trim() ? 'Import again' : 'Import' }}
               </button>
             </div>
-
-            <a
-              class="bookmarklet"
-              [href]="bookmarklet"
-              (click)="$event.preventDefault()"
-              >Add to My Cookbooks</a
-            >
-            <p class="hint">
-              Drag this to your bookmarks bar. On any recipe page, click it to
-              import that page here.
-            </p>
-
-            <label class="field-label url-fallback" for="url-area">Or paste the page source</label>
-            <p class="hint">
-              If a site won't let the server in, paste its HTML here instead. This
-              reads schema.org <code>Recipe</code> markup, and falls back to plain
-              text.
-            </p>
-            <textarea
-              id="url-area"
-              rows="14"
-              [value]="urlText()"
-              (input)="onUrlText($any($event.target).value)"
-              placeholder="Paste the page's HTML, or its JSON-LD block"
-            ></textarea>
           }
-
-          @case ('manual') {
-            <div class="manual">
-              @if (editing()) {
-                <p class="hint">Address: <code class="edit-slug">/{{ slug() }}</code> (fixed; editing never renames)</p>
-              }
-              <div class="field-row">
-                <label class="field">
-                  <span class="field-label">Title</span>
-                  <input type="text" [value]="title()" (input)="title.set($any($event.target).value)" />
-                </label>
-                <label class="field">
-                  <span class="field-label">Credit line</span>
-                  <input
-                    type="text"
-                    [value]="subtitle()"
-                    (input)="subtitle.set($any($event.target).value)"
-                    placeholder="From The Modern Proper"
-                  />
-                </label>
-              </div>
-
-              <div class="field-row">
-                <label class="field field-small">
-                  <span class="field-label">Servings</span>
-                  <input
-                    type="number"
-                    min="1"
-                    [value]="servings()"
-                    (input)="servings.set(+$any($event.target).value || 1)"
-                  />
-                </label>
-                <label class="field field-small">
-                  <span class="field-label">Time</span>
-                  <input
-                    type="text"
-                    [value]="time()"
-                    (input)="time.set($any($event.target).value)"
-                    placeholder="30 min"
-                  />
-                </label>
-                <label class="field">
-                  <span class="field-label">Tags</span>
-                  <input
-                    type="text"
-                    [value]="tagsText()"
-                    (input)="tagsText.set($any($event.target).value)"
-                    placeholder="dinner, pasta"
-                  />
-                </label>
-              </div>
-
-              @if (!editing() && cookbooks.cookbooks().length > 0) {
-                <label class="field">
-                  <span class="field-label">Cookbook</span>
-                  <select (change)="fileIn.set($any($event.target).value)">
-                    <option value="" [selected]="!fileIn()">Not in a cookbook</option>
-                    @for (c of cookbooks.cookbooks(); track c.id) {
-                      <option [value]="c.id" [selected]="c.id === fileIn()">{{ c.name }}</option>
-                    }
-                  </select>
-                </label>
-              }
-
-              <label class="field">
-                <span class="field-label">Card blurb</span>
+          @case ('paste') {
+            <textarea
+              id="paste-area"
+              rows="8"
+              aria-label="The whole recipe"
+              [value]="pasted()"
+              (input)="onPaste($any($event.target).value)"
+              placeholder="Grandma's Chili&#10;&#10;Ingredients&#10;1 lb hamburger&#10;1 can kidney beans&#10;&#10;Steps&#10;Brown the beef.&#10;Simmer for an hour."
+            ></textarea>
+            <p class="hint">
+              The first line becomes the title. An <em>Ingredients</em> or <em>Steps</em> heading
+              splits the rest; without one, lines starting with an amount are read as ingredients.
+            </p>
+          }
+          @case ('file') {
+            <div
+              class="dropzone"
+              [class.is-active]="dropActive()"
+              (dragover)="onDragOver($event)"
+              (dragleave)="onDragLeave()"
+              (drop)="onDrop($event)"
+            >
+              <mat-icon fontIcon="upload_file" aria-hidden="true" />
+              <p>Drop a <code>.md</code> or <code>.txt</code> file here, or a folder of them</p>
+              <label class="btn-outline file-pick">
+                Choose files
                 <input
-                  type="text"
-                  [value]="blurb()"
-                  (input)="blurb.set($any($event.target).value)"
-                  placeholder="One line for the library card"
+                  type="file"
+                  multiple
+                  accept=".md,.markdown,.txt"
+                  (change)="onFiles($any($event.target).files)"
                 />
               </label>
-
-              <label class="field">
-                <span class="field-label">Description</span>
-                <textarea
-                  rows="3"
-                  [value]="desc()"
-                  (input)="desc.set($any($event.target).value)"
-                ></textarea>
-              </label>
-
-              <!-- One set of row editors, shared by the recipe and each section. -->
-              <ng-template #ingredientRows let-list let-owner="owner">
-                @for (ing of list; track $index) {
-                  <div class="editor-row">
-                    <input
-                      type="text"
-                      class="grow"
-                      [value]="amountLabel(ing) ? amountLabel(ing) + ' ' + ing.name : ing.name"
-                      (change)="updateIngredientName($index, $any($event.target).value, owner)"
-                      placeholder="2 tbsp olive oil"
-                    />
-                    <!-- §6.4 — the aisle is inferred, with a manual override. -->
-                    <!--
-                      Selected per option: a [value] on the select lands before its
-                      options exist, so the box showed the first aisle instead.
-                    -->
-                    <select
-                      (change)="setAisle($index, $any($event.target).value, owner)"
-                      aria-label="Aisle"
-                    >
-                      @for (aisle of aisles; track aisle) {
-                        <option [value]="aisle" [selected]="aisle === ing.aisle">{{ aisle }}</option>
-                      }
-                    </select>
-                    <button
-                      type="button"
-                      class="icon-button"
-                      (click)="removeIngredient($index, owner)"
-                      aria-label="Remove ingredient"
-                    >
-                      <mat-icon fontIcon="close" />
-                    </button>
-                  </div>
-                } @empty {
-                  <p class="hint">Nothing yet.</p>
-                }
-              </ng-template>
-
-              <ng-template #stepRows let-list let-owner="owner">
-                @for (step of list; track $index) {
-                  <div class="editor-row">
-                    <textarea
-                      rows="2"
-                      class="grow"
-                      [value]="step"
-                      (input)="updateStep($index, $any($event.target).value, owner)"
-                    ></textarea>
-                    <button
-                      type="button"
-                      class="icon-button"
-                      (click)="removeStep($index, owner)"
-                      aria-label="Remove step"
-                    >
-                      <mat-icon fontIcon="close" />
-                    </button>
-                  </div>
-                } @empty {
-                  <p class="hint">Nothing yet.</p>
-                }
-              </ng-template>
-
-              <div class="editor-block">
-                <div class="editor-head">
-                  <span class="field-label">Ingredients</span>
-                  <button type="button" class="btn-ghost btn-small" (click)="addIngredient()">
-                    <mat-icon fontIcon="add" aria-hidden="true" /> Add
-                  </button>
-                </div>
-                <ng-container
-                  [ngTemplateOutlet]="ingredientRows"
-                  [ngTemplateOutletContext]="{ $implicit: ingredients(), owner: undefined }"
-                />
-              </div>
-
-              <div class="editor-block">
-                <div class="editor-head">
-                  <span class="field-label">Steps</span>
-                  <button type="button" class="btn-ghost btn-small" (click)="addStep()">
-                    <mat-icon fontIcon="add" aria-hidden="true" /> Add
-                  </button>
-                </div>
-                <ng-container
-                  [ngTemplateOutlet]="stepRows"
-                  [ngTemplateOutletContext]="{ $implicit: steps(), owner: undefined }"
-                />
-              </div>
-
-              <div class="editor-block">
-                <div class="editor-head">
-                  <span class="field-label">Sections</span>
-                  <button type="button" class="btn-ghost btn-small" [disabled]="atSectionLimit()" (click)="addSection()">
-                    <mat-icon fontIcon="add" aria-hidden="true" /> Add section
-                  </button>
-                </div>
-                <p class="hint">
-                  A part with its own ingredients and steps, such as “For the
-                  sauce”. Each is saved as a recipe of its own, shown only inside
-                  this one.
-                </p>
-                @for (section of sections(); track $index; let s = $index) {
-                  <div class="section-block">
-                    <div class="editor-row">
-                      <label class="field grow">
-                        <span class="field-label">Section title</span>
-                        <input
-                          type="text"
-                          [value]="section.title"
-                          (input)="setSectionTitle(s, $any($event.target).value)"
-                          placeholder="For the sauce"
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        class="icon-button"
-                        (click)="removeSection(s)"
-                        [attr.aria-label]="'Remove section ' + (section.title || (s + 1))"
-                      >
-                        <mat-icon fontIcon="close" />
-                      </button>
-                    </div>
-
-                    <div class="editor-head">
-                      <span class="field-label">Ingredients</span>
-                      <button type="button" class="btn-ghost btn-small" (click)="addIngredient(s)">
-                        <mat-icon fontIcon="add" aria-hidden="true" /> Add
-                      </button>
-                    </div>
-                    <ng-container
-                      [ngTemplateOutlet]="ingredientRows"
-                      [ngTemplateOutletContext]="{ $implicit: section.ingredients, owner: s }"
-                    />
-
-                    <div class="editor-head">
-                      <span class="field-label">Steps</span>
-                      <button type="button" class="btn-ghost btn-small" (click)="addStep(s)">
-                        <mat-icon fontIcon="add" aria-hidden="true" /> Add
-                      </button>
-                    </div>
-                    <ng-container
-                      [ngTemplateOutlet]="stepRows"
-                      [ngTemplateOutletContext]="{ $implicit: section.steps, owner: s }"
-                    />
-                  </div>
-                }
-              </div>
-
-              <div class="editor-block">
-                <div class="editor-head">
-                  <span class="field-label">Notes</span>
-                  <button type="button" class="btn-ghost btn-small" (click)="addNote()">
-                    <mat-icon fontIcon="add" aria-hidden="true" /> Add
-                  </button>
-                </div>
-                @for (note of notes(); track $index) {
-                  <div class="editor-row">
-                    <input
-                      type="text"
-                      class="grow"
-                      [value]="note"
-                      (input)="updateNote($index, $any($event.target).value)"
-                    />
-                    <button
-                      type="button"
-                      class="icon-button"
-                      (click)="removeNote($index)"
-                      aria-label="Remove note"
-                    >
-                      <mat-icon fontIcon="close" />
-                    </button>
-                  </div>
-                } @empty {
-                  <p class="hint">Nothing yet.</p>
-                }
-              </div>
             </div>
+            <p class="hint">
+              Front matter fills in the servings and tags, and recipes written in a table (a Google
+              Docs export) are read too. In a folder, the first file opens here and the rest are
+              saved straight away.
+            </p>
+          }
+          @case ('photo') {
+            <div class="import-row">
+              <input
+                id="import-photo"
+                type="file"
+                aria-label="Photo of a recipe"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                [disabled]="importing()"
+                (change)="importPhoto($any($event.target).files); $any($event.target).value = ''"
+              />
+            </div>
+            <p class="hint">
+              Handwritten cards work. Claude reads the photo on the local recipe server.
+            </p>
           }
         }
-      </section>
 
-      <!-- §6.4 — sticky draft preview with the parse-status badge. -->
-      <aside class="preview">
-        <div class="preview-head">
-          <span class="label">Draft</span>
-          <span class="badge" [attr.data-status]="status()">{{ statusLabel() }}</span>
+        <div class="import-foot">
+          <p class="import-status" role="status">
+            @if (importing()) {
+              Importing…
+            } @else if (fillSummary()) {
+              <span class="ok"><mat-icon fontIcon="check" aria-hidden="true" />{{ filledFrom() === 'url' || filledFrom() === 'photo' ? 'Imported' : 'Read' }}</span>
+              {{ fillSummary() }}
+              @if (checkCount() > 0) {
+                <strong class="warn">{{ checkCount() }} {{ checkCount() === 1 ? 'thing' : 'things' }} to check</strong>,
+                marked below.
+              }
+            }
+            @if (notice()) {
+              <span class="import-notice">{{ notice() }}</span>
+            }
+          </p>
+          @if (tab() === 'url') {
+            <button type="button" class="link-button" (click)="htmlOpen.set(!htmlOpen())" [attr.aria-expanded]="htmlOpen()">
+              Page source won't load? Paste its HTML
+            </button>
+          }
         </div>
 
-        @if (notice()) {
-          <p class="notice" role="status">{{ notice() }}</p>
+        @if (tab() === 'url' && htmlOpen()) {
+          <textarea
+            id="url-area"
+            rows="8"
+            aria-label="The page's HTML"
+            [value]="urlText()"
+            (input)="onUrlText($any($event.target).value)"
+            placeholder="Paste the page's HTML, or its JSON-LD block"
+          ></textarea>
+          <p class="hint">
+            For a site that won't let the recipe server in. Schema.org <code>Recipe</code> markup is
+            read first, then plain text.
+          </p>
         }
+        @if (tab() === 'url') {
+          <p class="hint bookmarklet-line">
+            Drag
+            <a class="bookmarklet" [href]="bookmarklet" (click)="$event.preventDefault()">Add to My Cookbooks</a>
+            to your bookmarks bar, then click it on any recipe page to import that page here.
+          </p>
+        }
+      </section>
+    }
 
-        @if (status() === 'waiting') {
-          <p class="hint">Nothing parsed yet.</p>
-        } @else {
-          <h2 class="preview-title">{{ title() || 'Untitled' }}</h2>
-          @if (slug()) {
-            <p class="preview-slug label">/{{ slug() }}</p>
+    @if (checkCount() > 0) {
+      <button type="button" class="mobile-checks" (click)="jump('checklist')">
+        <mat-icon fontIcon="priority_high" aria-hidden="true" />
+        {{ checkCount() }} {{ checkCount() === 1 ? 'thing' : 'things' }} worth a look
+        <span class="mobile-checks-show">Show</span>
+      </button>
+    }
+
+    <div class="columns">
+      <div class="form">
+        <section class="details" id="details" aria-label="Details">
+          <div class="field">
+            <span class="field-label">Photo</span>
+            <div class="photo-frame" [class.has-photo]="photo() && !photoBroken()">
+              @if (photo() && !photoBroken()) {
+                <img [src]="photo()" alt="" (error)="photoBroken.set(true)" />
+              } @else {
+                <p class="photo-empty">
+                  <mat-icon fontIcon="image" aria-hidden="true" />
+                  {{ photo() ? 'The photo didn’t load' : 'No photo yet' }}
+                </p>
+              }
+              <div class="photo-actions">
+                <button type="button" class="btn-chip" (click)="photoDraft.set(photo())">
+                  {{ photo() ? 'Replace' : 'Add a photo' }}
+                </button>
+                @if (photo()) {
+                  <button type="button" class="btn-chip" (click)="removePhoto()">Remove</button>
+                }
+              </div>
+            </div>
+            @if (photoDraft() !== null) {
+              <div class="photo-url">
+                <input
+                  type="url"
+                  aria-label="Photo address"
+                  placeholder="Paste the address of an image"
+                  [value]="photoDraft()"
+                  (input)="photoDraft.set($any($event.target).value)"
+                  (keydown.enter)="usePhoto()"
+                />
+                <button type="button" class="btn-outline" (click)="usePhoto()">Use it</button>
+                <button type="button" class="btn-ghost" (click)="photoDraft.set(null)">Cancel</button>
+              </div>
+            }
+          </div>
+
+          <label class="field">
+            <span class="field-label">Title</span>
+            <input
+              type="text"
+              class="title-input"
+              [value]="title()"
+              (input)="title.set($any($event.target).value)"
+              placeholder="Grandma's Chili"
+            />
+          </label>
+          @if (editing()) {
+            <p class="hint slug-hint">
+              <mat-icon fontIcon="lock" aria-hidden="true" />/{{ slug() }} — stays the same if you rename
+            </p>
+          } @else if (slug()) {
+            <p class="hint slug-hint">Will live at /{{ slug() }}</p>
           }
 
-          @if (review().length > 0) {
-            <div class="review">
-              <p class="review-head">
-                <mat-icon fontIcon="error_outline" aria-hidden="true" />
-                {{ review().length }}
-                {{ review().length === 1 ? 'line needs' : 'lines need' }} a look
-              </p>
-              <ul>
-                @for (line of review(); track line) {
-                  <li>{{ line }}</li>
-                }
-              </ul>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="credit">Credit line</label>
+              <input
+                id="credit"
+                type="text"
+                [value]="subtitle()"
+                (input)="subtitle.set($any($event.target).value)"
+                placeholder="From The Modern Proper"
+              />
+              @if (filledCredit() && filledCredit() === subtitle()) {
+                <p class="hint">Filled in from the link</p>
+              }
+            </div>
+            <div class="field">
+              <label class="field-label" for="source">Source link</label>
+              <input
+                id="source"
+                type="url"
+                [value]="sourceUrl()"
+                (input)="sourceUrl.set($any($event.target).value.trim())"
+                placeholder="https://"
+                [attr.aria-invalid]="sourceValid() ? null : 'true'"
+              />
+              @if (!sourceValid()) {
+                <p class="hint is-problem">Starts with http:// or https://</p>
+              }
+            </div>
+          </div>
+
+          <div class="field-row field-row-3">
+            <div class="field">
+              <label class="field-label" for="makes">Makes</label>
+              <div class="stepper">
+                <button type="button" (click)="stepServings(-1)" [disabled]="servings() <= 1" aria-label="Fewer">−</button>
+                <input
+                  id="makes"
+                  type="number"
+                  min="1"
+                  [value]="servings()"
+                  (input)="servings.set(+$any($event.target).value || 1)"
+                />
+                <button type="button" (click)="stepServings(1)" aria-label="More">+</button>
+              </div>
+            </div>
+            <label class="field">
+              <span class="field-label">Duration</span>
+              <input
+                type="text"
+                [value]="time()"
+                (input)="time.set($any($event.target).value)"
+                placeholder="30 min"
+              />
+            </label>
+            <label class="field">
+              <span class="field-label">Card blurb <span class="optional">· optional</span></span>
+              <input
+                type="text"
+                [value]="blurb()"
+                (input)="blurb.set($any($event.target).value)"
+                placeholder="One line for the library card"
+              />
+            </label>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label class="field-label" for="tag-input">Tags</label>
+              @if (tags().length > 0) {
+                <span class="label-count">{{ tags().length }}</span>
+              }
+            </div>
+            <div class="chips" (click)="tagBox.focus()">
+              @for (tag of tags(); track tag) {
+                <span class="chip">
+                  {{ tagLabel(tag) }}
+                  <button type="button" (click)="removeTag(tag); $event.stopPropagation()" [attr.aria-label]="'Remove ' + tag">
+                    <mat-icon fontIcon="close" aria-hidden="true" />
+                  </button>
+                </span>
+              }
+              <input
+                #tagBox
+                id="tag-input"
+                type="text"
+                class="chip-input"
+                placeholder="Add tag…"
+                (keydown)="onTagKey($event)"
+                (blur)="onTagBlur(tagBox)"
+              />
+            </div>
+          </div>
+
+          <label class="field">
+            <span class="field-label">Description</span>
+            <textarea
+              class="grow-text"
+              rows="3"
+              [value]="desc()"
+              (input)="desc.set($any($event.target).value)"
+            ></textarea>
+          </label>
+        </section>
+
+        <!-- The recipe itself, then each part with ingredients and steps of its own. -->
+        <div class="part-tabs" role="tablist" aria-label="Parts of the recipe">
+          <button
+            type="button"
+            role="tab"
+            class="part-tab"
+            [class.is-on]="part() === undefined"
+            [attr.aria-selected]="part() === undefined"
+            (click)="part.set(undefined)"
+          >
+            Main recipe
+          </button>
+          @for (s of sections(); track $index; let n = $index) {
+            <button
+              type="button"
+              role="tab"
+              class="part-tab"
+              [class.is-on]="part() === n"
+              [attr.aria-selected]="part() === n"
+              (click)="part.set(n)"
+            >
+              {{ s.title.trim() || 'Untitled part' }}
+            </button>
+          }
+          <button type="button" class="add-part" (click)="addSection()" [disabled]="atSectionLimit()">
+            <mat-icon fontIcon="add" aria-hidden="true" />
+            Add a part <span class="add-part-eg">(e.g. “For the sauce”)</span>
+          </button>
+        </div>
+
+        @if (part() !== undefined && sections()[part()!]; as s) {
+          <div class="part-head">
+            <label class="field">
+              <span class="field-label">Part name</span>
+              <input
+                type="text"
+                [value]="s.title"
+                (input)="setSectionTitle(part()!, $any($event.target).value)"
+                placeholder="For the sauce"
+                [attr.aria-invalid]="s.title.trim() ? null : 'true'"
+              />
+            </label>
+            <button type="button" class="btn-ghost" (click)="removeSection(part()!)">Remove this part</button>
+          </div>
+          <p class="hint part-hint">
+            Saved as a recipe of its own, shown only inside this one.
+          </p>
+        }
+
+        <section class="panel" id="ingredients" aria-labelledby="ingredients-title">
+          <div class="panel-head">
+            <h2 id="ingredients-title" class="panel-title">
+              Ingredients <span class="panel-count">· {{ listOf(part()).length }}</span>
+            </h2>
+            <button type="button" class="btn-chip" (click)="pasteOpen.set(!pasteOpen())" [attr.aria-expanded]="pasteOpen()">
+              Paste several
+            </button>
+            <button type="button" class="btn-chip" (click)="addIngredient(part())">
+              <mat-icon fontIcon="add" aria-hidden="true" /> Add
+            </button>
+          </div>
+
+          @if (pasteOpen()) {
+            <div class="paste-several">
+              <textarea
+                #pasteBox
+                rows="5"
+                aria-label="Ingredients, one per line"
+                placeholder="2 tbsp olive oil&#10;1 onion, chopped&#10;Salt and pepper"
+              ></textarea>
+              <div class="paste-actions">
+                <button type="button" class="btn-outline" (click)="pasteIngredients(pasteBox.value, part())">Add these</button>
+                <button type="button" class="btn-ghost" (click)="pasteOpen.set(false)">Cancel</button>
+              </div>
             </div>
           }
 
-          <h3 class="preview-sub label">
-            Ingredients · {{ ingredients().length }}
-          </h3>
-          <ul class="preview-list">
-            @for (ing of ingredients(); track $index) {
-              <li class="preview-ing">
-                @if (amountLabel(ing); as amt) {
-                  <span class="preview-amount">{{ amt }}</span>
+          @if (listOf(part()).length > 0) {
+            <div class="ing-head" aria-hidden="true">
+              <span></span><span>Amount</span><span>Ingredient</span><span>Aisle</span><span></span>
+            </div>
+          }
+          <ul class="ing-list">
+            @for (ing of listOf(part()); track $index; let i = $index; let last = $last; let first = $first) {
+              <li
+                class="ing-item"
+                [id]="rowId(part(), i)"
+                [class.is-drop]="dropTarget() === rowId(part(), i)"
+                (dragover)="rowDragOver($event, part(), i)"
+                (drop)="rowDrop($event, part(), i)"
+              >
+                <div class="ing-row">
+                  <span
+                    class="drag"
+                    draggable="true"
+                    title="Drag to reorder"
+                    (dragstart)="rowDragStart($event, part(), i)"
+                    (dragend)="rowDragEnd()"
+                  >
+                    <mat-icon fontIcon="drag_indicator" aria-hidden="true" />
+                  </span>
+                  <input
+                    type="text"
+                    class="amount"
+                    aria-label="Amount"
+                    [value]="amountLabel(ing)"
+                    placeholder="to taste"
+                    (change)="setAmount(i, $any($event.target).value, part())"
+                  />
+                  <input
+                    type="text"
+                    class="name"
+                    aria-label="Ingredient"
+                    [value]="ing.name"
+                    placeholder="olive oil"
+                    (change)="updateIngredientName(i, $any($event.target).value, part())"
+                  />
+                  <!--
+                    Selected per option: a [value] on the select lands before its
+                    options exist, so the box showed the first aisle instead.
+                  -->
+                  <select
+                    class="aisle"
+                    [attr.data-aisle]="ing.aisle"
+                    aria-label="Aisle"
+                    (change)="setAisle(i, $any($event.target).value, part())"
+                  >
+                    @for (aisle of aisles; track aisle) {
+                      <option [value]="aisle" [selected]="aisle === ing.aisle">{{ aisleLabels[aisle] }}</option>
+                    }
+                  </select>
+                  <button
+                    type="button"
+                    class="row-menu"
+                    [matMenuTriggerFor]="ingredientMenu"
+                    [matMenuTriggerData]="{ i: i, first: first, last: last }"
+                    [attr.aria-label]="'More for ' + (ing.name || 'this ingredient')"
+                  >
+                    <mat-icon fontIcon="more_horiz" aria-hidden="true" />
+                  </button>
+                </div>
+                @for (check of checksByRow().get(rowId(part(), i)) ?? []; track check.id) {
+                  <div class="check-band">
+                    <span class="check-text">{{ check.message }}</span>
+                    @if (check.fix; as fix) {
+                      <button type="button" class="check-fix" (click)="applyFix(check)">{{ fix.label }}</button>
+                    }
+                    <button type="button" class="check-keep" (click)="keep(check.id)">Keep</button>
+                  </div>
                 }
-                <span class="preview-name">{{ ing.name }}</span>
-                <span class="preview-aisle">{{ ing.aisle }}</span>
+              </li>
+            } @empty {
+              <li class="empty-row hint">No ingredients yet.</li>
+            }
+          </ul>
+        </section>
+
+        <mat-menu #ingredientMenu="matMenu" xPosition="before">
+          <ng-template matMenuContent let-i="i" let-first="first" let-last="last">
+            <button mat-menu-item [disabled]="first" (click)="moveIngredient(i, i - 1, part())">
+              <mat-icon fontIcon="arrow_upward" /> Move up
+            </button>
+            <button mat-menu-item [disabled]="last" (click)="moveIngredient(i, i + 1, part())">
+              <mat-icon fontIcon="arrow_downward" /> Move down
+            </button>
+            <button mat-menu-item class="menu-danger" (click)="removeIngredient(i, part())">
+              <mat-icon fontIcon="delete_outline" /> Delete
+            </button>
+          </ng-template>
+        </mat-menu>
+
+        <section class="panel" id="steps" aria-labelledby="steps-title">
+          <div class="panel-head">
+            <h2 id="steps-title" class="panel-title">
+              Instructions <span class="panel-count">· {{ stepsOf(part()).length }}</span>
+            </h2>
+            <button type="button" class="btn-chip" (click)="addStep(part())">
+              <mat-icon fontIcon="add" aria-hidden="true" /> Add step
+            </button>
+          </div>
+          <ol class="step-list">
+            @for (step of stepsOf(part()); track $index; let i = $index; let last = $last; let first = $first) {
+              <li class="step-row">
+                <span class="step-num" aria-hidden="true">{{ i + 1 }}</span>
+                <textarea
+                  class="grow-text"
+                  rows="2"
+                  [attr.aria-label]="'Step ' + (i + 1)"
+                  [value]="step"
+                  (input)="updateStep(i, $any($event.target).value, part())"
+                  (keyup)="noteCaret(part(), i, $any($event.target))"
+                  (click)="noteCaret(part(), i, $any($event.target))"
+                ></textarea>
+                <button
+                  type="button"
+                  class="row-menu"
+                  [matMenuTriggerFor]="stepMenu"
+                  [matMenuTriggerData]="{ i: i, first: first, last: last }"
+                  [attr.aria-label]="'More for step ' + (i + 1)"
+                >
+                  <mat-icon fontIcon="more_horiz" aria-hidden="true" />
+                </button>
+              </li>
+            } @empty {
+              <li class="empty-row hint">No steps yet.</li>
+            }
+          </ol>
+        </section>
+
+        <mat-menu #stepMenu="matMenu" xPosition="before">
+          <ng-template matMenuContent let-i="i" let-first="first" let-last="last">
+            <button mat-menu-item [disabled]="first" (click)="moveStep(i, i - 1, part())">
+              <mat-icon fontIcon="arrow_upward" /> Move up
+            </button>
+            <button mat-menu-item [disabled]="last" (click)="moveStep(i, i + 1, part())">
+              <mat-icon fontIcon="arrow_downward" /> Move down
+            </button>
+            <button mat-menu-item [disabled]="splitPoint(part(), i) === null" (click)="splitStep(i, part())">
+              <mat-icon fontIcon="content_cut" /> Split at the cursor
+            </button>
+            <button mat-menu-item (click)="stepToNote(i, part())">
+              <mat-icon fontIcon="sticky_note_2" /> Make it a note
+            </button>
+            <button mat-menu-item class="menu-danger" (click)="removeStep(i, part())">
+              <mat-icon fontIcon="delete_outline" /> Delete
+            </button>
+          </ng-template>
+        </mat-menu>
+
+        @if (notes().length > 0 || noteChecks().length > 0 || editing()) {
+          <section class="panel" id="notes" aria-labelledby="notes-title">
+            <div class="panel-head">
+              <h2 id="notes-title" class="panel-title">Notes</h2>
+              <button type="button" class="btn-chip" (click)="addNote()">
+                <mat-icon fontIcon="add" aria-hidden="true" /> Add note
+              </button>
+            </div>
+            <ul class="note-list">
+              @for (note of notes(); track $index; let i = $index) {
+                <li class="note-row">
+                  <textarea
+                    class="grow-text"
+                    rows="2"
+                    [id]="'note-' + i"
+                    [attr.aria-label]="'Note ' + (i + 1)"
+                    [value]="note"
+                    (input)="updateNote(i, $any($event.target).value)"
+                  ></textarea>
+                  <button type="button" class="row-menu" (click)="removeNote(i)" aria-label="Remove note">
+                    <mat-icon fontIcon="close" aria-hidden="true" />
+                  </button>
+                </li>
+              }
+            </ul>
+            @for (check of noteChecks(); track check.summary) {
+              <div class="check-band is-dashed">
+                <span class="check-text">{{ check.message }}</span>
+                <button type="button" class="check-fix" (click)="addNote(check.fix.note)">{{ check.fix.label }}</button>
+                <button type="button" class="check-keep" (click)="keep('note|' + check.summary)">Keep</button>
+              </div>
+            }
+          </section>
+        } @else {
+          <div class="add-more" id="notes">
+            <button type="button" class="btn-chip" (click)="addNote()">
+              <mat-icon fontIcon="add" aria-hidden="true" /> Add a note
+            </button>
+          </div>
+        }
+
+        @if (editing() && original(); as o) {
+          <footer class="edit-foot">
+            <span class="hint">
+              Cooked {{ o.cooked }} {{ o.cooked === 1 ? 'time' : 'times' }}
+              @if (o.lastCooked) {
+                · last on {{ o.lastCooked | date: 'MMM d, y' }}
+              }
+            </span>
+            <button type="button" class="delete-link" (click)="confirmingDelete.set(true)">Delete recipe…</button>
+          </footer>
+          @if (confirmingDelete()) {
+            <div class="delete-confirm" role="alertdialog" aria-labelledby="delete-q">
+              <p id="delete-q">
+                Delete “{{ o.title }}”? It disappears from the app. The record stays in the database,
+                so it can be brought back by hand.
+              </p>
+              <div class="confirm-buttons">
+                <button type="button" class="btn-ghost" [disabled]="deleting()" (click)="confirmingDelete.set(false)">Cancel</button>
+                <button type="button" class="btn-danger" [disabled]="deleting()" (click)="deleteRecipe()">
+                  {{ deleting() ? 'Deleting…' : 'Delete recipe' }}
+                </button>
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <aside class="side">
+        <section class="library-preview" aria-labelledby="preview-label">
+          <h2 class="side-label" id="preview-label">In the library</h2>
+          <div class="preview-card" aria-hidden="true">
+            <div class="preview-photo">
+              @if (photo() && !photoBroken()) {
+                <img [src]="photo()" alt="" />
+              } @else {
+                <app-no-photo />
+              }
+              @if (original()?.favorite) {
+                <span class="preview-fav"><mat-icon fontIcon="star" /></span>
+              }
+            </div>
+            <div class="preview-body">
+              @if (time().trim()) {
+                <p class="preview-meta">{{ time().trim() }}</p>
+              }
+              <p class="preview-title">{{ title().trim() || 'Untitled recipe' }}</p>
+              <span class="preview-cook">Cook this</span>
+            </div>
+          </div>
+          @if (!editing() && cookbooks.cookbooks().length > 0) {
+            <label class="file-in">
+              <span class="field-label">Save into</span>
+              <select class="file-in-select" (change)="fileIn.set($any($event.target).value)">
+                <option value="" [selected]="!fileIn()">Not in a cookbook</option>
+                @for (c of cookbooks.cookbooks(); track c.id) {
+                  <option [value]="c.id" [selected]="c.id === fileIn()">{{ c.name }}</option>
+                }
+              </select>
+            </label>
+          }
+        </section>
+
+        <section class="checklist" id="checklist" aria-labelledby="checklist-title">
+          <h2 class="checklist-title" id="checklist-title">
+            @if (!canSave()) {
+              Not ready to save
+            } @else if (editing() && checklist().length > 0) {
+              Worth a look before saving
+            } @else {
+              Ready to save
+            }
+          </h2>
+
+          @if (saveMessage()) {
+            <p class="save-message" role="status">{{ saveMessage() }}</p>
+          }
+
+          <ul class="checklist-items">
+            @for (item of requirements(); track item.text) {
+              <li class="req" [class.is-missing]="!item.ok">
+                <mat-icon [fontIcon]="item.ok ? 'check' : 'close'" aria-hidden="true" />
+                <span>
+                  {{ item.text }}
+                  @if (item.aside) {
+                    <span class="req-aside">{{ item.aside }}</span>
+                  }
+                </span>
+              </li>
+            }
+            @if (duplicate(); as dup) {
+              <li class="check-item duplicate">
+                <span class="bang" aria-hidden="true">!</span>
+                <span>
+                  <a [routerLink]="['/recipes', dup.recipe.slug]">{{ dup.recipe.title }}</a>
+                  is already in the collection{{ dup.samePage ? ', from the same page' : '' }}. Saving
+                  adds a second copy.
+                </span>
+              </li>
+            }
+            @for (item of checklist(); track item.id) {
+              <li class="check-item">
+                <span class="bang" aria-hidden="true">!</span>
+                <button type="button" class="check-link" (click)="show(item)">{{ item.text }}</button>
               </li>
             }
           </ul>
 
-          <h3 class="preview-sub label">Steps · {{ steps().length }}</h3>
-          <ol class="preview-list">
-            @for (step of steps(); track $index) {
-              <li>{{ step }}</li>
-            }
-          </ol>
-
-          @for (section of sections(); track $index) {
-            <h3 class="preview-sub label">
-              {{ section.title || 'Untitled section' }} · {{ section.ingredients.length }}
-              {{ section.ingredients.length === 1 ? 'ingredient' : 'ingredients' }},
-              {{ section.steps.length }} {{ section.steps.length === 1 ? 'step' : 'steps' }}
-            </h3>
+          @if (recipes.status() === 'loading') {
+            <p class="hint" data-state="loading" role="status">Loading the collection…</p>
+          } @else if (recipes.status() === 'error') {
+            <div class="hint" data-state="error" role="alert">
+              <p>Couldn't load the recipe collection, so saving is paused.</p>
+              <button type="button" class="btn-ghost" (click)="retry()">Try again</button>
+            </div>
+          } @else if (!canSave()) {
+            <p class="hint">Saving needs these first.</p>
+          } @else if (checklist().length > 0 || duplicate()) {
+            <p class="hint">
+              {{ editing() ? 'None of these block saving.' : 'Save works now; these are just worth a glance.' }}
+            </p>
           }
-
-          @if (draft().sourceUrl; as source) {
-            <p class="preview-source hint">From {{ source }}</p>
-          }
-        }
-
-        @if (duplicate(); as dup) {
-          <p class="hint duplicate" role="status">
-            <a [routerLink]="['/recipes', dup.recipe.slug]">{{ dup.recipe.title }}</a>
-            is already in the collection{{ dup.samePage ? ', from the same page' : '' }}. Saving
-            adds a second copy.
-          </p>
-        }
-
-        <div class="preview-actions">
-          <button type="button" class="btn-primary" (click)="save()"
-            [disabled]="!canSave() || saving() || recipes.status() !== 'ready'">
-            {{ saving() ? 'Saving…' : 'Save recipe' }}
-          </button>
-          <button type="button" class="btn-ghost" (click)="copyJson()">
-            <mat-icon fontIcon="content_copy" aria-hidden="true" /> Copy JSON
-          </button>
-        </div>
-
-        @if (recipes.status() === 'loading') {
-          <p class="hint" data-state="loading" role="status">Loading the collection…</p>
-        } @else if (recipes.status() === 'error') {
-          <div class="hint" data-state="error" role="alert">
-            <p>Couldn't load the recipe collection, so saving is paused.</p>
-            <button type="button" class="btn-ghost" (click)="retry()">Try again</button>
-          </div>
-        } @else if (!canSave() && title().trim() && ingredients().length > 0) {
-          <p class="hint">Each section needs a title before it can be saved.</p>
-        } @else if (!canSave()) {
-          <p class="hint">A title and at least one ingredient are needed to save.</p>
-        } @else if (editing()) {
-          <p class="hint">Saving updates this recipe in the shared collection.</p>
-        } @else {
-          <p class="hint">
-            Saving adds this recipe to the shared collection. Copy the JSON if you
-            want a copy of it elsewhere.
-          </p>
-        }
+        </section>
       </aside>
     </div>
   }
 </div>
+
+<!-- On a phone, the long form is easier to move around by section. -->
+<nav class="jump-bar" aria-label="Jump to a section">
+  <button type="button" (click)="jump('details')">Details</button>
+  <button type="button" (click)="jump('ingredients')">
+    Ingredients
+    @if (rowChecks().length > 0) {
+      <span class="jump-count" [attr.aria-label]="rowChecks().length + ' to check'">{{ rowChecks().length }}</span>
+    }
+  </button>
+  <button type="button" (click)="jump('steps')">Steps</button>
+  <button type="button" (click)="jump('notes')">Notes</button>
+</nav>

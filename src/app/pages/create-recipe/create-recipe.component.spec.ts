@@ -10,7 +10,7 @@ import { ImportClient, ImportPreview } from '../../core/import-client';
 import { Recipe } from '../../core/model/recipes.model';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { RecipeStore } from '../../core/stores/recipe.store';
-import { BOOKMARKLET_HREF, CreateRecipeComponent } from './create-recipe.component';
+import { BOOKMARKLET_HREF, CreateRecipeComponent, RowCheck, parseAmount } from './create-recipe.component';
 
 const CONFLICT = 'A recipe with that name already exists. Change the title and try again.';
 
@@ -59,6 +59,7 @@ type Internals = {
   title: { set(v: string): void; (): string };
   ingredients: { set(v: unknown[]): void; (): unknown[] };
   notice(): string;
+  saveMessage(): string;
   saving(): boolean;
   save(): Promise<void>;
   onFiles(files: FileList | null): Promise<void>;
@@ -98,14 +99,32 @@ describe('CreateRecipeComponent', () => {
   const button = (): HTMLButtonElement =>
     fixture.nativeElement.querySelector('.btn-primary') as HTMLButtonElement;
 
-  it('says saving adds the recipe, and offers the JSON copy, in create mode', async () => {
+  it('offers Save recipe and Copy JSON, and says what saving needs, in create mode', async () => {
     await setup();
     await TestBed.inject(RecipeStore).whenLoaded();
     fixture.detectChanges();
-    const t = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(t).toContain('Saving adds this recipe to the shared collection.');
-    expect(t).toContain('Copy the JSON');
-    expect(t).not.toContain('Saving updates this recipe');
+    const el = fixture.nativeElement as HTMLElement;
+    expect(button().textContent?.trim()).toBe('Save recipe');
+    expect(el.querySelector('.bar-actions')?.textContent).toContain('Copy JSON');
+    expect(el.querySelector('.checklist-title')?.textContent?.trim()).toBe('Ready to save');
+    expect(el.querySelector('.checklist')?.textContent?.replace(/\s+/g, ' ')).toContain(
+      'Title and 1 ingredient (all that’s required)',
+    );
+  });
+
+  it('says what is missing, and keeps Save off, until there is a title and an ingredient', async () => {
+    await setup();
+    await TestBed.inject(RecipeStore).whenLoaded();
+    page.title.set('');
+    page.ingredients.set([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(button().disabled).toBeTrue();
+    expect(el.querySelector('.checklist-title')?.textContent?.trim()).toBe('Not ready to save');
+    expect([...el.querySelectorAll('.req.is-missing')].map((li) => li.textContent?.trim())).toEqual([
+      'A title',
+      'At least one ingredient',
+    ]);
   });
 
   it('disables Save and says "Saving…" while the write is pending', async () => {
@@ -158,7 +177,7 @@ describe('CreateRecipeComponent', () => {
     expect(navigate).not.toHaveBeenCalled();
     expect(page.title()).toBe('Soup');
     expect(page.ingredients().length).toBe(1);
-    expect(page.notice()).toBe(CONFLICT);
+    expect(page.saveMessage()).toBe(CONFLICT);
     expect(page.saving()).toBeFalse();
     expect(button().disabled).toBeFalse();
   });
@@ -200,8 +219,6 @@ describe('CreateRecipeComponent', () => {
       { qty: 2, unit: '', name: 'peaches', aisle: 'pantry' },
     ]);
     const el = fixture.nativeElement as HTMLElement;
-    const manual = [...el.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Manual')!;
-    manual.click();
     fixture.detectChanges();
     const values = [...el.querySelectorAll<HTMLSelectElement>('select[aria-label="Aisle"]')].map(
       (s) => s.value,
@@ -279,7 +296,7 @@ describe('CreateRecipeComponent edit mode', () => {
   type Edit = {
     title: { set(v: string): void; (): string };
     save(): Promise<void>;
-    notice(): string;
+    saveMessage(): string;
     subtitle: { set(v: string): void };
     updateIngredientName(i: number, raw: string): void;
     ingredients(): { name: string; group?: string }[];
@@ -321,11 +338,24 @@ describe('CreateRecipeComponent edit mode', () => {
     expect(text()).toContain('/old-soup');
   });
 
-  it('says saving updates the recipe, without the JSON sentence, in edit mode', async () => {
+  it('offers Discard and Save changes, without Copy JSON, in edit mode', async () => {
     await setup();
-    expect(text()).toContain('Saving updates this recipe in the shared collection.');
-    expect(text()).not.toContain('Saving adds');
-    expect(text()).not.toContain('Copy the JSON');
+    const bar = (fixture.nativeElement as HTMLElement).querySelector('.bar-actions')!;
+    expect(bar.querySelector('.btn-primary')?.textContent?.trim()).toBe('Save changes');
+    expect(bar.textContent).toContain('Discard');
+    expect(bar.textContent).not.toContain('Copy JSON');
+  });
+
+  it('says there are unsaved changes only once something has changed', async () => {
+    await setup();
+    const unsaved = () => (fixture.nativeElement as HTMLElement).querySelector('.unsaved');
+    expect(unsaved()).toBeNull();
+    page.title.set('Older Soup');
+    fixture.detectChanges();
+    expect(unsaved()?.textContent?.trim()).toBe('Unsaved changes');
+    page.title.set('Old Soup');
+    fixture.detectChanges();
+    expect(unsaved()).toBeNull();
   });
 
   it('saves with update, keeps the slug when the title changes, and preserves hidden fields', async () => {
@@ -372,7 +402,7 @@ describe('CreateRecipeComponent edit mode', () => {
     fake.failNext(Object.assign(new Error('x'), { status: 0 }));
     await page.save();
     expect(navigate).not.toHaveBeenCalled();
-    expect(page.notice()).toContain("Couldn't reach the recipe server");
+    expect(page.saveMessage()).toContain("Couldn't reach the recipe server");
     expect(page.title()).toBe('Old Soup');
   });
 
@@ -390,9 +420,9 @@ describe('CreateRecipeComponent edit mode', () => {
     expect('subtitle' in update.calls.mostRecent().args[0]).toBeFalse();
   });
 
-  it('shows the manual form straight away, with no tab strip', async () => {
+  it('shows the form straight away, with no import panel', async () => {
     await setup();
-    expect((fixture.nativeElement as HTMLElement).querySelector('.tabs')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.import')).toBeNull();
     expect((fixture.nativeElement as HTMLElement).querySelector('#paste-area')).toBeNull();
   });
 
@@ -424,7 +454,7 @@ describe('CreateRecipeComponent edit mode', () => {
     await setup();
     spyOn(fake, 'update').and.resolveTo(null);
     await page.save();
-    expect(page.notice()).toContain('That recipe no longer exists');
+    expect(page.saveMessage()).toContain('That recipe no longer exists');
     expect(navigate).not.toHaveBeenCalled();
   });
 
@@ -464,8 +494,9 @@ type Full = {
   canSave(): boolean;
   atSectionLimit(): boolean;
   notice(): string;
+  saveMessage(): string;
   importing(): boolean;
-  importUrl: { set(v: string): void };
+  importUrl: { set(v: string): void; (): string };
   canSave(): boolean;
   setTab(tab: string): void;
   importFromUrl(): Promise<void>;
@@ -594,7 +625,11 @@ describe('CreateRecipeComponent import and sections', () => {
     expect(sections.map((s) => s.title)).toEqual(['For the croutons', 'For the cream']);
     expect(sections.every((s) => s.slug === null && s.steps.length === 0)).toBeTrue();
     expect(sections[1].ingredients.map((i) => [i.qty, i.unit, i.name])).toEqual([[1, 'cup', 'cream']]);
-    expect(el().querySelectorAll('.section-block').length).toBe(2);
+    expect([...el().querySelectorAll('.part-tab')].map((t) => t.textContent?.trim())).toEqual([
+      'Main recipe',
+      'For the croutons',
+      'For the cream',
+    ]);
   });
 
   it('saves nothing by importing', async () => {
@@ -631,11 +666,23 @@ describe('CreateRecipeComponent import and sections', () => {
     fixture.detectChanges();
     expect(btn.disabled).toBeTrue();
     expect(btn.textContent).toContain('Importing…');
-    // The paste-the-source fallback stays on the same tab.
-    expect(el().querySelector('#url-area')).not.toBeNull();
     answer(PREVIEW);
-    await fixture.whenStable();
+    // The address is recorded once the import has returned, a turn after the fill.
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
     expect(page.title()).toBe('Leek Soup');
+    // The same address again is offered as a second read.
+    expect(btn.textContent?.trim()).toBe('Import again');
+  });
+
+  it('opens the paste-the-source box from the link tab', async () => {
+    await setup();
+    fixture.detectChanges();
+    expect(el().querySelector('#url-area')).toBeNull();
+    const open = [...el().querySelectorAll('button')].find((b) => b.textContent?.includes('Paste its HTML'))!;
+    open.click();
+    fixture.detectChanges();
+    expect(el().querySelector('#url-area')).not.toBeNull();
   });
 
   it('needs a title on every section before it can save', async () => {
@@ -697,7 +744,7 @@ describe('CreateRecipeComponent import and sections', () => {
 
     const store = TestBed.inject(RecipeStore);
     expect(navigate).not.toHaveBeenCalled();
-    expect(page.notice()).toContain("Couldn't reach the recipe server");
+    expect(page.saveMessage()).toContain("Couldn't reach the recipe server");
     expect(store.bySlug('soup')).toBeUndefined();
     // The saved section stays, listed like any recipe, and the form remembers it.
     expect(store.bySlug('soup-sauce')?.component).toBeTrue();
@@ -747,7 +794,7 @@ describe('CreateRecipeComponent import and sections', () => {
         steps: STOCK.steps,
       }),
     ]);
-    expect(el().querySelectorAll('.section-block').length).toBe(1);
+    expect(el().querySelectorAll('.part-tab').length).toBe(2);
 
     page.updateStep(0, 'Simmer for two hours.', 0);
     const order: string[] = [];
@@ -914,7 +961,7 @@ describe('CreateRecipeComponent import and sections', () => {
     );
   });
 
-  it('fills the form from a photo and switches to Manual', async () => {
+  it('fills the form from a photo and says what it read', async () => {
     await setup();
     photoSpy().and.resolveTo({ ...PREVIEW, sourceUrl: '' });
     const file = new File(['x'], 'card.jpg', { type: 'image/jpeg' });
@@ -923,9 +970,11 @@ describe('CreateRecipeComponent import and sections', () => {
     fixture.detectChanges();
     expect(photoSpy()).toHaveBeenCalledOnceWith(file);
     expect(page.title()).toBe(PREVIEW.title);
-    expect(page.tab()).toBe('manual');
-    expect(page.notice()).toContain('Imported.');
-    expect(el().querySelector('.preview-source')).toBeNull();
+    expect(page.tab()).toBe('photo');
+    expect(el().querySelector('.import-status')?.textContent?.replace(/\s+/g, ' ')).toContain(
+      'Imported 4 ingredients, 2 steps, photo and tags.',
+    );
+    expect(page.draft().sourceUrl).toBeUndefined();
     expect(page.importing()).toBeFalse();
   });
 
@@ -992,7 +1041,7 @@ describe('CreateRecipeComponent import and sections', () => {
     expect(page.atSectionLimit()).toBeTrue();
     page.addSection();
     expect(page.sections().length).toBe(20);
-    const btn = Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.includes('Add section'));
+    const btn = Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.includes('Add a part'));
     expect(btn?.disabled).toBeTrue();
   });
 
@@ -1008,7 +1057,7 @@ describe('CreateRecipeComponent import and sections', () => {
   it('imports once from ?url= and clears it from the address', async () => {
     await setup(undefined, [], 'https://example.com/soup');
     expect(preview()).toHaveBeenCalledOnceWith('https://example.com/soup');
-    expect(page.tab()).toBe('manual');
+    expect(page.tab()).toBe('url');
     expect(navigate).toHaveBeenCalledOnceWith([], {
       queryParams: { url: null },
       queryParamsHandling: 'merge',
@@ -1022,7 +1071,7 @@ describe('CreateRecipeComponent import and sections', () => {
   it('ignores a non-http ?url=', async () => {
     await setup(undefined, [], 'javascript:alert(1)');
     expect(preview()).not.toHaveBeenCalled();
-    expect(page.tab()).toBe('paste');
+    expect(page.importUrl()).toBe('');
     expect(navigate).not.toHaveBeenCalled();
   });
 
@@ -1147,14 +1196,14 @@ describe('CreateRecipeComponent filing and duplicates', () => {
     fixture = TestBed.createComponent(CreateRecipeComponent);
     page = fixture.componentInstance as unknown as Filing;
     await TestBed.inject(CookbookStore).whenLoaded();
-    page.setTab('manual');
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
   afterEach(() => localStorage.clear());
 
-  const select = (el: HTMLElement) => el.querySelector<HTMLSelectElement>('select')!;
-  const warning = (el: HTMLElement) => el.querySelector('.duplicate')?.textContent?.replace(/\s+/g, ' ').trim();
+  const select = (el: HTMLElement) => el.querySelector<HTMLSelectElement>('select.file-in-select')!;
+  const warning = (el: HTMLElement) =>
+    el.querySelector('.duplicate span:last-child')?.textContent?.replace(/\s+/g, ' ').trim();
 
   it('files a new recipe in the cookbook open in the library', async () => {
     const el = await setup(['stokes']);
@@ -1210,5 +1259,218 @@ describe('CreateRecipeComponent filing and duplicates', () => {
     page.title.set('Pie');
     fixture.detectChanges();
     expect(warning(el)).toBeUndefined();
+  });
+});
+
+describe('parseAmount', () => {
+  const cases: [string, { qty: number | null; unit: string }][] = [
+    ['2 tbsp', { qty: 2, unit: 'tbsp' }],
+    ['1 1/2 cups', { qty: 1.5, unit: 'cup' }],
+    ['1 large', { qty: 1, unit: 'large' }],
+    ['3', { qty: 3, unit: '' }],
+    ['pinch', { qty: null, unit: 'pinch' }],
+    ['', { qty: null, unit: '' }],
+    ['to taste', { qty: null, unit: '' }],
+  ];
+  for (const [text, amount] of cases) {
+    it(`reads "${text}"`, () => {
+      expect(parseAmount(text)).toEqual(amount);
+    });
+  }
+});
+
+describe('CreateRecipeComponent form tools', () => {
+  type Tools = {
+    ingredients: { set(v: unknown[]): void; (): { qty: number | null; unit: string; name: string; aisle: string }[] };
+    steps: { set(v: string[]): void; (): string[] };
+    notes(): string[];
+    tags(): string[];
+    subtitle(): string;
+    servings(): number;
+    title: { set(v: string): void };
+    sections(): { title: string }[];
+    part(): number | undefined;
+    rowChecks(): RowCheck[];
+    noteChecks(): unknown[];
+    applyFix(check: RowCheck): void;
+    keep(id: string): void;
+    setAmount(i: number, text: string, owner?: number): void;
+    moveIngredient(from: number, to: number, owner?: number): void;
+    pasteIngredients(text: string, owner?: number): void;
+    addTags(text: string): void;
+    removeTag(tag: string): void;
+    stepServings(delta: number): void;
+    noteCaret(owner: number | undefined, index: number, box: { selectionStart: number }): void;
+    splitStep(i: number, owner?: number): void;
+    stepToNote(i: number, owner?: number): void;
+    addSection(): void;
+    removeSection(i: number): void;
+    importUrl: { set(v: string): void };
+    importFromUrl(): Promise<void>;
+    confirmingDelete: { set(v: boolean): void };
+    deleteRecipe(): Promise<void>;
+  };
+  const row = (name: string, aisle = 'pantry') => ({ qty: 1, unit: '', name, aisle });
+
+  let fixture: ComponentFixture<CreateRecipeComponent>;
+  let page: Tools;
+  let fake: FakeRecipeRepository;
+  let importer: ImportClient;
+  let navigate: jasmine.Spy;
+
+  async function setup(slug?: string): Promise<HTMLElement> {
+    fake = new FakeRecipeRepository([
+      {
+        slug: 'old-soup',
+        title: 'Old Soup',
+        tags: [],
+        time: '',
+        servings: 4,
+        cooked: 0,
+        blurb: '',
+        desc: '',
+        ingredients: [{ qty: 1, unit: '', name: 'leek', aisle: 'produce' }],
+        steps: ['Simmer.'],
+        notes: [],
+        cookbooks: [],
+      },
+    ]);
+    importer = fakeImport();
+    TestBed.configureTestingModule({
+      imports: [CreateRecipeComponent],
+      providers: [
+        provideRouter([]),
+        ...provideFakeRecipes(fake),
+        ...provideFakeCookbooks(),
+        { provide: ImportClient, useValue: importer },
+      ],
+    });
+    navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fixture = TestBed.createComponent(CreateRecipeComponent);
+    if (slug) fixture.componentRef.setInput('slug', slug);
+    page = fixture.componentInstance as unknown as Tools;
+    fixture.detectChanges();
+    await TestBed.inject(RecipeStore).whenLoaded();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('shows a check under its row and in the checklist, and Fix applies it', async () => {
+    const el = await setup();
+    page.ingredients.set([row('peaches, quartered'), row('gochujang, plus')]);
+    fixture.detectChanges();
+    expect([...el.querySelectorAll('.check-band .check-text')].map((b) => b.textContent?.trim())).toEqual([
+      'Peaches are usually in Produce.',
+      'The line ends in “plus”.',
+    ]);
+    expect(el.querySelectorAll('.checklist .check-item').length).toBe(2);
+
+    page.applyFix(page.rowChecks()[0]);
+    page.applyFix(page.rowChecks()[0]);
+    expect(page.ingredients().map((i) => [i.name, i.aisle])).toEqual([
+      ['peaches, quartered', 'produce'],
+      ['gochujang, plus more to taste', 'pantry'],
+    ]);
+    expect(page.rowChecks()).toEqual([]);
+  });
+
+  it('splits a row holding two things into two', async () => {
+    await setup();
+    page.ingredients.set([{ qty: null, unit: '', name: 'Sour cream and parsley (both optional)', aisle: 'dairy' }]);
+    page.applyFix(page.rowChecks()[0]);
+    expect(page.ingredients().map((i) => [i.name, i.aisle])).toEqual([
+      ['Sour cream (optional)', 'dairy'],
+      ['parsley (optional)', 'produce'],
+    ]);
+  });
+
+  it('lets Keep put a check away for good, until the row changes', async () => {
+    await setup();
+    page.ingredients.set([row('peaches')]);
+    page.keep(page.rowChecks()[0].id);
+    expect(page.rowChecks()).toEqual([]);
+    page.ingredients.set([row('peaches, sliced')]);
+    expect(page.rowChecks().length).toBe(1);
+  });
+
+  it('reads an amount typed on its own', async () => {
+    await setup();
+    page.ingredients.set([row('olive oil')]);
+    page.setAmount(0, '2 tbsp');
+    expect(page.ingredients()[0]).toEqual(jasmine.objectContaining({ qty: 2, unit: 'tbsp', name: 'olive oil' }));
+    page.setAmount(0, '');
+    expect(page.ingredients()[0]).toEqual(jasmine.objectContaining({ qty: null, unit: '' }));
+  });
+
+  it('moves rows, and adds a row per pasted line', async () => {
+    await setup();
+    page.ingredients.set([row('a'), row('b'), row('c')]);
+    page.moveIngredient(0, 2);
+    expect(page.ingredients().map((i) => i.name)).toEqual(['b', 'c', 'a']);
+    page.moveIngredient(0, -1);
+    expect(page.ingredients().map((i) => i.name)).toEqual(['b', 'c', 'a']);
+    page.pasteIngredients('- 2 tbsp olive oil\n\n1 onion, chopped\n');
+    expect(page.ingredients().slice(3).map((i) => [i.qty, i.unit, i.name])).toEqual([
+      [2, 'tbsp', 'olive oil'],
+      [1, '', 'onion, chopped'],
+    ]);
+  });
+
+  it('adds tags once each, takes them off, and steps the servings', async () => {
+    await setup();
+    page.addTags('Dinner, soup, dinner');
+    expect(page.tags()).toEqual(['dinner', 'soup']);
+    page.removeTag('dinner');
+    expect(page.tags()).toEqual(['soup']);
+    page.stepServings(-10);
+    expect(page.servings()).toBe(1);
+    page.stepServings(2);
+    expect(page.servings()).toBe(3);
+  });
+
+  it('splits a step at the caret, and moves one to the notes', async () => {
+    await setup();
+    page.steps.set(['Brown the beef. Simmer an hour.', 'Keeps a week.']);
+    page.noteCaret(undefined, 0, { selectionStart: 15 });
+    page.splitStep(0);
+    expect(page.steps()).toEqual(['Brown the beef.', 'Simmer an hour.', 'Keeps a week.']);
+    page.stepToNote(2);
+    expect(page.steps().length).toBe(2);
+    expect(page.notes()).toEqual(['Keeps a week.']);
+  });
+
+  it('shows a new part at once, and the recipe again when it is removed', async () => {
+    await setup();
+    page.addSection();
+    expect(page.part()).toBe(0);
+    page.removeSection(0);
+    expect(page.part()).toBeUndefined();
+    expect(page.sections()).toEqual([]);
+  });
+
+  it('credits the site a link came from, unless a credit was typed', async () => {
+    await setup();
+    const answer = {
+      sourceUrl: 'https://example.com/s',
+      title: 'Stew',
+      description: '',
+      siteName: 'The Modern Proper',
+      ingredientGroups: [{ name: null, lines: ['1 potato'] }],
+      steps: ['Cook.'],
+    };
+    (importer.previewRecipe as jasmine.Spy).and.resolveTo(answer);
+    page.importUrl.set('https://example.com/s');
+    await page.importFromUrl();
+    expect(page.subtitle()).toBe('From The Modern Proper');
+  });
+
+  it('archives the recipe from the edit footer and goes to the library', async () => {
+    const el = await setup('old-soup');
+    expect(el.querySelector('.delete-link')?.textContent?.trim()).toBe('Delete recipe…');
+    const archive = spyOn(TestBed.inject(RecipeStore), 'archive').and.resolveTo(true);
+    await page.deleteRecipe();
+    expect(archive).toHaveBeenCalledOnceWith('old-soup');
+    expect(navigate).toHaveBeenCalledWith(['/']);
   });
 });

@@ -1,4 +1,4 @@
-import { NgTemplateOutlet } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import {
   Component,
   WritableSignal,
@@ -12,20 +12,27 @@ import {
 } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
-import { AISLE_ORDER, Aisle } from '../../core/aisle';
+import { AISLE_LABELS, AISLE_ORDER, Aisle, inferAisle } from '../../core/aisle';
 import { vocabularyTags } from '../../core/facets';
 import { Ingredient, Recipe } from '../../core/model/recipes.model';
 import { ImportClient, ImportPreview, photoProblem } from '../../core/import-client';
 import { parseIngredient } from '../../core/ingredient-parser';
+import { IngredientCheck, checkIngredient, checkNotes } from '../../core/recipe-checks';
 import { parseJsonLd, parseRecipeText, slugify, splitFrontMatter } from '../../core/recipe-text';
 import { formatQty } from '../../core/scale';
 import { Storage } from '../../core/storage';
 import { CookbookStore } from '../../core/stores/cookbook.store';
-import { RecipeStore } from '../../core/stores/recipe.store';
+import { RecipeStore, tagLabel } from '../../core/stores/recipe.store';
 import { describePhotoError, describeWriteError } from '../../core/write-error';
+import { NoPhotoComponent } from '../../no-photo/no-photo.component';
 
-type Tab = 'paste' | 'file' | 'url' | 'photo' | 'manual';
+/** Where the form can be filled from, above the fields. */
+type Tab = 'paste' | 'file' | 'url' | 'photo';
+
+/** What last filled the form; the import panel says so. */
+type FilledFrom = Tab | 'html';
 
 /**
  * The bookmarklet: opens the local app's create page with the current page's
@@ -51,8 +58,39 @@ function pageKey(url: string | undefined): string {
   }
 }
 
-/** The badge above the preview, per §6.4. */
-type Status = 'waiting' | 'check' | 'clean';
+/** True for an address the API will store: http or https, and parseable. */
+function isWebAddress(text: string): boolean {
+  if (!/^https?:\/\//i.test(text)) return false;
+  try {
+    new URL(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reads what is typed in an Amount box: "2 tbsp", "1 large", "pinch", or
+ * nothing at all, which is "to taste". A unit the parser does not know is kept
+ * as typed rather than dropped.
+ */
+export function parseAmount(text: string): { qty: number | null; unit: string } {
+  const typed = text.trim();
+  if (!typed || /^to taste$/i.test(typed)) return { qty: null, unit: '' };
+  const parsed = parseIngredient(`${typed} x`);
+  if (parsed.name === 'x') return { qty: parsed.qty, unit: parsed.unit };
+  if (parsed.qty === null) return { qty: null, unit: typed };
+  const words = /^[\d\s/.½¼¾⅓⅔⅛⅜⅝⅞–-]+(.*)$/.exec(typed);
+  return { qty: parsed.qty, unit: (words?.[1] ?? '').trim() };
+}
+
+/** "13 ingredients", "1 step". */
+const count = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
+
+/** "a, b and c". */
+function listed(items: readonly string[]): string {
+  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
+}
 
 /**
  * A sub-recipe being edited inside its parent ("For the sauce"). It is saved as
@@ -82,6 +120,7 @@ interface SectionDraft {
 /** A draft field a paste, file or import writes. */
 type FillField =
   | 'title'
+  | 'subtitle'
   | 'desc'
   | 'servings'
   | 'time'
@@ -95,12 +134,29 @@ type FillField =
 /** Which list an editor row belongs to: the recipe itself, or section n. */
 type Owner = number | undefined;
 
+/** A check on a row, with what the checklist needs to find the row again. */
+export interface RowCheck extends IngredientCheck {
+  /** Stable across reorders: the owner, the kind and the row's text. */
+  id: string;
+  owner: Owner;
+  index: number;
+}
+
+/** One line of the checklist beside the form. */
+interface ChecklistItem {
+  id: string;
+  text: string;
+  /** The element to bring into view, and the part tab it is on. */
+  target: string;
+  owner: Owner;
+}
+
 /** The API refuses a recipe with more embedded components than this. */
 const MAX_SECTIONS = 20;
 
 @Component({
   selector: 'app-create-recipe',
-  imports: [RouterLink, MatIconModule, NgTemplateOutlet],
+  imports: [RouterLink, MatIconModule, MatMenuModule, NgTemplateOutlet, DatePipe, NoPhotoComponent],
   templateUrl: './create-recipe.component.html',
   styleUrl: './create-recipe.component.scss',
 })
@@ -121,23 +177,40 @@ export class CreateRecipeComponent {
   private readonly importer = inject(ImportClient);
 
   protected readonly aisles = AISLE_ORDER;
-  protected readonly formatQty = formatQty;
+  protected readonly aisleLabels = AISLE_LABELS;
+  protected readonly tagLabel = tagLabel;
+  protected readonly sources: readonly { id: Tab; label: string; icon: string }[] = [
+    { id: 'paste', label: 'Pasted text', icon: 'notes' },
+    { id: 'file', label: 'A file', icon: 'description' },
+    { id: 'url', label: 'A link', icon: 'link' },
+    { id: 'photo', label: 'A photo', icon: 'photo_camera' },
+  ];
 
-  protected readonly tab = signal<Tab>('paste');
+  /** Links are what most recipes arrive as, so the panel opens on one. */
+  protected readonly tab = signal<Tab>('url');
   protected readonly pasted = signal('');
   protected readonly urlText = signal('');
   protected readonly importUrl = signal('');
+  /** The address the last import read, so its button offers to read it again. */
+  protected readonly importedUrl = signal('');
+  /** Whether the "paste its HTML" box is open under a link that will not load. */
+  protected readonly htmlOpen = signal(false);
   /** True from pressing Import until the API answers. */
   protected readonly importing = signal(false);
   protected readonly dropActive = signal(false);
+  /** What the import panel says: an import's trouble, or a folder's result. */
   protected readonly notice = signal('');
+  /** What the save box says: a failed save, or the JSON copied. */
+  protected readonly saveMessage = signal('');
   /** True from pressing Save until the API answers; the button and `save()` both honour it. */
   protected readonly saving = signal(false);
+  protected readonly filledFrom = signal<FilledFrom | null>(null);
+  /** The credit line an import wrote, so the form can say where it came from. */
+  protected readonly filledCredit = signal('');
 
   /**
-   * One editable draft behind all four tabs (§6.4). Each tab writes into it;
-   * the preview and the manual editor read from it. Nothing saves until the
-   * Save button is pressed.
+   * One editable draft behind the import panel and the fields (§6.4). Each
+   * import writes into it; the fields edit it. Nothing saves until Save.
    */
   protected readonly title = signal('');
   protected readonly subtitle = signal('');
@@ -150,16 +223,13 @@ export class CreateRecipeComponent {
   protected readonly steps = signal<string[]>([]);
   protected readonly notes = signal<string[]>([]);
   protected readonly sections = signal<SectionDraft[]>([]);
-  /** No form field: set by an import or carried from the recipe being edited. */
-  private readonly photo = signal('');
-  private readonly sourceUrl = signal('');
+  protected readonly photo = signal('');
+  protected readonly sourceUrl = signal('');
   /**
    * References on the stored recipe whose component no longer resolves. They
    * have no section to edit, but saving must not quietly drop them.
    */
   private readonly unresolved = signal<{ slug: string; label?: string }[]>([]);
-  protected readonly review = signal<readonly string[]>([]);
-  private readonly parsedSomething = signal(false);
 
   protected readonly tags = computed(() =>
     this.tagsText()
@@ -169,7 +239,7 @@ export class CreateRecipeComponent {
   );
 
   /** The stored recipe being edited; null when adding, or until it has loaded. */
-  private readonly original = signal<Recipe | null>(null);
+  protected readonly original = signal<Recipe | null>(null);
   protected readonly editing = computed(() => this.slug_() !== undefined);
   /** An edit whose slug matched nothing once the collection loaded. */
   protected readonly missing = signal(false);
@@ -177,28 +247,18 @@ export class CreateRecipeComponent {
   /** Editing never renames: the slug is the stored one, whatever the title says. */
   protected readonly slug = computed(() => this.slug_() ?? slugify(this.title()));
 
-  protected readonly status = computed<Status>(() => {
-    if (!this.title() && this.ingredients().length === 0 && this.steps().length === 0) {
-      return 'waiting';
-    }
-    // A flagged line or a one-sided parse means a human should look.
-    if (this.review().length > 0 || this.ingredients().length === 0 || this.steps().length === 0) {
-      return 'check';
-    }
-    return this.parsedSomething() ? 'clean' : 'check';
-  });
+  /** The part whose ingredients and steps are showing; undefined is the recipe itself. */
+  protected readonly part = signal<Owner>(undefined);
 
-  protected readonly statusLabel = computed(
-    () =>
-      ({ waiting: 'Waiting', check: 'Check the split', clean: 'Parsed cleanly' })[this.status()],
-  );
+  protected readonly sourceValid = computed(() => !this.sourceUrl() || isWebAddress(this.sourceUrl()));
 
   protected readonly canSave = computed(
     () =>
       this.title().trim().length > 0 &&
       (this.ingredients().length > 0 ||
         this.sections().some((x) => x.ingredients.length > 0)) &&
-      this.sections().every((s) => s.title.trim().length > 0),
+      this.sections().every((s) => s.title.trim().length > 0) &&
+      this.sourceValid(),
   );
 
   /**
@@ -260,6 +320,129 @@ export class CreateRecipeComponent {
   });
 
   protected readonly draftJson = computed(() => JSON.stringify(this.draft(), null, 2));
+
+  /** Everything a save would write, to tell an edited form from the one loaded. */
+  private readonly snapshot = computed(() => JSON.stringify([this.draft(), this.sections()]));
+  private readonly baseline = signal<string | null>(null);
+  protected readonly dirty = computed(() => this.baseline() !== null && this.snapshot() !== this.baseline());
+
+  // ---- Checks -------------------------------------------------------------
+
+  /** Checks the user has answered with Keep, by id, for as long as the form is open. */
+  private readonly kept = signal<ReadonlySet<string>>(new Set());
+
+  /** Every row check still standing, the recipe's own rows first, then each part's. */
+  protected readonly rowChecks = computed<RowCheck[]>(() => {
+    const kept = this.kept();
+    const lists: [Owner, Ingredient[]][] = [
+      [undefined, this.ingredients()],
+      ...this.sections().map((s, n): [Owner, Ingredient[]] => [n, s.ingredients]),
+    ];
+    return lists.flatMap(([owner, list]) =>
+      list.flatMap((ing, index) =>
+        checkIngredient(ing)
+          .map((check) => ({ ...check, owner, index, id: `${owner ?? 'main'}|${check.kind}|${ing.name}` }))
+          .filter((check) => !kept.has(check.id)),
+      ),
+    );
+  });
+
+  /** Row checks by row, for the bands under each row. */
+  protected readonly checksByRow = computed(() => {
+    const byRow = new Map<string, RowCheck[]>();
+    for (const check of this.rowChecks()) {
+      const key = this.rowId(check.owner, check.index);
+      byRow.set(key, [...(byRow.get(key) ?? []), check]);
+    }
+    return byRow;
+  });
+
+  protected readonly noteChecks = computed(() =>
+    checkNotes(
+      [...this.ingredients(), ...this.sections().flatMap((s) => s.ingredients)],
+      [...this.steps(), ...this.sections().flatMap((s) => s.steps)],
+      this.notes(),
+    ).filter((c) => !this.kept().has(`note|${c.summary}`)),
+  );
+
+  protected readonly checkCount = computed(() => this.rowChecks().length + this.noteChecks().length);
+
+  /** The checklist beside the form: each check, said briefly, pointing at its row. */
+  protected readonly checklist = computed<ChecklistItem[]>(() => {
+    const parts = this.sections();
+    const items: ChecklistItem[] = this.rowChecks().map((c) => ({
+      id: c.id,
+      text: c.owner === undefined ? c.summary : `${parts[c.owner]?.title || 'Untitled part'}: ${c.summary}`,
+      target: this.rowId(c.owner, c.index),
+      owner: c.owner,
+    }));
+    for (const c of this.noteChecks()) {
+      items.push({ id: `note|${c.summary}`, text: c.summary, target: 'notes', owner: undefined });
+    }
+    return items;
+  });
+
+  /** What saving needs and has; unmet, these are the only things that block it. */
+  protected readonly requirements = computed(() => {
+    const items: { ok: boolean; text: string; aside?: string }[] = [];
+    const title = !!this.title().trim();
+    const ingredientCount =
+      this.ingredients().length + this.sections().reduce((n, s) => n + s.ingredients.length, 0);
+    if (this.editing()) {
+      const present = [
+        ...(this.photo() ? ['photo'] : []),
+        ...(title ? ['title'] : []),
+        ...(this.time().trim() ? ['time'] : []),
+        'servings',
+      ];
+      items.push({ ok: true, text: present.join(', ').replace(/^./, (c) => c.toUpperCase()) });
+      if (ingredientCount > 0) {
+        items.push({ ok: true, text: `${count(ingredientCount, 'ingredient')} · ${count(this.steps().length, 'step')}` });
+      }
+    } else if (title && ingredientCount > 0) {
+      items.push({ ok: true, text: `Title and ${count(ingredientCount, 'ingredient')}`, aside: '(all that’s required)' });
+    }
+    if (!title) items.push({ ok: false, text: 'A title' });
+    if (ingredientCount === 0) items.push({ ok: false, text: 'At least one ingredient' });
+    if (this.sections().some((s) => !s.title.trim())) items.push({ ok: false, text: 'A name for each part' });
+    if (!this.sourceValid()) items.push({ ok: false, text: 'A source link that starts with http:// or https://' });
+    return items;
+  });
+
+  /** "13 ingredients, 3 steps, photo and tags", for the line under the import panel. */
+  protected readonly fillSummary = computed(() => {
+    if (!this.filledFrom()) return '';
+    const ingredientCount =
+      this.ingredients().length + this.sections().reduce((n, s) => n + s.ingredients.length, 0);
+    return `${listed([
+      count(ingredientCount, 'ingredient'),
+      count(this.steps().length, 'step'),
+      ...(this.photo() ? ['photo'] : []),
+      ...(this.tags().length ? ['tags'] : []),
+    ])}.`;
+  });
+
+  // ---- Photo --------------------------------------------------------------
+
+  /** The address being typed for a new photo; null when the box is closed. */
+  protected readonly photoDraft = signal<string | null>(null);
+  /** Set when the photo fails to load, and cleared when it changes. */
+  protected readonly photoBroken = linkedSignal({ source: this.photo, computation: () => false });
+
+  // ---- Steps ----------------------------------------------------------------
+
+  /** Where the caret last sat in a step, for "Split here". */
+  protected readonly caret = signal<{ owner: Owner; index: number; pos: number } | null>(null);
+
+  // ---- Rows being dragged ---------------------------------------------------
+
+  private dragging: { owner: Owner; index: number } | null = null;
+  protected readonly dropTarget = signal<string | null>(null);
+
+  /** The "paste several" box, open under the ingredients being shown. */
+  protected readonly pasteOpen = signal(false);
+  protected readonly confirmingDelete = signal(false);
+  protected readonly deleting = signal(false);
 
   constructor() {
     effect(() => {
@@ -329,7 +512,7 @@ export class CreateRecipeComponent {
     }
     this.sections.set(sections);
     this.unresolved.set(unresolved);
-    this.tab.set('manual');
+    this.baseline.set(this.snapshot());
   }
 
   /**
@@ -338,6 +521,7 @@ export class CreateRecipeComponent {
    */
   private readonly fillable = {
     title: [this.title, ''],
+    subtitle: [this.subtitle, ''],
     desc: [this.desc, ''],
     servings: [this.servings, 4],
     time: [this.time, ''],
@@ -369,20 +553,29 @@ export class CreateRecipeComponent {
       (this.fillable[field][0] as unknown as WritableSignal<unknown>).set(value);
     }
     this.lastFill = new Map(Object.entries(values) as [FillField, unknown][]);
+    this.filledCredit.set(typeof values.subtitle === 'string' ? values.subtitle : '');
+  }
+
+  /** True when a fill may write the field: it is blank, or still holds what a fill wrote. */
+  private untouched(field: FillField): boolean {
+    const [target] = this.fillable[field] as unknown as [WritableSignal<unknown>];
+    const value = target();
+    return value === '' || value === this.lastFill.get(field);
   }
 
   protected setTab(tab: Tab): void {
     this.tab.set(tab);
   }
 
-  // ---- Paste text tab -----------------------------------------------------
+  // ---- Pasted text -----------------------------------------------------------
 
   protected onPaste(text: string): void {
     this.pasted.set(text);
     this.applyDraft(parseRecipeText(text));
+    this.filledFrom.set(text.trim() ? 'paste' : null);
   }
 
-  // ---- Markdown file tab -------------------------------------------------
+  // ---- A file ----------------------------------------------------------------
 
   protected async onFiles(files: FileList | null): Promise<void> {
     this.dropActive.set(false);
@@ -430,9 +623,8 @@ export class CreateRecipeComponent {
           ingredients: parsed.ingredients,
           steps: parsed.steps,
           notes: [],
-          // Unfiled, matching RecipeTemplate: this screen does not ask which
-          // cookbook to import into yet, and guessing would file a folder drop
-          // into a cookbook the user never chose.
+          // Unfiled, matching RecipeTemplate: a folder drop never sees the
+          // cookbook choice, which belongs to the one recipe being shown.
           cookbooks: [],
         });
         saved++;
@@ -463,6 +655,7 @@ export class CreateRecipeComponent {
       ...(meta.servings ? { servings: meta.servings } : {}),
       ...(meta.tags?.length ? { tagsText: meta.tags.join(', ') } : {}),
     });
+    this.filledFrom.set('file');
   }
 
   protected onDragOver(event: DragEvent): void {
@@ -479,7 +672,7 @@ export class CreateRecipeComponent {
     void this.onFiles(event.dataTransfer?.files ?? null);
   }
 
-  // ---- From a URL tab ----------------------------------------------------
+  // ---- A link ----------------------------------------------------------------
 
   /**
    * Fills the form from the API's reading of a page. Saves nothing: the result
@@ -488,10 +681,13 @@ export class CreateRecipeComponent {
   protected async importFromUrl(): Promise<void> {
     const url = this.importUrl().trim();
     if (!url) return;
-    await this.runImport(() => this.importer.previewRecipe(url));
+    if (await this.runImport(() => this.importer.previewRecipe(url))) {
+      this.importedUrl.set(url);
+      this.filledFrom.set('url');
+    }
   }
 
-  // ---- From a photo tab --------------------------------------------------
+  // ---- A photo ---------------------------------------------------------------
 
   /** Reads the chosen photo through the API into the same draft a URL import fills. */
   protected async importPhoto(files: FileList | null): Promise<void> {
@@ -502,15 +698,17 @@ export class CreateRecipeComponent {
       this.notice.set(problem);
       return;
     }
-    await this.runImport(() => this.importer.previewPhoto(file), describePhotoError);
+    if (await this.runImport(() => this.importer.previewPhoto(file), describePhotoError)) {
+      this.filledFrom.set('photo');
+    }
   }
 
-  /** The flow both imports share: busy flag, fill, notice, then the Manual tab. */
+  /** The flow both imports share: busy flag, fill, notice. True when it filled the form. */
   private async runImport(
     read: () => Promise<ImportPreview>,
     describe: (err: unknown) => string = describeWriteError,
-  ): Promise<void> {
-    if (this.importing()) return;
+  ): Promise<boolean> {
+    if (this.importing()) return false;
     this.importing.set(true);
     this.notice.set('');
     try {
@@ -518,18 +716,18 @@ export class CreateRecipeComponent {
       this.applyPreview(preview);
       const dropped = this.droppedSections;
       this.notice.set(
-        'Imported. Check it over, fill in the sections\' steps, then Save.' +
-          (dropped > 0
-            ? ` The recipe server allows ${MAX_SECTIONS} sections, so ${dropped} ingredient ${dropped === 1 ? 'group was' : 'groups were'} left out.`
-            : ''),
+        dropped > 0
+          ? `The recipe server allows ${MAX_SECTIONS} parts, so ${dropped} ingredient ${dropped === 1 ? 'group was' : 'groups were'} left out.`
+          : '',
       );
-      this.tab.set('manual');
+      return true;
     } catch (err) {
       this.notice.set(
         (err as { status?: unknown } | null)?.status === 404
           ? "Import isn't switched on in the local API. Add RECIPE_IMPORT_ENABLED=true to its .env and restart it."
           : describe(err),
       );
+      return false;
     } finally {
       this.importing.set(false);
     }
@@ -571,10 +769,13 @@ export class CreateRecipeComponent {
       ownTitle: null,
       hadLabel: true,
     }));
+    // A credit typed by hand outranks the site's name.
+    const credit = preview.siteName && this.untouched('subtitle') ? `From ${preview.siteName}` : '';
     this.fill({
       title: preview.title ?? '',
       ingredients: toIngredients(own),
       steps: [...(preview.steps ?? [])],
+      ...(credit ? { subtitle: credit } : {}),
       ...(preview.description ? { desc: preview.description } : {}),
       ...(typeof preview.servings === 'number' && preview.servings > 0
         ? { servings: Math.round(preview.servings) }
@@ -588,13 +789,7 @@ export class CreateRecipeComponent {
       ...(preview.sourceUrl === '' ? { sourceUrl: '', ...(preview.image ? {} : { photo: '' }) } : {}),
       ...(sections.length > 0 ? { sections } : {}),
     });
-    this.review.set(
-      [own, ...named.map((g) => g.parsed)]
-        .flat()
-        .filter(({ result }) => result.needsReview)
-        .map(({ line }) => line),
-    );
-    this.parsedSomething.set(true);
+    this.part.set(undefined);
   }
 
   protected onUrlText(text: string): void {
@@ -605,6 +800,7 @@ export class CreateRecipeComponent {
     }
 
     const structured = parseJsonLd(text);
+    this.filledFrom.set('html');
     if (structured) {
       this.applyDraft(structured);
       this.notice.set('Read schema.org Recipe data from the pasted markup.');
@@ -616,7 +812,55 @@ export class CreateRecipeComponent {
     this.notice.set('No recipe markup found, so this was read as plain text.');
   }
 
-  // ---- Manual tab --------------------------------------------------------
+  // ---- Details ---------------------------------------------------------------
+
+  protected stepServings(delta: number): void {
+    this.servings.update((n) => Math.max(1, n + delta));
+  }
+
+  /** Adds typed tags: several at once when separated by commas. */
+  protected addTags(text: string): void {
+    const next = [...this.tags()];
+    for (const tag of text.split(',').map((t) => t.trim().toLowerCase())) {
+      if (tag && !next.includes(tag)) next.push(tag);
+    }
+    this.tagsText.set(next.join(', '));
+  }
+
+  protected removeTag(tag: string): void {
+    this.tagsText.set(this.tags().filter((t) => t !== tag).join(', '));
+  }
+
+  /** Enter or a comma makes a chip; Backspace in an empty box takes the last one back. */
+  protected onTagKey(event: KeyboardEvent): void {
+    const box = event.target as HTMLInputElement;
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      this.addTags(box.value);
+      box.value = '';
+    } else if (event.key === 'Backspace' && box.value === '' && this.tags().length > 0) {
+      this.removeTag(this.tags().at(-1)!);
+    }
+  }
+
+  protected onTagBlur(box: HTMLInputElement): void {
+    this.addTags(box.value);
+    box.value = '';
+  }
+
+  protected usePhoto(): void {
+    const address = (this.photoDraft() ?? '').trim();
+    if (!isWebAddress(address)) return;
+    this.photo.set(address);
+    this.photoDraft.set(null);
+  }
+
+  protected removePhoto(): void {
+    this.photo.set('');
+    this.photoDraft.set(null);
+  }
+
+  // ---- Parts -----------------------------------------------------------------
 
   /** Edits the ingredient list of the recipe itself, or of section `owner`. */
   private editIngredients(owner: Owner, change: (list: Ingredient[]) => Ingredient[]): void {
@@ -639,6 +883,47 @@ export class CreateRecipeComponent {
     this.sections.update((list) => list.map((s, i) => (i === index ? change(s) : s)));
   }
 
+  protected readonly atSectionLimit = computed(() => this.sections().length >= MAX_SECTIONS);
+
+  /** Adds a part and shows it. */
+  protected addSection(): void {
+    if (this.atSectionLimit()) return;
+    this.sections.update((list) => [
+      ...list,
+      { slug: null, title: '', ingredients: [], steps: [], ownTitle: null, hadLabel: true },
+    ]);
+    this.part.set(this.sections().length - 1);
+  }
+
+  protected setSectionTitle(index: number, title: string): void {
+    this.editSection(index, (s) => ({ ...s, title }));
+  }
+
+  /**
+   * Takes the section off this recipe. A section already saved stays stored as
+   * a component recipe; it just stops being listed here.
+   */
+  protected removeSection(index: number): void {
+    this.sections.update((list) => list.filter((_, i) => i !== index));
+    this.part.set(undefined);
+  }
+
+  /** The ingredients of the part being shown. */
+  protected listOf(owner: Owner): Ingredient[] {
+    return owner === undefined ? this.ingredients() : (this.sections()[owner]?.ingredients ?? []);
+  }
+
+  protected stepsOf(owner: Owner): string[] {
+    return owner === undefined ? this.steps() : (this.sections()[owner]?.steps ?? []);
+  }
+
+  // ---- Ingredients -------------------------------------------------------------
+
+  /** The element id of an ingredient row, which the checklist scrolls to. */
+  protected rowId(owner: Owner, index: number): string {
+    return `ing-${owner ?? 'main'}-${index}`;
+  }
+
   protected addIngredient(owner?: Owner): void {
     this.editIngredients(owner, (list) => [
       ...list,
@@ -646,22 +931,30 @@ export class CreateRecipeComponent {
     ]);
   }
 
+  protected setAmount(index: number, text: string, owner?: Owner): void {
+    const { qty, unit } = parseAmount(text);
+    this.editIngredients(owner, (list) => list.map((item, i) => (i === index ? { ...item, qty, unit } : item)));
+  }
+
+  /**
+   * Sets a row's name. A whole line typed into a row with no amount yet ("2
+   * tbsp olive oil") is read the way a paste is, amount and all.
+   */
   protected updateIngredientName(index: number, raw: string, owner?: Owner): void {
-    // Typing a whole line here should behave like the paste tab does.
     const parsed = parseIngredient(raw);
     this.editIngredients(owner, (list) =>
-      list.map((item, i) =>
-        i === index
-          ? {
-              qty: parsed.qty,
-              unit: parsed.unit,
-              name: parsed.name || raw,
-              // Keep a hand-picked aisle rather than re-inferring over it.
-              aisle: item.name ? item.aisle : parsed.aisle,
-              ...(item.group ? { group: item.group } : {}),
-            }
-          : item,
-      ),
+      list.map((item, i) => {
+        if (i !== index) return item;
+        const whole = item.qty === null && !item.unit && parsed.qty !== null;
+        return {
+          qty: whole ? parsed.qty : item.qty,
+          unit: whole ? parsed.unit : item.unit,
+          name: whole ? parsed.name || raw : raw.trim(),
+          // Keep a hand-picked aisle rather than re-inferring over it.
+          aisle: item.name ? item.aisle : whole ? parsed.aisle : inferAisle(raw),
+          ...(item.group ? { group: item.group } : {}),
+        };
+      }),
     );
   }
 
@@ -675,6 +968,76 @@ export class CreateRecipeComponent {
     this.editIngredients(owner, (list) => list.filter((_, i) => i !== index));
   }
 
+  protected moveIngredient(from: number, to: number, owner?: Owner): void {
+    this.editIngredients(owner, (list) => {
+      if (to < 0 || to >= list.length || from === to) return list;
+      const next = [...list];
+      const [row] = next.splice(from, 1);
+      next.splice(to, 0, row);
+      return next;
+    });
+  }
+
+  /** Adds a row for each pasted line, read the way the paste tab reads them. */
+  protected pasteIngredients(text: string, owner?: Owner): void {
+    const rows = text
+      .split('\n')
+      .map((line) => line.replace(/^\s*[-*•]\s*/, '').trim())
+      .filter(Boolean)
+      .map((line): Ingredient => {
+        const p = parseIngredient(line);
+        return { qty: p.qty, unit: p.unit, name: p.name || line, aisle: p.aisle };
+      });
+    if (rows.length > 0) this.editIngredients(owner, (list) => [...list, ...rows]);
+    this.pasteOpen.set(false);
+  }
+
+  protected applyFix(check: RowCheck): void {
+    const change = check.fix?.change;
+    if (!change) return;
+    this.editIngredients(check.owner, (list) =>
+      list.flatMap((item, i) => {
+        if (i !== check.index) return [item];
+        if (change.type === 'name') return [{ ...item, name: change.name }];
+        if (change.type === 'aisle') return [{ ...item, aisle: change.aisle }];
+        return change.rows;
+      }),
+    );
+  }
+
+  protected keep(id: string): void {
+    this.kept.update((set) => new Set(set).add(id));
+  }
+
+  protected rowDragStart(event: DragEvent, owner: Owner, index: number): void {
+    this.dragging = { owner, index };
+    const row = (event.target as HTMLElement).closest('.ing-row');
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', String(index));
+      if (row) event.dataTransfer.setDragImage(row, 16, 16);
+    }
+  }
+
+  protected rowDragOver(event: DragEvent, owner: Owner, index: number): void {
+    if (!this.dragging || this.dragging.owner !== owner) return;
+    event.preventDefault();
+    this.dropTarget.set(this.rowId(owner, index));
+  }
+
+  protected rowDrop(event: DragEvent, owner: Owner, index: number): void {
+    event.preventDefault();
+    if (this.dragging && this.dragging.owner === owner) this.moveIngredient(this.dragging.index, index, owner);
+    this.rowDragEnd();
+  }
+
+  protected rowDragEnd(): void {
+    this.dragging = null;
+    this.dropTarget.set(null);
+  }
+
+  // ---- Steps --------------------------------------------------------------------
+
   protected addStep(owner?: Owner): void {
     this.editSteps(owner, (list) => [...list, '']);
   }
@@ -687,30 +1050,57 @@ export class CreateRecipeComponent {
     this.editSteps(owner, (list) => list.filter((_, i) => i !== index));
   }
 
-  protected readonly atSectionLimit = computed(() => this.sections().length >= MAX_SECTIONS);
-
-  protected addSection(): void {
-    if (this.atSectionLimit()) return;
-    this.sections.update((list) => [
-      ...list,
-      { slug: null, title: '', ingredients: [], steps: [], ownTitle: null, hadLabel: true },
-    ]);
+  protected moveStep(from: number, to: number, owner?: Owner): void {
+    this.editSteps(owner, (list) => {
+      if (to < 0 || to >= list.length || from === to) return list;
+      const next = [...list];
+      const [step] = next.splice(from, 1);
+      next.splice(to, 0, step);
+      return next;
+    });
   }
 
-  protected setSectionTitle(index: number, title: string): void {
-    this.editSection(index, (s) => ({ ...s, title }));
+  protected noteCaret(owner: Owner, index: number, box: HTMLTextAreaElement): void {
+    this.caret.set({ owner, index, pos: box.selectionStart });
   }
 
-  /**
-   * Takes the section off this recipe. A section already saved stays stored as
-   * a component recipe; it just stops being listed here.
-   */
-  protected removeSection(index: number): void {
-    this.sections.update((list) => list.filter((_, i) => i !== index));
+  /** Where "Split here" would cut this step, or null when the caret is not inside it. */
+  protected splitPoint(owner: Owner, index: number): number | null {
+    const caret = this.caret();
+    const text = this.stepsOf(owner)[index] ?? '';
+    if (!caret || caret.owner !== owner || caret.index !== index) return null;
+    const head = text.slice(0, caret.pos).trim();
+    const tail = text.slice(caret.pos).trim();
+    return head && tail ? caret.pos : null;
   }
 
-  protected addNote(): void {
-    this.notes.update((list) => [...list, '']);
+  protected splitStep(index: number, owner?: Owner): void {
+    const at = this.splitPoint(owner, index);
+    if (at === null) return;
+    this.editSteps(owner, (list) =>
+      list.flatMap((s, i) => (i === index ? [s.slice(0, at).trim(), s.slice(at).trim()] : [s])),
+    );
+    this.caret.set(null);
+  }
+
+  /** Moves a step that is really advice ("Can be made a day ahead") to the notes. */
+  protected stepToNote(index: number, owner?: Owner): void {
+    const text = this.stepsOf(owner)[index]?.trim();
+    this.removeStep(index, owner);
+    if (text) this.notes.update((list) => [...list, text]);
+  }
+
+  // ---- Notes ----------------------------------------------------------------------
+
+  protected addNote(text = ''): void {
+    this.notes.update((list) => [...list, text]);
+    const at = this.notes().length - 1;
+    // Focused once it is drawn, with the caret after any text it starts with.
+    setTimeout(() => {
+      const box = document.getElementById(`note-${at}`) as HTMLTextAreaElement | null;
+      box?.focus();
+      box?.setSelectionRange(text.length, text.length);
+    });
   }
 
   protected updateNote(index: number, text: string): void {
@@ -721,7 +1111,23 @@ export class CreateRecipeComponent {
     this.notes.update((list) => list.filter((_, i) => i !== index));
   }
 
-  // ---- Confirm -----------------------------------------------------------
+  // ---- Checklist --------------------------------------------------------------------
+
+  /** Brings a checked row into view, switching to its part first. */
+  protected show(item: { target: string; owner: Owner }): void {
+    this.part.set(item.owner);
+    setTimeout(() => {
+      const el = document.getElementById(item.target);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el?.querySelector<HTMLElement>('input, textarea, button')?.focus({ preventScroll: true });
+    });
+  }
+
+  protected jump(id: string): void {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ---- Confirm ----------------------------------------------------------------------
 
   protected async save(): Promise<void> {
     // The button is disabled too, but a second call can arrive before the
@@ -729,11 +1135,11 @@ export class CreateRecipeComponent {
     if (!this.canSave() || this.saving()) return;
     if (this.editing() && !this.original()) return;
     this.saving.set(true);
-    this.notice.set('');
+    this.saveMessage.set('');
     const recipe = this.draft();
     const cleaned: Recipe = {
       ...recipe,
-      // Drop the blank rows the manual editor leaves behind.
+      // Drop the blank rows the editor leaves behind.
       steps: recipe.steps.map((s) => s.trim()).filter(Boolean),
       notes: recipe.notes.map((n) => n.trim()).filter(Boolean),
       ingredients: recipe.ingredients.filter((i) => i.name.trim()),
@@ -749,7 +1155,7 @@ export class CreateRecipeComponent {
         // Against the copy the form loaded, so notes a device added since are
         // kept and notes deleted here stay deleted.
         if (!(await this.recipes.update(cleaned, this.original() ?? undefined))) {
-          this.notice.set('That recipe no longer exists, so nothing was saved.');
+          this.saveMessage.set('That recipe no longer exists, so nothing was saved.');
           return;
         }
         void this.router.navigate(['/recipes', cleaned.slug]);
@@ -760,7 +1166,7 @@ export class CreateRecipeComponent {
       void this.router.navigate(['/recipes', slug]);
     } catch (err) {
       // Stay here with the draft untouched so nothing typed is lost.
-      this.notice.set(describeWriteError(err));
+      this.saveMessage.set(describeWriteError(err));
     } finally {
       this.saving.set(false);
     }
@@ -789,7 +1195,7 @@ export class CreateRecipeComponent {
         const ok =
           stored !== undefined && (await this.recipes.update({ ...stored, ...body }));
         if (!ok) {
-          this.notice.set(`The section “${title}” no longer exists, so nothing more was saved.`);
+          this.saveMessage.set(`The part “${title}” no longer exists, so nothing more was saved.`);
           return null;
         }
         // An unlabelled reference stays unlabelled until the label is changed.
@@ -827,6 +1233,29 @@ export class CreateRecipeComponent {
     });
   }
 
+  /**
+   * Archives the recipe: it leaves the app everywhere, and the record stays in
+   * the database, which is where it can be brought back.
+   */
+  protected async deleteRecipe(): Promise<void> {
+    const slug = this.slug_();
+    if (!slug || this.deleting()) return;
+    this.deleting.set(true);
+    this.saveMessage.set('');
+    try {
+      if (await this.recipes.archive(slug)) {
+        void this.router.navigate(['/']);
+        return;
+      }
+      this.saveMessage.set('That recipe no longer exists.');
+    } catch (err) {
+      this.saveMessage.set(describeWriteError(err));
+    } finally {
+      this.deleting.set(false);
+      this.confirmingDelete.set(false);
+    }
+  }
+
   protected retry(): void {
     void this.recipes.load().then(() => {
       const slug = this.slug_();
@@ -837,14 +1266,14 @@ export class CreateRecipeComponent {
   protected async copyJson(): Promise<void> {
     try {
       await navigator.clipboard.writeText(this.draftJson());
-      this.notice.set('Copied the draft as JSON.');
+      this.saveMessage.set('Copied the draft as JSON.');
     } catch {
-      this.notice.set('Could not reach the clipboard — select the JSON and copy it.');
+      this.saveMessage.set('Could not reach the clipboard, so nothing was copied.');
     }
   }
 
   protected amountLabel(ingredient: Ingredient): string {
-    if (ingredient.qty === null) return '';
+    if (ingredient.qty === null) return ingredient.unit;
     const amount = formatQty(ingredient.qty);
     return ingredient.unit ? `${amount} ${ingredient.unit}` : amount;
   }
@@ -863,7 +1292,6 @@ export class CreateRecipeComponent {
       steps: parsed.steps,
       ...extra,
     });
-    this.review.set(parsed.review);
-    this.parsedSomething.set(parsed.confidence === 'clean');
+    this.part.set(undefined);
   }
 }

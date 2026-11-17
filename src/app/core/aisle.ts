@@ -50,6 +50,9 @@ const KEYWORDS: ReadonlyArray<readonly [Aisle, readonly string[]]> = [
       'zucchini', 'squash',
       'mushroom', 'mushrooms', 'cucumber', 'lemon', 'lime', 'orange', 'apple',
       'avocado', 'ginger', 'corn', 'peas', 'green beans', 'asparagus',
+      'peach', 'peaches', 'plum', 'plums', 'pear', 'pears', 'banana', 'bananas',
+      'berries', 'strawberries', 'blueberries', 'raspberries', 'grapes',
+      'arugula', 'radish', 'radishes', 'eggplant', 'beet', 'beets',
     ],
   ],
   [
@@ -113,6 +116,9 @@ const KEYWORDS: ReadonlyArray<readonly [Aisle, readonly string[]]> = [
       'oil', 'mct oil', 'all purpose flour', 'all-purpose flour', 'brown sugar',
       'vanilla bean', 'vanilla extract', 'quinoa', 'couscous', 'rigatoni',
       'ramen noodles',
+      // Beans and pulses, longer than the "butter" and "black pepper" they contain.
+      'butter beans', 'cannellini', 'cannellini beans', 'black beans', 'kidney beans',
+      'pinto beans', 'chickpeas', 'lentils',
     ],
   ],
 ];
@@ -123,11 +129,20 @@ const RANKED: ReadonlyArray<readonly [string, Aisle]> = KEYWORDS.flatMap(
 ).sort((a, b) => b[0].length - a[0].length);
 
 export function inferAisle(name: string): Aisle {
+  return matchAisle(name)?.aisle ?? 'pantry';
+}
+
+/**
+ * The keyword a name matched and the aisle it points to, or null when nothing
+ * matched. `inferAisle` falls back to pantry; this tells that fallback apart
+ * from a real match, which is what a "this is usually in Produce" check needs.
+ */
+export function matchAisle(name: string): { word: string; aisle: Aisle } | null {
   const haystack = name.toLowerCase();
   for (const [word, aisle] of RANKED) {
-    if (containsWord(haystack, word)) return aisle;
+    if (containsWord(haystack, word)) return { word, aisle };
   }
-  return 'pantry';
+  return null;
 }
 
 /**

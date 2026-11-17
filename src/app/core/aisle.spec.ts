@@ -1,4 +1,4 @@
-import { AISLE_LABELS, AISLE_ORDER, inferAisle } from './aisle';
+import { matchAisle, AISLE_LABELS, AISLE_ORDER, inferAisle } from './aisle';
 
 describe('inferAisle', () => {
   it('defaults to pantry when nothing matches', () => {
@@ -54,5 +54,19 @@ describe('aisle presentation', () => {
 
   it('orders aisles produce, meat, seafood, dairy, pantry', () => {
     expect(AISLE_ORDER).toEqual(['produce', 'meat', 'seafood', 'dairy', 'pantry']);
+  });
+});
+
+describe('matchAisle', () => {
+  it('names the keyword it matched', () => {
+    expect(matchAisle('2 peaches, quartered')).toEqual({ word: 'peaches', aisle: 'produce' });
+  });
+
+  it('is null when nothing matched, where inferAisle falls back to pantry', () => {
+    expect(matchAisle('gochujang')).toBeNull();
+  });
+
+  it('files butter beans as beans, not butter', () => {
+    expect(matchAisle('cannellini or butter beans, rinsed')?.aisle).toBe('pantry');
   });
 });

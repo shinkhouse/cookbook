@@ -1066,7 +1066,12 @@ h1 {
 :host-context(.book-recipe) {
     .rail-activity,
     .photo-slot,
-    .method-note {
+    .method-note,
+    // A book is one cookbook, named on its cover, and its own page numbers are
+    // in the footers; the cookbook links and the original book's page would
+    // only read as a page of this PDF.
+    .shelf,
+    .detail-book {
         display: none;
     }
 }

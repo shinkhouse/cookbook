@@ -13,7 +13,15 @@ import { BookComponent } from './book.component';
 
 const seed = [
   { ...Recipes[0], slug: 'tacos', title: 'Tacos', tags: ['dinner'], cookbooks: ['bob'], component: false },
-  { ...Recipes[0], slug: 'apple-pie', title: 'Apple Pie', tags: ['dessert'], cookbooks: ['sam'], component: false },
+  {
+    ...Recipes[0],
+    slug: 'apple-pie',
+    title: 'Apple Pie',
+    tags: ['dessert'],
+    cookbooks: ['sam'],
+    component: false,
+    sourcePage: 13,
+  },
   { ...Recipes[0], slug: 'pancakes', title: 'Pancakes', tags: ['breakfast'], cookbooks: ['sam'], component: false },
 ];
 
@@ -87,6 +95,14 @@ describe('BookComponent', () => {
     const el = await render();
     const activity = el.querySelector('.book-recipe .rail-activity')!;
     expect(getComputedStyle(activity).display).toBe('none');
+  });
+
+  it("leaves out each recipe's cookbook and the printed book's page number", async () => {
+    const el = await render();
+    const pie = el.querySelector('#r0')!;
+    expect(pie.querySelector('.detail-book')).not.toBeNull();
+    expect(getComputedStyle(pie.querySelector('.detail-book')!).display).toBe('none');
+    for (const shelf of pie.querySelectorAll('.shelf')) expect(getComputedStyle(shelf).display).toBe('none');
   });
 
   it('heads each group, in the contents and with a page of its own, when grouped', async () => {

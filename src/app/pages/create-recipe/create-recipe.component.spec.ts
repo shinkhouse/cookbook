@@ -411,6 +411,18 @@ describe('CreateRecipeComponent edit mode', () => {
     expect(text()).toContain('No recipe by that name.');
   });
 
+  it('keeps a book recipe\'s page and contributor through a save, with no field for them', async () => {
+    fake = new FakeRecipeRepository([{ ...stored, sourcePage: 216, contributor: 'Margaret J. Miller' }]);
+    await setup('old-soup', fake);
+    expect((fixture.nativeElement as HTMLElement).querySelector('#page')).toBeNull();
+    page.title.set('Newer Soup');
+    const update = spyOn(fake, 'update').and.callThrough();
+    await page.save();
+    expect(update.calls.mostRecent().args[0]).toEqual(
+      jasmine.objectContaining({ sourcePage: 216, contributor: 'Margaret J. Miller' }),
+    );
+  });
+
   it('sends no subtitle once the field is cleared', async () => {
     fake = new FakeRecipeRepository([{ ...stored, subtitle: 'From Mum' }]);
     await setup('old-soup', fake);
@@ -1516,7 +1528,6 @@ describe('CreateRecipeComponent headings, fields and fixes', () => {
     moveIngredient(from: number, to: number, owner?: number): void;
     pasteIngredients(text: string, owner?: number): void;
     setSource(text: string): void;
-    setPage(text: string): void;
     removePhoto(): void;
   };
   const row = (name: string, group?: string): Ingredient => ({
@@ -1599,21 +1610,19 @@ describe('CreateRecipeComponent headings, fields and fixes', () => {
     expect(page.subtitle()).toBe('From Grandma');
   });
 
-  it('saves the page, the yield unit and the focus point, and leaves out what means nothing', async () => {
+  it('saves the yield unit and the focus point, and leaves out what means nothing', async () => {
     await setup();
     page.title.set('Bread');
-    page.setPage('216');
     page.servingsUnit.set('loaves');
     page.photo.set('https://example.com/p.jpg');
     page.photoFocus.set({ x: 40, y: 25 });
     expect(page.draft()).toEqual(
-      jasmine.objectContaining({ sourcePage: 216, servingsUnit: 'loaves', photoFocus: { x: 40, y: 25 } }),
+      jasmine.objectContaining({ servingsUnit: 'loaves', photoFocus: { x: 40, y: 25 } }),
     );
-    page.setPage('0');
     page.servingsUnit.set('Servings');
     page.removePhoto();
     const draft = page.draft();
-    expect('sourcePage' in draft || 'servingsUnit' in draft || 'photoFocus' in draft).toBeFalse();
+    expect('servingsUnit' in draft || 'photoFocus' in draft).toBeFalse();
   });
 
   it('joins a row cut in two by the scan', async () => {

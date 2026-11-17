@@ -545,10 +545,6 @@ textarea {
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
 }
 
-.field-row-book {
-    grid-template-columns: minmax(0, 1fr) 168px;
-}
-
 .makes {
     display: grid;
     grid-template-columns: 116px minmax(0, 1fr);
@@ -1589,10 +1585,6 @@ textarea {
     .field-row,
     .field-row-3 {
         grid-template-columns: 1fr 1fr;
-    }
-
-    .field-row-book {
-        grid-template-columns: minmax(0, 1fr) 110px;
     }
 
     .field-row-3 > :first-child {

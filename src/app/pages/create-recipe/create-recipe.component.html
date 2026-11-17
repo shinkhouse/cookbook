@@ -312,46 +312,33 @@
             </div>
           </div>
 
-          <div class="field-row field-row-book">
-            <div class="field">
-              <span class="field-label" id="cookbooks-label">Cookbooks</span>
-              <div class="cookbook-picker">
-                <button
-                  type="button"
-                  class="picker-button"
-                  aria-labelledby="cookbooks-label"
-                  [attr.aria-expanded]="cookbooksOpen()"
-                  (click)="cookbooksOpen.set(!cookbooksOpen())"
-                >
-                  <span class="picker-text" [class.is-empty]="cookbookIds().length === 0">{{ cookbookSummary() }}</span>
-                  <mat-icon [fontIcon]="cookbooksOpen() ? 'expand_less' : 'expand_more'" aria-hidden="true" />
-                </button>
-                @if (cookbooksOpen()) {
-                  <ul class="picker-panel" role="group" aria-labelledby="cookbooks-label">
-                    @for (c of cookbooks.cookbooks(); track c.id) {
-                      <li>
-                        <label class="picker-option">
-                          <input type="checkbox" [checked]="cookbookIds().includes(c.id)" (change)="toggleCookbook(c.id)" />
-                          {{ c.name }}
-                        </label>
-                      </li>
-                    } @empty {
-                      <li class="hint">No cookbooks yet.</li>
-                    }
-                  </ul>
-                }
-              </div>
-            </div>
-            <div class="field">
-              <label class="field-label" for="page">Page <span class="optional">· optional</span></label>
-              <input
-                id="page"
-                type="number"
-                min="1"
-                [value]="sourcePage() ?? ''"
-                (input)="setPage($any($event.target).value)"
-                placeholder="In the printed book"
-              />
+          <div class="field">
+            <span class="field-label" id="cookbooks-label">Cookbooks</span>
+            <div class="cookbook-picker">
+              <button
+                type="button"
+                class="picker-button"
+                aria-labelledby="cookbooks-label"
+                [attr.aria-expanded]="cookbooksOpen()"
+                (click)="cookbooksOpen.set(!cookbooksOpen())"
+              >
+                <span class="picker-text" [class.is-empty]="cookbookIds().length === 0">{{ cookbookSummary() }}</span>
+                <mat-icon [fontIcon]="cookbooksOpen() ? 'expand_less' : 'expand_more'" aria-hidden="true" />
+              </button>
+              @if (cookbooksOpen()) {
+                <ul class="picker-panel" role="group" aria-labelledby="cookbooks-label">
+                  @for (c of cookbooks.cookbooks(); track c.id) {
+                    <li>
+                      <label class="picker-option">
+                        <input type="checkbox" [checked]="cookbookIds().includes(c.id)" (change)="toggleCookbook(c.id)" />
+                        {{ c.name }}
+                      </label>
+                    </li>
+                  } @empty {
+                    <li class="hint">No cookbooks yet.</li>
+                  }
+                </ul>
+              }
             </div>
           </div>
 

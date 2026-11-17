@@ -266,8 +266,6 @@ export class CreateRecipeComponent {
   /** The point of the photo a crop keeps; null is the middle. */
   protected readonly photoFocus = signal<{ x: number; y: number } | null>(null);
   protected readonly sourceUrl = signal('');
-  /** The page of the printed cookbook, for a recipe from one. */
-  protected readonly sourcePage = signal<number | null>(null);
   /**
    * References on the stored recipe whose component no longer resolves. They
    * have no section to edit, but saving must not quietly drop them.
@@ -364,7 +362,6 @@ export class CreateRecipeComponent {
       ...(this.photo() ? { photo: this.photo() } : {}),
       ...(this.photo() && this.photoFocus() ? { photoFocus: this.photoFocus()! } : {}),
       ...(this.sourceUrl() ? { sourceUrl: this.sourceUrl() } : {}),
-      ...(this.sourcePage() ? { sourcePage: this.sourcePage()! } : {}),
       ...(this.unitWord() ? { servingsUnit: this.unitWord() } : {}),
       cookbooks: this.cookbookIds(),
     };
@@ -373,7 +370,6 @@ export class CreateRecipeComponent {
     if (!this.photo()) delete draft.photo;
     if (!this.photo() || !this.photoFocus()) delete draft.photoFocus;
     if (!this.sourceUrl()) delete draft.sourceUrl;
-    if (!this.sourcePage()) delete draft.sourcePage;
     if (!this.unitWord()) delete draft.servingsUnit;
     return draft;
   });
@@ -612,7 +608,6 @@ export class CreateRecipeComponent {
     this.photo.set(recipe.photo ?? '');
     this.photoFocus.set(recipe.photoFocus ?? null);
     this.sourceUrl.set(recipe.sourceUrl ?? '');
-    this.sourcePage.set(recipe.sourcePage ?? null);
     const sections: SectionDraft[] = [];
     const unresolved: { slug: string; label?: string }[] = [];
     for (const ref of recipe.components ?? []) {
@@ -995,12 +990,6 @@ export class CreateRecipeComponent {
     this.subtitle.set(credit);
     this.lastFill.set('subtitle', credit);
     this.filledCredit.set(credit);
-  }
-
-  /** A page number, or nothing for anything that is not a whole page. */
-  protected setPage(text: string): void {
-    const page = Number(text);
-    this.sourcePage.set(text.trim() && Number.isInteger(page) && page > 0 && page <= 10000 ? page : null);
   }
 
   protected toggleCookbook(id: string): void {

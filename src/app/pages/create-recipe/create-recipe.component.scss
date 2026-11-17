@@ -110,6 +110,11 @@ select {
     width: 100%;
     margin-top: 8px;
     padding: 12px 14px;
+
+    // The gap is for a hint or a row above; a field sits right under its label.
+    .field-label + & {
+        margin-top: 0;
+    }
     border: 1px solid var(--rule-strong);
     border-radius: var(--radius-card);
     background: var(--surface);

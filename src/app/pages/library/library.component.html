@@ -37,7 +37,7 @@
               [attr.aria-checked]="shelfId() === null"
               (click)="chooseShelf(null)"
             >
-              All Cookbooks
+              <span class="shelf-name">All Cookbooks</span>
               <mat-icon fontIcon="check" aria-hidden="true" />
             </button>
             @for (id of shelf.options; track id) {
@@ -48,7 +48,20 @@
                 [attr.aria-checked]="shelfId() === id"
                 (click)="chooseShelf(id)"
               >
-                {{ cookbooks.byId(id)?.name ?? id }}
+                <span class="shelf-name">{{ cookbooks.byId(id)?.name ?? id }}</span>
+                <mat-icon fontIcon="check" aria-hidden="true" />
+              </button>
+            }
+            @if (canFile) {
+              <button
+                type="button"
+                class="shelf-option shelf-unfiled"
+                role="menuitemradio"
+                [attr.aria-checked]="shelfId() === noCookbook"
+                (click)="chooseShelf(noCookbook)"
+              >
+                <span class="shelf-name">Not in a cookbook</span>
+                <span class="option-count tnum">{{ unfiledCount() }}</span>
                 <mat-icon fontIcon="check" aria-hidden="true" />
               </button>
             }

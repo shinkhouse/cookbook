@@ -26,7 +26,7 @@ import { gapLabel, gapsOf } from '../../core/recipe-health';
 import { Recipe } from '../../core/model/recipes.model';
 import { CookbookStore } from '../../core/stores/cookbook.store';
 import { ListStore } from '../../core/stores/list.store';
-import { PAGE_SIZE, RecipeStore, tagLabel } from '../../core/stores/recipe.store';
+import { NO_COOKBOOK, PAGE_SIZE, RecipeStore, tagLabel } from '../../core/stores/recipe.store';
 
 /** §6.1 — search is debounced 150ms. */
 const SEARCH_DEBOUNCE_MS = 150;
@@ -142,17 +142,29 @@ export class LibraryComponent {
    */
   protected readonly shelf = computed(() => cookbookFacet(this.cookbooks.cookbooks()));
 
-  /** The cookbook on the shelf, or null for all of them. */
+  /** The cookbook on the shelf, NO_COOKBOOK for the recipes filed nowhere, or null for all of them. */
   protected readonly shelfId = computed(() => {
-    const shelf = this.shelf();
-    const on = shelf?.options.filter((id) => this.recipes.isOptionSelected(shelf, id)) ?? [];
-    return on.length === 1 ? on[0] : null;
+    const selected = [...this.recipes.selectedCookbooks()];
+    return this.shelf() && selected.length === 1 ? selected[0] : null;
   });
 
   protected readonly title = computed(() => {
     const id = this.shelfId();
+    if (id === NO_COOKBOOK) return 'Not in a cookbook';
     return (id && this.cookbooks.byId(id)?.name) || 'All Cookbooks';
   });
+
+  protected readonly noCookbook = NO_COOKBOOK;
+
+  /**
+   * Recipes added from a URL arrive filed in no cookbook, so the shelf offers
+   * them as a choice wherever recipes can be filed, which is not the live site.
+   */
+  protected readonly canFile = this.recipes.writable;
+
+  protected readonly unfiledCount = computed(
+    () => this.recipes.recipes().filter((r) => r.cookbooks.length === 0).length,
+  );
 
   protected toggleShelf(): void {
     this.toggleFacet(SHELF);
@@ -168,10 +180,7 @@ export class LibraryComponent {
   }
 
   protected chooseShelf(id: string | null): void {
-    const shelf = this.shelf();
-    if (!shelf) return;
-    this.recipes.clearFacet(shelf);
-    if (id) this.recipes.toggleOption(shelf, id);
+    this.recipes.selectedCookbooks.set(new Set(id === null ? [] : [id]));
     this.closeFacet(true);
   }
 

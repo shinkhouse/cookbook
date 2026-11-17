@@ -46,6 +46,7 @@ describe('LibraryComponent cookbook switcher', () => {
     new FakeRecipeRepository([
       { ...Recipes[0], slug: 'sams', title: 'Sams', cookbooks: ['sam'] },
       { ...Recipes[0], slug: 'bobs', title: 'Bobs', cookbooks: ['bob'] },
+      { ...Recipes[0], slug: 'loose', title: 'Loose', cookbooks: [] },
     ]);
   const shelfTrigger = (el: HTMLElement) => el.querySelector<HTMLButtonElement>('h1 button');
   const shelfOptions = (el: HTMLElement) => [
@@ -66,10 +67,11 @@ describe('LibraryComponent cookbook switcher', () => {
 
     shelfTrigger(el)!.click();
     fixture.detectChanges();
-    expect(shelfOptions(el).map((o) => o.textContent?.trim())).toEqual([
+    expect(shelfOptions(el).map((o) => o.querySelector('.shelf-name')?.textContent?.trim())).toEqual([
       'All Cookbooks',
       "Sam's Cookbook",
       "Bob's Cookbook",
+      'Not in a cookbook',
     ]);
     expect(shelfOptions(el)[0].getAttribute('aria-checked')).toBe('true');
 
@@ -84,7 +86,35 @@ describe('LibraryComponent cookbook switcher', () => {
     shelfOptions(el)[0].click();
     fixture.detectChanges();
     expect(titleText(el)).toBe('All Cookbooks');
-    expect(cardTitles(el)).toEqual(['Sams', 'Bobs']);
+    expect(cardTitles(el)).toEqual(['Sams', 'Bobs', 'Loose']);
+  });
+
+  it('finds the recipes filed in no cookbook, and says how many there are', async () => {
+    const fixture = await render(twoBooks(), filed());
+    const el = fixture.nativeElement as HTMLElement;
+    shelfTrigger(el)!.click();
+    fixture.detectChanges();
+    const unfiled = shelfOptions(el).at(-1)!;
+    expect(unfiled.querySelector('.option-count')?.textContent?.trim()).toBe('1');
+
+    unfiled.click();
+    fixture.detectChanges();
+    expect(titleText(el)).toBe('Not in a cookbook');
+    expect(cardTitles(el)).toEqual(['Loose']);
+  });
+
+  it('leaves that choice off the read-only site, where nothing can be filed', async () => {
+    const recipes = filed();
+    recipes.writable = false;
+    const fixture = await render(twoBooks(), recipes);
+    const el = fixture.nativeElement as HTMLElement;
+    shelfTrigger(el)!.click();
+    fixture.detectChanges();
+    expect(shelfOptions(el).map((o) => o.querySelector('.shelf-name')?.textContent?.trim())).toEqual([
+      'All Cookbooks',
+      "Sam's Cookbook",
+      "Bob's Cookbook",
+    ]);
   });
 
   it('keeps the chosen cookbook through Clear filters', async () => {

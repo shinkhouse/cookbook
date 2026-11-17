@@ -12,7 +12,7 @@ import { CookbookStore } from './cookbook.store';
 import { DeviceStore } from './device.store';
 import { ListStore, OTHER_AISLE, boughtKey } from './list.store';
 import { PrefsStore } from './prefs.store';
-import { RecipeStore, tagLabel } from './recipe.store';
+import { NO_COOKBOOK, RecipeStore, tagLabel } from './recipe.store';
 
 /** A complete recipe; the fixtures below each take one thing away. */
 function fixture(slug: string, over: Partial<Recipe> = {}): Recipe {
@@ -1704,5 +1704,34 @@ describe('RecipeStore pages', () => {
     expect(store.currentPage()).toBe(3);
     // 101 recipes now, so the last page holds five.
     expect(store.pageResults().length).toBe(5);
+  });
+});
+
+describe('RecipeStore recipes in no cookbook', () => {
+  let store: RecipeStore;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideFakeRecipes(
+          new FakeRecipeRepository([
+            fixture('filed', { cookbooks: [DEFAULT_COOKBOOK_ID] }),
+            fixture('loose', { cookbooks: [] }),
+          ]),
+        ),
+      ],
+    });
+    store = TestBed.inject(RecipeStore);
+    await store.whenLoaded();
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('chooses the recipes filed nowhere when NO_COOKBOOK is the selection', () => {
+    store.selectedCookbooks.set(new Set([NO_COOKBOOK]));
+    expect(store.results().map((r) => r.slug)).toEqual(['loose']);
+    store.selectedCookbooks.set(new Set([DEFAULT_COOKBOOK_ID]));
+    expect(store.results().map((r) => r.slug)).toEqual(['filed']);
   });
 });

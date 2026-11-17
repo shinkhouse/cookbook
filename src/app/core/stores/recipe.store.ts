@@ -12,6 +12,12 @@ import { DeviceStore } from './device.store';
  */
 export const PAGE_SIZE = 48;
 
+/**
+ * In the cookbook selection, stands for "filed in no cookbook", which is how a
+ * recipe added from a URL arrives. Not a real id: cookbook ids are never empty.
+ */
+export const NO_COOKBOOK = '';
+
 /** How the library orders its results; 'default' is the order the API gave. */
 export type LibrarySort = 'default' | 'stale';
 
@@ -404,8 +410,9 @@ export class RecipeStore {
       if (favsOnly && r.favorite !== true) return false;
       // OR within the gap facet, matching how the tag facets behave.
       if (gaps.size > 0 && !gapKeys(r).some((k) => gaps.has(k))) return false;
-      // OR within the cookbook facet; a recipe filed nowhere matches no option.
-      if (cookbooks.size > 0 && !r.cookbooks.some((id) => cookbooks.has(id))) return false;
+      // OR within the cookbook facet; a recipe filed nowhere matches NO_COOKBOOK.
+      const filed = r.cookbooks.length > 0 ? r.cookbooks.some((id) => cookbooks.has(id)) : cookbooks.has(NO_COOKBOOK);
+      if (cookbooks.size > 0 && !filed) return false;
       return true;
     });
   });

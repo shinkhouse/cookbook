@@ -65,6 +65,17 @@
     min-width: 240px;
 }
 
+.shelf-name {
+    flex: 1;
+}
+
+// Not a cookbook but the recipes outside them all, so it sits apart.
+.shelf-unfiled {
+    margin-top: 4px;
+    border-top: 1px solid var(--rule);
+    border-radius: 0 0 4px 4px;
+}
+
 .shelf-option {
     display: flex;
     align-items: center;

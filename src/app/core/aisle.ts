@@ -146,6 +146,31 @@ export function matchAisle(name: string): { word: string; aisle: Aisle } | null 
 }
 
 /**
+ * Every food word in a passage, longest first and never overlapping, in the
+ * order they appear: "Brown the ground beef with the onions" gives
+ * "ground beef" and "onions".
+ */
+export function findFoods(text: string): { word: string; aisle: Aisle }[] {
+  const haystack = text.toLowerCase();
+  const taken: [number, number][] = [];
+  const found: { word: string; aisle: Aisle; at: number }[] = [];
+  for (const [word, aisle] of RANKED) {
+    let from = 0;
+    for (;;) {
+      const at = haystack.indexOf(word, from);
+      if (at === -1) break;
+      from = at + 1;
+      const end = at + word.length;
+      if (isWordChar(haystack[at - 1] ?? '') || isWordChar(haystack[end] ?? '')) continue;
+      if (taken.some(([a, b]) => at < b && end > a)) continue;
+      taken.push([at, end]);
+      found.push({ word, aisle, at });
+    }
+  }
+  return found.sort((a, b) => a.at - b.at).map(({ word, aisle }) => ({ word, aisle }));
+}
+
+/**
  * Whole-word containment, so "creamy dressing" does not match "cream" and
  * "creamer" does not match "cream" either.
  */

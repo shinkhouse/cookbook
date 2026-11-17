@@ -30,6 +30,8 @@ export interface Recipe {
   time: string;
   /** Base yield that the servings scaler multiplies against. */
   servings: number;
+  /** What the yield counts, when not servings: "loaves", "dozen", "bars". */
+  servingsUnit?: string;
   /** Times-cooked counter, shown on the card and the detail rail. */
   cooked: number;
   /**
@@ -47,6 +49,11 @@ export interface Recipe {
   steps: string[];
   notes: string[];
   photo?: string;
+  /**
+   * The point a cropped photo keeps in frame, as percentages across and down.
+   * Absent means the middle.
+   */
+  photoFocus?: { x: number; y: number };
   /**
    * Ids of the cookbooks this recipe appears in — a recipe can sit in several
    * at once, and in none at all. Empty is legal: an unfiled recipe still

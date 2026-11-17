@@ -21,7 +21,7 @@ describe('sumAmounts', () => {
   it('keeps incompatible amounts side by side', () =>
     expect(sumAmounts([{ qty: 2, unit: '' }, { qty: 1, unit: 'cup' }])).toBe('2 + 1 cup'));
   it('sums an exact non-measurable unit', () =>
-    expect(sumAmounts([{ qty: 1, unit: 'can' }, { qty: 2, unit: 'can' }])).toBe('3 can'));
+    expect(sumAmounts([{ qty: 1, unit: 'can' }, { qty: 2, unit: 'can' }])).toBe('3 cans'));
   it('ignores to-taste entries, and is blank when all are', () => {
     expect(sumAmounts([{ qty: null, unit: '' }, { qty: 1, unit: 'tsp' }])).toBe('1 tsp');
     expect(sumAmounts([{ qty: null, unit: '' }])).toBe('');

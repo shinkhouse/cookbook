@@ -81,3 +81,28 @@ export function gapSentence(gaps: RecipeGaps): string {
   if (parts.length === 0) return '';
   return `This one has ${parts.join(' and ')}.`;
 }
+
+const NUMBER_WORDS = ['No', 'One', 'Two'];
+const stepsWord = (n: number) => `${NUMBER_WORDS[n] ?? n} ${n === 1 ? 'step' : 'steps'}`;
+
+/**
+ * What the method is missing, said on the recipe page beside "Fill in the
+ * method": "Just one step for 8 ingredients." '' when the method looks whole.
+ * The edit form's checklist says the same thing in fewer words (`methodGap`),
+ * so the two pages never disagree.
+ */
+export function methodNote(recipe: Recipe): string {
+  const gaps = gapsOf(recipe);
+  if (gaps.needsMethod) return 'No method written down yet.';
+  if (!gaps.thinMethod) return '';
+  const n = recipe.steps.length;
+  return `${n === 1 ? 'Just one step' : stepsWord(n)} for ${recipe.ingredients.length} ingredients.`;
+}
+
+/** The checklist's version of `methodNote`: "Method is one step". */
+export function methodGap(recipe: Recipe): string {
+  const gaps = gapsOf(recipe);
+  if (gaps.needsMethod) return 'No method yet';
+  if (!gaps.thinMethod) return '';
+  return `Method is ${stepsWord(recipe.steps.length).toLowerCase()}`;
+}

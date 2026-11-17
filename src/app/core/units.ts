@@ -105,10 +105,38 @@ export function convertMeasure(m: Measure, system: UnitSystem): Measure {
 export function formatMeasure(m: Measure): string {
   const info = measurable(m.unit);
   const qty = info?.system === 'metric' ? trimDecimals(m.qty) : formatQty(m.qty);
-  let unit = info?.unit ?? m.unit;
-  // Only the spelled-out unit takes an s; tbsp, oz and the rest are abbreviations.
-  if (unit === 'cup' && m.qty > 1) unit = 'cups';
+  const unit = unitFor(info?.unit ?? m.unit, m.qty);
   return unit ? `${qty} ${unit}` : qty;
+}
+
+/** Spelled-out units and their plurals; tbsp, oz and the rest are abbreviations and stay as they are. */
+const PLURALS: Record<string, string> = {
+  cup: 'cups',
+  can: 'cans',
+  jar: 'jars',
+  slice: 'slices',
+  clove: 'cloves',
+  stick: 'sticks',
+  box: 'boxes',
+  bag: 'bags',
+  package: 'packages',
+  head: 'heads',
+  bunch: 'bunches',
+  sprig: 'sprigs',
+  pinch: 'pinches',
+  dash: 'dashes',
+  pint: 'pints',
+  quart: 'quarts',
+  gallon: 'gallons',
+};
+
+/** The unit as said after a number: "10 slices", "2 large heads", but "1 slice". */
+export function unitFor(unit: string, qty: number): string {
+  if (qty <= 1 || !unit) return unit;
+  const words = unit.split(' ');
+  const last = words.length - 1;
+  words[last] = PLURALS[words[last]] ?? words[last];
+  return words.join(' ');
 }
 
 function usMeasure(baseAmount: number, unit: string): Measure {

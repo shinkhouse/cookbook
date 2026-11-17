@@ -571,6 +571,12 @@ describe('CreateRecipeComponent import and sections', () => {
     expect(draft.photo).toBe('https://example.com/soup.jpg');
   });
 
+  it("puts the site's tags in the filters' words and drops the rest", async () => {
+    await setup();
+    await importIt({ ...PREVIEW, tags: ['Main course', 'Pastas', 'chicken thigh', 'heavy cream', 'stovetop'] });
+    expect(page.tagsText()).toBe('main dish, pasta, chicken');
+  });
+
   it('turns each named group into a section draft with no steps', async () => {
     await setup();
     await importIt();

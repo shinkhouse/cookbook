@@ -13,6 +13,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { AISLE_ORDER, Aisle } from '../../core/aisle';
+import { vocabularyTags } from '../../core/facets';
 import { Ingredient, Recipe } from '../../core/model/recipes.model';
 import { ImportClient, ImportPreview, photoProblem } from '../../core/import-client';
 import { parseIngredient } from '../../core/ingredient-parser';
@@ -509,8 +510,8 @@ export class CreateRecipeComponent {
     const named = kept.map((g) => ({ name: g.name, parsed: parse(g.lines) }));
 
     // Only what the page supplied is written, so an empty description never
-    // wipes one typed by hand.
-    const tags = (preview.tags ?? []).map((t) => t.toLowerCase()).join(', ');
+    // wipes one typed by hand. Tags are put in the filters' words.
+    const tags = vocabularyTags(preview.tags ?? []).join(', ');
     const sections: SectionDraft[] = named.map((g) => ({
       slug: null,
       title: g.name,

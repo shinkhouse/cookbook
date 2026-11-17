@@ -8,6 +8,7 @@ import {
   facetOf,
   groupSelection,
   matchesSelection,
+  vocabularyTags,
 } from './facets';
 import { Recipes } from './mock/recipes.mock';
 
@@ -198,5 +199,35 @@ describe('cookbookFacet', () => {
       kind: 'cookbook',
       options: ['sam', 'Bobs'],
     });
+  });
+});
+
+describe('vocabularyTags', () => {
+  it('keeps tags the filters already have, lowercased and once each', () => {
+    expect(vocabularyTags(['Dinner', 'italian', 'dinner'])).toEqual(['dinner', 'italian']);
+  });
+
+  it('maps what a site calls a thing to the filters’ word for it', () => {
+    expect(vocabularyTags(['main course', 'pastas', 'chicken thigh', 'sauces and gravies'])).toEqual([
+      'main dish',
+      'pasta',
+      'chicken',
+      'sauce',
+    ]);
+  });
+
+  it('merges synonyms that land on the same word', () => {
+    expect(vocabularyTags(['chicken breast', 'chicken thigh', 'chicken'])).toEqual(['chicken']);
+  });
+
+  it('drops tags the filters have no word for', () => {
+    expect(vocabularyTags(['heavy cream', 'super bowl', 'stovetop', 'dinner'])).toEqual(['dinner']);
+  });
+
+  it('files the new dish and method words', () => {
+    expect(vocabularyTags(['stew', 'udon noodle', 'dutch oven'])).toEqual(['stew', 'noodles', 'one pot']);
+    expect(facetOf('stew')).toBe('dish');
+    expect(facetOf('noodles')).toBe('dish');
+    expect(facetOf('one pot')).toBe('method');
   });
 });

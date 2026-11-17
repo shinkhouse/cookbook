@@ -130,9 +130,11 @@ const DEFS: readonly FacetDef[] = [
     label: 'Dish',
     tags: [
       'soup',
+      'stew',
       'salad',
       'casserole',
       'pasta',
+      'noodles',
       'rice',
       'sandwich',
       'tacos',
@@ -163,6 +165,7 @@ const DEFS: readonly FacetDef[] = [
       'canning',
       'microwave',
       'slow cooker',
+      'one pot',
       'skillet',
       'sheet-pan',
       'make-ahead',
@@ -198,6 +201,159 @@ const DEFS: readonly FacetDef[] = [
     ],
   },
 ];
+
+/**
+ * What recipe sites call things the filters already have a word for. NYT
+ * Cooking tags a pasta "pastas" and its chicken "chicken thigh"; read through
+ * this, the recipe lands under Pasta and Chicken like every other.
+ */
+const SYNONYMS: Readonly<Record<string, string>> = {
+  // Meal
+  'main course': 'main dish',
+  main: 'main dish',
+  entree: 'main dish',
+  'entrée': 'main dish',
+  side: 'side dish',
+  sides: 'side dish',
+  'side dishes': 'side dish',
+  appetizers: 'appetizer',
+  starter: 'appetizer',
+  starters: 'appetizer',
+  desserts: 'dessert',
+  brunch: 'breakfast',
+  snacks: 'snack',
+  drink: 'beverage',
+  drinks: 'beverage',
+  beverages: 'beverage',
+  cocktail: 'beverage',
+  // Protein
+  'chicken breast': 'chicken',
+  'chicken thigh': 'chicken',
+  'chicken leg': 'chicken',
+  'chicken drumstick': 'chicken',
+  'chicken wings': 'chicken',
+  'ground chicken': 'chicken',
+  'roast chicken': 'chicken',
+  'beef stew meat': 'beef',
+  'beef tenderloin': 'beef',
+  steak: 'beef',
+  'pork shoulder': 'pork',
+  'pork chop': 'pork',
+  'ground pork': 'pork',
+  ham: 'pork',
+  'italian sausage': 'sausage',
+  'ground turkey': 'turkey',
+  scallops: 'seafood',
+  'sea scallop': 'seafood',
+  crab: 'seafood',
+  shellfish: 'seafood',
+  cod: 'fish',
+  tilapia: 'fish',
+  halibut: 'fish',
+  tuna: 'fish',
+  egg: 'eggs',
+  // Cuisine: `asian` already covers East and Southeast Asian cooking.
+  'italian american': 'italian',
+  'tex-mex': 'mexican',
+  southern: 'american',
+  creole: 'cajun',
+  japanese: 'asian',
+  vietnamese: 'asian',
+  greek: 'mediterranean',
+  'middle eastern': 'mediterranean',
+  // Dish
+  soups: 'soup',
+  stews: 'stew',
+  chili: 'stew',
+  salads: 'salad',
+  casseroles: 'casserole',
+  pastas: 'pasta',
+  spaghetti: 'pasta',
+  rigatoni: 'pasta',
+  fettuccine: 'pasta',
+  linguine: 'pasta',
+  penne: 'pasta',
+  pappardelle: 'pasta',
+  lasagna: 'pasta',
+  macaroni: 'pasta',
+  noodle: 'noodles',
+  ramen: 'noodles',
+  'ramen noodle': 'noodles',
+  udon: 'noodles',
+  'udon noodle': 'noodles',
+  soba: 'noodles',
+  sandwiches: 'sandwich',
+  taco: 'tacos',
+  breads: 'bread',
+  roll: 'rolls',
+  muffin: 'muffins',
+  dips: 'dip',
+  sauces: 'sauce',
+  'sauces and gravies': 'sauce',
+  gravy: 'sauce',
+  pesto: 'sauce',
+  'pesto (dish)': 'sauce',
+  dressings: 'dressing',
+  // Sweets
+  cakes: 'cake',
+  'gooey butter cake': 'cake',
+  pies: 'pie',
+  tart: 'pie',
+  tarts: 'pie',
+  cookie: 'cookies',
+  bar: 'bars',
+  brownies: 'bars',
+  candies: 'candy',
+  puddings: 'pudding',
+  // Method
+  'slow-cooker': 'slow cooker',
+  crockpot: 'slow cooker',
+  'crock pot': 'slow cooker',
+  'crock-pot': 'slow cooker',
+  'one-pot': 'one pot',
+  'dutch oven': 'one pot',
+  'instant pot': 'one pot',
+  'sheet pan': 'sheet-pan',
+  'cast iron': 'skillet',
+  'make ahead': 'make-ahead',
+  'plan-ahead': 'make-ahead',
+  'freezer friendly': 'make-ahead',
+  'freezer-friendly': 'make-ahead',
+  'five ingredient': 'easy',
+  // Diet
+  'low-calorie': 'low calorie',
+  // Ingredient
+  parmesan: 'cheese',
+  ricotta: 'cheese',
+  cheddar: 'cheese',
+  'cream cheese': 'cheese',
+  tomatoes: 'tomato',
+  'canned tomato': 'tomato',
+  'canned plum tomato': 'tomato',
+  'crushed canned tomato': 'tomato',
+  'sun-dried tomato': 'tomato',
+  'red pepper flake': 'red pepper flakes',
+  peaches: 'peach',
+};
+
+const VOCABULARY: ReadonlySet<string> = new Set(DEFS.flatMap((def) => def.tags));
+
+/**
+ * An imported recipe's tags, in the filters' words. Each maps to its word
+ * where it has one, and is dropped where it has none: sites tag every
+ * ingredient and occasion ("heavy cream", "super bowl"), and kept, those
+ * would fill the Other menu. Only imports are read through this; a tag typed
+ * by hand is kept as typed, which is what Other is for.
+ */
+export function vocabularyTags(raw: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const tag of raw) {
+    const needle = tag.trim().toLowerCase();
+    const word = VOCABULARY.has(needle) ? needle : SYNONYMS[needle];
+    if (word && !out.includes(word)) out.push(word);
+  }
+  return out;
+}
 
 /** A defined facet's tags in the order they are offered, or [] for an unknown id. */
 export function facetTags(id: string): readonly string[] {
